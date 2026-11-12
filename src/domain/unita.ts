@@ -87,7 +87,8 @@ export function converti(quantita: number, da: CodiceUnita, a: CodiceUnita): num
 
 /** Chiave di famiglia usata nelle chiavi della spesa (SPEC §10.2). */
 export function chiaveFamiglia(u: CodiceUnita | null): string {
-  if (u === null) return 'senza_unita'
+  // «2 uova» e «n. 2 uova» sono lo stesso conteggio: pezzi e numero puro si sommano.
+  if (u === null || u === 'pz') return 'senza_unita'
   const f = UNITA[u].famiglia
   if (f === 'massa' || f === 'volume') return f
   if (f === 'qb') return 'qb'
