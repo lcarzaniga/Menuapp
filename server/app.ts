@@ -34,10 +34,12 @@ export function hostLocale(host: string | undefined): boolean {
   if (!host) return false
   const nome = host.replace(/:\d+$/, '').replace(/^\[|\]$/g, '').toLowerCase()
   if (nome === 'localhost' || nome === 'loris-srv01' || nome.endsWith('.local') || nome.endsWith('.lan') || nome.endsWith('.home')) return true
+  // Tailscale: nomi MagicDNS del tailnet e indirizzi 100.64.0.0/10.
+  if (nome.endsWith('.ts.net')) return true
   const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(nome)
   if (!m) return false
   const [a, b] = [Number(m[1]), Number(m[2])]
-  return a === 10 || a === 127 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31)
+  return a === 10 || a === 127 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31) || (a === 100 && b >= 64 && b <= 127)
 }
 
 export async function costruisciApp(ctx: Contesto, opzioni: { log?: boolean; lan?: boolean } = {}): Promise<FastifyInstance> {

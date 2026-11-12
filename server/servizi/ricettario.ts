@@ -10,7 +10,7 @@ import * as repo from '../db/repo/ricettario.ts'
 import { nonTrovato, regolaViolata, richiestaNonValida } from './errori.ts'
 import { leggiEvento, richiediModificabile } from './eventi.ts'
 import { elencaReparti, leggiReparto } from './impostazioni.ts'
-import { elencaFoto, fotoPrincipali } from './foto.ts'
+import { elencaFoto, fotoPrincipali, ricollegaPassi } from './foto.ts'
 import { aggiornaConVersione, controllaVersioni, creaIdempotente, eliminaConVersione, incrementaVersione } from './versioni.ts'
 
 export function elencaPiatti(db: Db, ricerca?: string): RiepilogoPiatto[] {
@@ -76,7 +76,10 @@ export function creaPiatto(db: Db, d: NuovoPiatto, adesso = Date.now()): { creat
 export function aggiornaPiatto(db: Db, id: string, d: AggiornaPiatto, adesso = Date.now()): DettaglioPiatto {
   return transazione(db, () => {
     const ingredienti = controllaIngredienti(db, id, d.ingredienti)
-    aggiornaConVersione(db, 'piatti', id, d.versione, repo.colonnePiatto(datiPiatto(d)), () => leggiPiatto(db, id), adesso)
+    const prima = repo.leggiPiatto(db, id)?.procedimento ?? []
+    const dati = datiPiatto(d)
+    aggiornaConVersione(db, 'piatti', id, d.versione, repo.colonnePiatto(dati), () => leggiPiatto(db, id), adesso)
+    ricollegaPassi(db, id, prima, dati.procedimento)
     repo.scriviIngredienti(db, id, ingredienti)
     incrementaRevisione(db)
     return leggiPiatto(db, id)

@@ -13,8 +13,8 @@ const imp = async (host: string) => JSON.parse((await t.inietta({ method: 'GET',
 
 describe('ascolto in rete locale', () => {
   it('riconosce gli host locali', () => {
-    for (const h of ['192.168.1.160:9880', '10.0.0.5', '172.20.1.1:80', 'localhost:9880', 'loris-srv01.local:9880', 'loris-srv01:9880']) expect(hostLocale(h), h).toBe(true)
-    for (const h of ['evil.example', 'evil.example:9880', '8.8.8.8', '172.40.0.1', undefined]) expect(hostLocale(h), String(h)).toBe(false)
+    for (const h of ['192.168.1.160:9880', '10.0.0.5', '172.20.1.1:80', 'localhost:9880', 'loris-srv01.local:9880', 'loris-srv01:9880', 'loris-srv01.dala-tortoise.ts.net:9880', '100.114.50.37:9880']) expect(hostLocale(h), h).toBe(true)
+    for (const h of ['evil.example', 'evil.example:9880', '8.8.8.8', '172.40.0.1', '100.200.1.1', 'ts.net.evil.example', undefined]) expect(hostLocale(h), String(h)).toBe(false)
   })
 
   it('lettura e scrittura dall\'indirizzo locale con la propria origine', async () => {

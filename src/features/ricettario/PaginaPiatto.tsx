@@ -18,7 +18,7 @@ import { dataBreve } from '@/domain/tempo.ts'
 import type { IngredientePiatto } from '@/domain/tipi.ts'
 import { useImpostazioni } from '@/api/query'
 import { EditorIngredienti, testoQuantita } from './EditorIngredienti'
-import { GalleriaFoto } from './FotoPiatto'
+import { FotoPasso, GalleriaFoto } from './FotoPiatto'
 import { aTesto, daPiatto } from '@/domain/ricetta/formato.ts'
 import { toast } from 'sonner'
 
@@ -78,7 +78,7 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
       }
     >
       <div className="flex flex-col gap-4">
-        <GalleriaFoto piattoId={p.id} foto={p.foto} nome={p.nome} />
+        <GalleriaFoto piattoId={p.id} foto={p.foto} nome={p.nome} procedimento={p.procedimento} />
         <div className="flex flex-wrap gap-2 text-sm">
           <Badge variante={p.porzioniBase ? 'primario' : 'avviso'}>
             <Users className="size-3" /> {p.porzioniBase ? `per ${formattaCoperti(p.porzioniBase)} porzioni` : 'porzioni base da indicare'}
@@ -131,7 +131,10 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
               {p.procedimento.map((passo, k) => (
                 <li key={k} className="flex gap-3 text-[0.9375rem] leading-relaxed">
                   <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primario-tenue text-sm font-semibold text-primario">{k + 1}</span>
-                  <span className="whitespace-pre-line pt-0.5">{passo}</span>
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <span className="whitespace-pre-line">{passo}</span>
+                    <FotoPasso piattoId={p.id} foto={p.foto} passo={k} nome={p.nome} procedimento={p.procedimento} modificabile={puoScrivere} />
+                  </div>
                 </li>
               ))}
             </ol>

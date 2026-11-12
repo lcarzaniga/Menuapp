@@ -19,7 +19,7 @@ export function rotteFoto(app: FastifyInstance, ctx: Contesto): void {
   app.post<ConId>(`${P}/piatti/:id/foto`, async (req, reply) => {
     const q = valida(SchemaQueryCaricaFoto, req.query)
     if (!Buffer.isBuffer(req.body)) return reply.code(415).send({ errore: { codice: 'tipo_non_supportato', messaggio: 'Invia il file dell\'immagine' } })
-    const f = await foto.caricaFoto(db, config.cartellaFoto, req.params.id, { id: q.id, dati: req.body, didascalia: q.didascalia, principale: q.principale === '1' })
+    const f = await foto.caricaFoto(db, config.cartellaFoto, req.params.id, { id: q.id, dati: req.body, didascalia: q.didascalia, principale: q.principale === '1', passo: q.passo ?? null })
     return reply.code(201).send(f)
   })
 
@@ -52,7 +52,7 @@ export function rotteFoto(app: FastifyInstance, ctx: Contesto): void {
     for (const [k, f] of elenco.entries()) {
       const nome = `foto/${k + 1}.${foto.ESTENSIONI[f.tipo]}`
       file[nome] = await foto.leggiFile(config.cartellaFoto, f)
-      voci.push({ file: nome, didascalia: f.didascalia, principale: f.principale })
+      voci.push({ file: nome, didascalia: f.didascalia, principale: f.principale, ...(f.passo === null ? {} : { passo: f.passo + 1 }) })
     }
     file['ricetta.json'] = strToU8(JSON.stringify(daPiatto(p, voci), null, 2))
     const zip = zipSync(file, { level: 0 })

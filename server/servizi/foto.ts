@@ -18,6 +18,7 @@ interface Riga {
   ordine: number
   didascalia: string
   principale: number
+  passo: number | null
   tipo: TipoFoto
   byte: number
   sha256: string
@@ -31,6 +32,7 @@ const daRiga = (r: Riga): Foto => ({
   ordine: r.ordine,
   didascalia: r.didascalia,
   principale: r.principale === 1,
+  passo: r.passo,
   tipo: r.tipo,
   byte: r.byte,
   sha256: r.sha256,
@@ -73,13 +75,16 @@ export async function caricaFoto(
   db: Db,
   cartella: string,
   piattoId: string,
-  d: { id: string; dati: Buffer; didascalia: string; principale: boolean },
+  d: { id: string; dati: Buffer; didascalia: string; principale: boolean; passo?: number | null },
   adesso = Date.now(),
 ): Promise<Foto> {
   if (d.dati.length === 0 || d.dati.length > LIMITE_BYTE_FOTO) throw richiestaNonValida('Foto vuota o più grande di 8 MB')
   const tipo = tipoDaContenuto(d.dati)
   if (!tipo) throw richiestaNonValida('Formato non supportato: servono JPEG, PNG o WebP')
-  if (!uno(db, 'SELECT 1 FROM piatti WHERE id = ?', piattoId)) throw nonTrovato('Piatto')
+  const piatto = uno<{ procedimento: string }>(db, 'SELECT procedimento FROM piatti WHERE id = ?', piattoId)
+  if (!piatto) throw nonTrovato('Piatto')
+  const passo = d.passo ?? null
+  controllaPasso(passo, JSON.parse(piatto.procedimento) as string[])
   const esistente = uno<Riga>(db, 'SELECT * FROM foto_piatti WHERE id = ?', d.id)
   const sha256 = createHash('sha256').update(d.dati).digest('hex')
   if (esistente) {
@@ -101,9 +106,9 @@ export async function caricaFoto(
       const ordine = (uno<{ m: number | null }>(db, 'SELECT max(ordine) AS m FROM foto_piatti WHERE piatto_id = ?', piattoId)?.m ?? -1) + 1
       esegui(
         db,
-        `INSERT INTO foto_piatti (id, piatto_id, ordine, didascalia, principale, tipo, byte, sha256, versione, creato_il, aggiornato_il)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
-        d.id, piattoId, ordine, pulisci(d.didascalia), principale, tipo, d.dati.length, sha256, adesso, adesso,
+        `INSERT INTO foto_piatti (id, piatto_id, ordine, didascalia, principale, passo, tipo, byte, sha256, versione, creato_il, aggiornato_il)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+        d.id, piattoId, ordine, pulisci(d.didascalia), principale, passo, tipo, d.dati.length, sha256, adesso, adesso,
       )
       incrementaRevisione(db)
       return leggiFoto(db, d.id)
@@ -114,11 +119,19 @@ export async function caricaFoto(
   }
 }
 
-export function aggiornaFoto(db: Db, id: string, d: { didascalia: string; principale: boolean; versione: number }): Foto {
+function controllaPasso(passo: number | null, procedimento: string[]): void {
+  if (passo !== null && passo >= procedimento.length) {
+    throw regolaViolata('passo_inesistente', `Il procedimento ha ${procedimento.length} passaggi: non esiste il passaggio ${passo + 1}`)
+  }
+}
+
+export function aggiornaFoto(db: Db, id: string, d: { didascalia: string; principale: boolean; passo: number | null; versione: number }): Foto {
   return transazione(db, () => {
     const f = leggiFoto(db, id)
+    const piatto = uno<{ procedimento: string }>(db, 'SELECT procedimento FROM piatti WHERE id = ?', f.piattoId)
+    controllaPasso(d.passo, JSON.parse(piatto?.procedimento ?? '[]') as string[])
     if (d.principale && !f.principale) esegui(db, 'UPDATE foto_piatti SET principale = 0 WHERE piatto_id = ?', f.piattoId)
-    aggiornaConVersione(db, 'foto_piatti', id, d.versione, { didascalia: pulisci(d.didascalia), principale: d.principale }, () => leggiFoto(db, id))
+    aggiornaConVersione(db, 'foto_piatti', id, d.versione, { didascalia: pulisci(d.didascalia), principale: d.principale, passo: d.passo }, () => leggiFoto(db, id))
     incrementaRevisione(db)
     return leggiFoto(db, id)
   })
@@ -140,6 +153,27 @@ export async function leggiFile(cartella: string, f: Foto): Promise<Buffer> {
   } catch {
     throw nonTrovato('File della foto')
   }
+}
+
+/**
+ * Dopo una modifica del procedimento: ogni foto segue il suo passaggio se il testo è rimasto
+ * uguale (anche spostato); se il passaggio è stato riscritto o tolto, la foto resta solo in galleria.
+ */
+export function ricollegaPassi(db: Db, piattoId: string, prima: string[], dopo: string[]): void {
+  for (const r of tutti<{ id: string; passo: number | null }>(db, 'SELECT id, passo FROM foto_piatti WHERE piatto_id = ? AND passo IS NOT NULL', piattoId)) {
+    const testo = prima[r.passo!]
+    const nuovo = testo === undefined ? -1 : dopo.indexOf(testo)
+    const passo = nuovo >= 0 ? nuovo : prima.length === dopo.length && r.passo! < dopo.length && testo !== undefined && simili(testo, dopo[r.passo!]!) ? r.passo : null
+    if (passo !== r.passo) esegui(db, 'UPDATE foto_piatti SET passo = ?, versione = versione + 1 WHERE id = ?', passo, r.id)
+  }
+}
+
+/** Stesso passaggio corretto di poco (refusi, punteggiatura): almeno metà delle parole in comune. */
+function simili(a: string, b: string): boolean {
+  const pa = new Set(a.toLowerCase().split(/\W+/).filter((x) => x.length > 2))
+  const pb = b.toLowerCase().split(/\W+/).filter((x) => x.length > 2)
+  if (pa.size === 0) return false
+  return pb.filter((x) => pa.has(x)).length / pa.size >= 0.5
 }
 
 /** Copia nei backup le foto non ancora salvate (i file sono immutabili: basta copiare i nuovi). */

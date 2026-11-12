@@ -13,6 +13,8 @@ export const SchemaFoto = z.object({
   ordine: z.number().int(),
   didascalia: z.string(),
   principale: z.boolean(),
+  /** Passaggio del procedimento (indice da 0), o null se la foto è solo nella galleria. */
+  passo: z.number().int().min(0).nullable(),
   tipo: z.enum(TIPI_FOTO),
   byte: z.number().int(),
   sha256: z.string(),
@@ -26,6 +28,7 @@ export const SchemaQueryCaricaFoto = z.object({
   id: Id,
   didascalia: TestoBreve.optional().default(''),
   principale: z.enum(['0', '1']).optional().default('0'),
+  passo: z.coerce.number().int().min(0).max(99).optional(),
 })
 
-export const SchemaAggiornaFoto = z.object({ didascalia: TestoBreve, principale: z.boolean(), versione: Versione })
+export const SchemaAggiornaFoto = z.object({ didascalia: TestoBreve, principale: z.boolean(), passo: z.number().int().min(0).max(99).nullable(), versione: Versione })

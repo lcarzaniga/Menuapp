@@ -21,6 +21,8 @@ export interface FotoFormato {
   file: string
   didascalia?: string
   principale?: boolean
+  /** Passaggio del procedimento illustrato, numerato da 1. */
+  passo?: number
 }
 
 export interface RicettaFormato {
@@ -39,7 +41,7 @@ export interface RicettaFormato {
 }
 
 /** Piatto dell'app → ricetta.json (ingredienti come oggetti completi). */
-export function daPiatto(p: Piatto, foto: { file: string; didascalia: string; principale: boolean }[] = []): RicettaFormato {
+export function daPiatto(p: Piatto, foto: FotoFormato[] = []): RicettaFormato {
   return {
     formato: FORMATO_RICETTA,
     versione: VERSIONE_FORMATO_RICETTA,

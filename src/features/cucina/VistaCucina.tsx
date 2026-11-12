@@ -60,6 +60,12 @@ function useSchermoAcceso(): boolean {
   return attivo
 }
 
+/** Foto collegate a un passaggio (solo per i piatti del ricettario, non per gli snapshot). */
+function fotoDelPasso(piatto: Piatto, passo: number): string[] {
+  const foto = (piatto as Piatto & { foto?: { id: string; passo: number | null }[] }).foto
+  return foto?.filter((f) => f.passo === passo).map((f) => f.id) ?? []
+}
+
 export function quantitaCucina(i: IngredientePiatto, fattore: number | null): string {
   if (i.unita === 'qb') return 'q.b.'
   if (i.quantita === null) return ''
@@ -149,7 +155,12 @@ export function VistaCucina({ piatto, porzioniIniziali, indietro, sottotitolo }:
                       <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-full font-semibold', fatto ? 'bg-successo text-white' : 'bg-primario-tenue text-primario')}>
                         {fatto ? <Check className="size-4" /> : k + 1}
                       </span>
-                      <span className="whitespace-pre-line pt-0.5">{p}</span>
+                      <span className="min-w-0 flex-1 pt-0.5">
+                        <span className="whitespace-pre-line">{p}</span>
+                        {fotoDelPasso(piatto, k).map((id) => (
+                          <img key={id} src={`/api/v1/foto/${id}`} alt={`Passaggio ${k + 1}`} loading="lazy" className="mt-2 max-h-60 w-full rounded-2xl object-cover" />
+                        ))}
+                      </span>
                     </button>
                   </li>
                 )

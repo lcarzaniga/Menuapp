@@ -15,6 +15,8 @@ export interface FotoDaImportare {
   dati: Blob
   didascalia: string
   principale: boolean
+  /** Passaggio del procedimento (indice da 0), se indicato. */
+  passo: number | null
 }
 
 export interface RicettaDaImportare {
@@ -47,6 +49,7 @@ function daJson(testo: string, foto: (percorso: string) => Uint8Array | undefine
       dati: new Blob([contenuto as Uint8Array<ArrayBuffer>], { type: tipoDaNome(f.file) }),
       didascalia: f.didascalia ?? '',
       principale: f.principale ?? false,
+      passo: f.passo === undefined ? null : f.passo - 1,
     })
   }
   if (!elenco.some((f) => f.principale) && elenco[0]) elenco[0].principale = true

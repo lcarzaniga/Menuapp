@@ -88,7 +88,7 @@ export function ImportaRicetta({ aperta, onCambia }: { aperta: boolean; onCambia
         for (const [k, f] of v.foto.entries()) {
           setInCorso(`«${v.nome}»: foto ${k + 1} di ${v.foto.length}…`)
           const ridotta = await riduciFoto(f.dati)
-          const q = new URLSearchParams({ id: nuovoId(), didascalia: f.didascalia, principale: f.principale ? '1' : '0' })
+          const q = new URLSearchParams({ id: nuovoId(), didascalia: f.didascalia, principale: f.principale ? '1' : '0', ...(f.passo === null ? {} : { passo: String(f.passo) }) })
           await api.file('POST', `/piatti/${id}/foto?${q}`, ridotta)
         }
         ultimo = id
@@ -178,7 +178,10 @@ export function ImportaRicetta({ aperta, onCambia }: { aperta: boolean; onCambia
                 {v.anteprime.length ? (
                   <div className="mt-2 flex gap-1.5 overflow-x-auto">
                     {v.anteprime.map((u, k) => (
-                      <img key={u} src={u} alt={v.foto[k]?.didascalia || `Foto ${k + 1}`} className="size-16 shrink-0 rounded-lg object-cover" />
+                      <figure key={u} className="shrink-0">
+                        <img src={u} alt={v.foto[k]?.didascalia || `Foto ${k + 1}`} className="size-16 rounded-lg object-cover" />
+                        {v.foto[k]?.passo != null ? <figcaption className="text-center text-[0.6875rem] text-testo-tenue">passo {v.foto[k]!.passo! + 1}</figcaption> : null}
+                      </figure>
                     ))}
                   </div>
                 ) : null}

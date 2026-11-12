@@ -50,7 +50,7 @@ test('import di un pacchetto con foto, foto aggiunta dalla scheda, esportazione'
     porzioniBase: 8,
     ingredienti: ['500 g mascarpone', { testo: '4 uova', quantita: 4, nome: 'uova' }, '300 g di savoiardi'],
     procedimento: ['Montare i tuorli.', 'Alternare savoiardi e crema.'],
-    foto: [{ file: 'foto/1.jpg', didascalia: 'In teglia' }, { file: 'foto/2.jpg', didascalia: 'La fetta', principale: true }],
+    foto: [{ file: 'foto/1.jpg', didascalia: 'In teglia', passo: 2 }, { file: 'foto/2.jpg', didascalia: 'La fetta', principale: true }],
   }
   mkdirSync('test-results/import', { recursive: true })
   const percorso = 'test-results/import/tiramisu.menuapp-ricetta'
@@ -59,6 +59,7 @@ test('import di un pacchetto con foto, foto aggiunta dalla scheda, esportazione'
   await page.getByRole('button', { name: 'Importa' }).click()
   await page.locator('input[type=file]').setInputFiles(percorso)
   await expect(page.getByText('2 foto')).toBeVisible()
+  await expect(page.getByText('passo 2')).toBeVisible()
   await expect(page.getByRole('img', { name: 'La fetta' })).toBeVisible()
   await page.getByRole('button', { name: 'Importa la ricetta' }).click()
   await expect(page.getByRole('heading', { name: 'Tiramisù di Natale' })).toBeVisible({ timeout: 15_000 })
@@ -66,14 +67,22 @@ test('import di un pacchetto con foto, foto aggiunta dalla scheda, esportazione'
   // la principale è «La fetta», ridotta a 1600 px
   const principale = page.getByRole('img', { name: 'La fetta' }).first()
   await expect(principale).toBeVisible()
+  // la foto «In teglia» compare sotto il passaggio 2 del procedimento
+  const passo2 = page.locator('ol li').nth(1)
+  await expect(passo2.getByRole('img', { name: 'In teglia' })).toBeVisible()
   const larghezza = await principale.evaluate((i: HTMLImageElement) => (i.complete ? i.naturalWidth : 0))
   expect(larghezza).toBe(1600)
 
   // foto aggiunta dalla scheda
   writeFileSync('test-results/import/blu.jpg', blu)
-  await page.locator('input[type=file][accept="image/*"]').setInputFiles('test-results/import/blu.jpg')
+  await page.locator('section[aria-label="Foto"] input[type=file]').setInputFiles('test-results/import/blu.jpg')
   await expect(page.getByText('Foto aggiunta')).toBeVisible()
   await expect(page.locator('section[aria-label="Foto"] img')).toHaveCount(3)
+  // foto aggiunta direttamente al passaggio 1
+  await expect(page.getByRole('button', { name: 'Aggiungi una foto al passaggio 1' })).toBeVisible()
+  await page.locator('ol li').first().locator('input[type=file]').setInputFiles('test-results/import/blu.jpg')
+  await expect(page.getByText('Foto aggiunta al passaggio 1')).toBeVisible()
+  await expect(page.locator('ol li').first().getByRole('img')).toHaveCount(1)
   await page.screenshot({ path: 'test-results/import/scheda.png', fullPage: true })
 
   // esportazione nel formato v1

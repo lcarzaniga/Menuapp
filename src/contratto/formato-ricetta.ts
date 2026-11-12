@@ -40,15 +40,25 @@ export const SchemaRicettaFormato = z
     note: z.string().max(20_000).optional(),
     fonte: z.string().max(200).optional(),
     foto: z
-      .array(z.object({ file: z.string().max(300), didascalia: z.string().max(200).optional(), principale: z.boolean().optional() }).loose())
+      .array(z.object({ file: z.string().max(300), didascalia: z.string().max(200).optional(), principale: z.boolean().optional(), passo: z.number().int().min(1).max(100).optional() }).loose())
       .max(10, 'Al massimo 10 foto per ricetta')
       .optional(),
   })
   .loose()
 
+/** Il passo di una foto deve esistere nel procedimento. */
+function controllaPassi(r: RicettaFormato): string | null {
+  const n = r.procedimento?.length ?? 0
+  const f = r.foto?.find((x) => x.passo !== undefined && x.passo > n)
+  return f ? `foto «${f.file}»: il procedimento ha ${n} passaggi, non esiste il passaggio ${f.passo}` : null
+}
+
 export function validaRicetta(dati: unknown): { ok: true; ricetta: RicettaFormato } | { ok: false; errore: string } {
   const r = SchemaRicettaFormato.safeParse(dati)
-  if (r.success) return { ok: true, ricetta: r.data as RicettaFormato }
+  if (r.success) {
+    const errore = controllaPassi(r.data as RicettaFormato)
+    return errore ? { ok: false, errore } : { ok: true, ricetta: r.data as RicettaFormato }
+  }
   const i = r.error.issues[0]
   return { ok: false, errore: i ? `${i.path.join('.') || 'ricetta'}: ${i.message}` : 'Ricetta non valida' }
 }
