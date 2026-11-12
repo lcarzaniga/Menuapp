@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { SchemaEsportazione, SchemaRiepilogoRipristino } from '../../src/contratto/backup.ts'
 import { apriDatabase, esegui, uno } from '../db/connessione.ts'
 import { appDiProva, type AppDiProva, dbDiProva, type DbDiProva } from '../prova.ts'
+import { ultimaVersione } from '../db/migrazioni/esegui.ts'
 import { creaBackup, elencaBackup, verificaFile } from './backup.ts'
 import { esporta } from './esportazione.ts'
 import { eseguiRipristino, RegistroRipristini, verificaRipristino } from './ripristino.ts'
@@ -50,7 +51,7 @@ describe('creazione dei backup', () => {
     const info = await promessa
     expect(info.verificato).toBe(true)
     expect(info.conteggi.eventi).toBe(3)
-    expect(verificaFile(join(p.cartellaBackup, info.nome)).versioneSchema).toBe(1)
+    expect(verificaFile(join(p.cartellaBackup, info.nome)).versioneSchema).toBe(ultimaVersione())
     expect(readFileSync(join(p.cartellaBackup, `${info.nome}.json`), 'utf8')).toContain(info.sha256)
   })
 

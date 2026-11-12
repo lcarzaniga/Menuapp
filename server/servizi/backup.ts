@@ -3,6 +3,7 @@ import type { StatoBackup } from '../../src/contratto/backup.ts'
 import type { Db } from '../db/connessione.ts'
 import { leggiMeta, scriviMeta } from '../db/repo/meta.ts'
 import { creaBackup, elencaBackup, type InfoBackup, type TipoBackup } from '../backup/backup.ts'
+import { sincronizzaFotoNelBackup } from './foto.ts'
 
 interface UltimoBackup {
   nome: string
@@ -14,9 +15,10 @@ interface UltimoBackup {
 
 const ORE = 3_600_000
 
-export async function eseguiBackup(db: Db, cartella: string, tipo: TipoBackup): Promise<InfoBackup> {
+export async function eseguiBackup(db: Db, cartella: string, tipo: TipoBackup, cartellaFoto?: string): Promise<InfoBackup> {
   try {
     const info = await creaBackup(db, cartella, tipo)
+    if (cartellaFoto) await sincronizzaFotoNelBackup(cartellaFoto, cartella)
     scriviMeta(db, 'ultimo_backup', { nome: info.nome, creatoIl: info.creatoIl, tipo, esito: 'ok' } satisfies UltimoBackup)
     return info
   } catch (e) {

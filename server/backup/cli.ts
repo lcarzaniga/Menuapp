@@ -14,7 +14,7 @@ if (!TIPI_BACKUP.includes(tipo)) {
 const config = leggiConfig()
 const db = apriDatabase(config.percorsoDb)
 try {
-  const info = await eseguiBackup(db, config.cartellaBackup, tipo)
+  const info = await eseguiBackup(db, config.cartellaBackup, tipo, config.cartellaFoto)
   console.log(`Backup ${tipo} verificato: ${info.nome} (${info.byte} byte, schema v${info.versioneSchema})`)
 } catch (e) {
   console.error(`Backup ${tipo} non riuscito: ${(e as Error).message}`)

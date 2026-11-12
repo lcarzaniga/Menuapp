@@ -10,17 +10,19 @@ import * as repo from '../db/repo/ricettario.ts'
 import { nonTrovato, regolaViolata, richiestaNonValida } from './errori.ts'
 import { leggiEvento, richiediModificabile } from './eventi.ts'
 import { elencaReparti, leggiReparto } from './impostazioni.ts'
+import { elencaFoto, fotoPrincipali } from './foto.ts'
 import { aggiornaConVersione, controllaVersioni, creaIdempotente, eliminaConVersione, incrementaVersione } from './versioni.ts'
 
 export function elencaPiatti(db: Db, ricerca?: string): RiepilogoPiatto[] {
-  return repo.elencaPiatti(db, ricerca)
+  const principali = fotoPrincipali(db)
+  return repo.elencaPiatti(db, ricerca).map((p) => ({ ...p, fotoPrincipale: principali.get(p.id) ?? null }))
 }
 
 export function leggiPiatto(db: Db, id: string): DettaglioPiatto {
   return lettura(db, () => {
     const p = repo.leggiPiatto(db, id)
     if (!p) throw nonTrovato('Piatto')
-    return { ...p, usatoIn: repo.usiPiatto(db, id) }
+    return { ...p, usatoIn: repo.usiPiatto(db, id), foto: elencaFoto(db, id) }
   })
 }
 

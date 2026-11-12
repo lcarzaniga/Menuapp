@@ -35,9 +35,12 @@ test('backup ora, esportazione e ripristino dal backup', async ({ page, request 
   await page.goto('/#/impostazioni/dati')
   await page.getByRole('button', { name: 'Backup ora' }).click()
   await expect(page.getByText(/Backup creato e verificato/)).toBeVisible()
-  const download = page.waitForEvent('download')
-  await page.getByRole('link', { name: /Esporta/ }).click()
-  expect((await download).suggestedFilename()).toMatch(/^menuapp-esportazione-.*\.json$/)
+  const zip = page.waitForEvent('download')
+  await page.getByRole('link', { name: 'Esporta con le foto (ZIP)' }).click()
+  expect((await zip).suggestedFilename()).toMatch(/^menuapp-esportazione-.*\.zip$/)
+  const json = page.waitForEvent('download')
+  await page.getByRole('link', { name: 'Solo dati (JSON)' }).click()
+  expect((await json).suggestedFilename()).toMatch(/^menuapp-esportazione-.*\.json$/)
 
   const revisione = (await apiLeggi<{ revisione: number }>(request, '/revisione')).revisione
   await page.getByRole('button', { name: 'Ripristina' }).first().click()

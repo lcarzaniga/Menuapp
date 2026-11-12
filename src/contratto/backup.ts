@@ -62,4 +62,5 @@ export const SchemaEsitoRipristino = z.object({
   ok: z.literal(true),
   backupPrecedente: z.string(),
   conteggi: z.record(z.string(), z.number()),
+  fotoMancanti: z.array(z.string()),
 })

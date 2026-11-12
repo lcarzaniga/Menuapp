@@ -79,6 +79,9 @@ export function VistaCucina({ piatto, porzioniIniziali, indietro, sottotitolo }:
   return (
     <Pagina titolo={piatto.nome} sottotitolo={sottotitolo} indietro={indietro}>
       <div className="flex flex-col gap-5 text-[1.0625rem]">
+        {'foto' in piatto && Array.isArray(piatto.foto) && piatto.foto[0] ? (
+          <img src={`/api/v1/foto/${(piatto.foto.find((f: { principale: boolean }) => f.principale) ?? piatto.foto[0]).id}`} alt="" className="max-h-56 w-full rounded-3xl object-cover" />
+        ) : null}
         <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-carta p-3">
           <span className="text-sm text-testo-tenue">Porzioni</span>
           {piatto.porzioniBase ? (

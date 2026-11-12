@@ -27,11 +27,13 @@ restino invariati, chiede conferma prima di `tailscale serve`).
 
 ## Dati e backup
 
-- Database: `dati/menuapp.db` (WAL). Backup: `dati/backup/` con file `.json` di verifica.
+- Database: `dati/menuapp.db` (WAL). Foto: `dati/foto/` (file immutabili, nome = id).
+- Backup: `dati/backup/` con file `.json` di verifica; le foto nuove vengono copiate in
+  `dati/backup/foto/` a ogni backup e rimesse al loro posto dopo un ripristino.
 - Conservazione: 14 giornalieri, 8 settimanali (domenica), 5 pre-migrazione, 5
   pre-ripristino, 10 manuali.
-- Database e backup stanno sullo stesso disco: scarica periodicamente un'esportazione
-  JSON (*Impostazioni → Dati → Esporta*) su un altro dispositivo.
+- Database e backup stanno sullo stesso disco: scarica periodicamente l'esportazione
+  con le foto (*Impostazioni → Dati → Esporta con le foto (ZIP)*) su un altro dispositivo.
 
 ## Ripristino
 

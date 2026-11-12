@@ -1,5 +1,5 @@
 // Ricettario: ricerca ed elenco dei piatti (SPEC §5).
-import { ChevronRight, Plus, Search } from 'lucide-react'
+import { ChevronRight, FileUp, Plus, Search } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { usePiatti } from '@/api/query'
@@ -10,11 +10,15 @@ import { Input } from '@/components/ui/campi'
 import { norm } from '@/domain/testo.ts'
 import { formattaCoperti } from '@/domain/porzioni.ts'
 import { cn } from '@/lib/utils'
+import { Pentola } from '@/components/Illustrazioni'
+import { urlFoto } from './FotoPiatto'
+import { ImportaRicetta } from './ImportaRicetta'
 
 export function PaginaRicettario() {
   const piatti = usePiatti()
   const [cerca, setCerca] = useState('')
   const [soloVuoti, setSoloVuoti] = useState(false)
+  const [importa, setImporta] = useState(false)
   const q = norm(cerca)
   const elenco = (piatti.data ?? []).filter((p) => (!q || norm(p.nome).includes(q)) && (!soloVuoti || p.numeroIngredienti === 0))
   const vuoti = (piatti.data ?? []).filter((p) => p.numeroIngredienti === 0).length
@@ -22,11 +26,16 @@ export function PaginaRicettario() {
     <Pagina
       titolo="Ricettario"
       azioni={
-        <Button asChild>
-          <Link to="/ricettario/nuovo">
-            <Plus /> Nuovo
-          </Link>
-        </Button>
+        <>
+          <Button variante="contorno" onClick={() => setImporta(true)}>
+            <FileUp /> Importa
+          </Button>
+          <Button asChild>
+            <Link to="/ricettario/nuovo">
+              <Plus /> Nuovo
+            </Link>
+          </Button>
+        </>
       }
     >
       <div className="relative mb-3">
@@ -56,9 +65,16 @@ export function PaginaRicettario() {
         <ul className="flex flex-col gap-2">
           {elenco.map((p) => (
             <li key={p.id}>
-              <Link to={`/ricettario/${p.id}`} className="flex items-center gap-3 rounded-xl border border-bordo bg-carta px-4 py-3 hover:bg-tenue/60">
+              <Link to={`/ricettario/${p.id}`} className="flex items-center gap-3 rounded-2xl border border-bordo/70 bg-carta p-2 pr-4 shadow-carta hover:bg-tenue/60">
+                {p.fotoPrincipale ? (
+                  <img src={urlFoto(p.fotoPrincipale)} alt="" loading="lazy" className="size-16 shrink-0 rounded-xl object-cover" />
+                ) : (
+                  <span className="flex size-16 shrink-0 items-center justify-center rounded-xl bg-tenue/70">
+                    <Pentola className="h-12 w-auto opacity-80" />
+                  </span>
+                )}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{p.nome}</p>
+                  <p className="titolo truncate text-lg font-semibold">{p.nome}</p>
                   <p className="mt-0.5 flex flex-wrap gap-1.5 text-xs text-testo-tenue">
                     {p.portataSuggerita ? <span>{p.portataSuggerita}</span> : null}
                     {p.porzioniBase ? <span>per {formattaCoperti(p.porzioniBase)}</span> : <span>porzioni da indicare</span>}
@@ -72,6 +88,7 @@ export function PaginaRicettario() {
           ))}
         </ul>
       )}
+      <ImportaRicetta aperta={importa} onCambia={setImporta} />
     </Pagina>
   )
 }

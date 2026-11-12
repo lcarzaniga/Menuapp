@@ -41,11 +41,15 @@ type Metodo = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
 export async function richiesta<T>(metodo: Metodo, percorso: string, corpo?: unknown, schema?: z.ZodType<T>): Promise<T> {
   let risposta: Response
+  const binario = corpo instanceof Blob
   try {
     risposta = await fetch(`${PREFISSO_API}${percorso}`, {
       method: metodo,
-      headers: corpo === undefined ? { accept: 'application/json' } : { accept: 'application/json', 'content-type': 'application/json' },
-      body: corpo === undefined ? undefined : JSON.stringify(corpo),
+      headers:
+        corpo === undefined
+          ? { accept: 'application/json' }
+          : { accept: 'application/json', 'content-type': binario ? (corpo as Blob).type : 'application/json' },
+      body: corpo === undefined ? undefined : binario ? (corpo as Blob) : JSON.stringify(corpo),
       cache: 'no-store',
     })
   } catch {
@@ -84,6 +88,8 @@ export const api = {
   leggi: <T>(percorso: string, schema?: z.ZodType<T>) => richiesta<T>('GET', percorso, undefined, schema),
   crea: <T>(percorso: string, corpo: unknown) => richiesta<T>('POST', percorso, corpo),
   modifica: <T>(percorso: string, corpo: unknown) => richiesta<T>('PUT', percorso, corpo),
+  /** Carica un file (foto): il corpo è il file stesso, con il suo tipo. */
+  file: <T>(metodo: 'POST' | 'PUT', percorso: string, dati: Blob) => richiesta<T>(metodo, percorso, dati),
   elimina: <T>(percorso: string, versione?: number) =>
     richiesta<T>('DELETE', versione === undefined ? percorso : `${percorso}${percorso.includes('?') ? '&' : '?'}versione=${versione}`),
 }

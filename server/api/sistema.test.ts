@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { SchemaErrore, SchemaSalute } from '../../src/contratto/comune.ts'
 import { SchemaImpostazioni, SchemaReparto } from '../../src/contratto/impostazioni.ts'
+import { ultimaVersione } from '../db/migrazioni/esegui.ts'
 import { appDiProva, type AppDiProva, ORIGINE_PROVA } from '../prova.ts'
 
 let t: AppDiProva
@@ -16,7 +17,7 @@ describe('salute e revisione', () => {
     const r = await t.leggi('/api/v1/salute')
     expect(r.statusCode).toBe(200)
     const s = SchemaSalute.parse(corpo(r))
-    expect(s.versioneSchema).toBe(1)
+    expect(s.versioneSchema).toBe(ultimaVersione())
     expect(r.headers['cache-control']).toBe('no-store')
     expect(r.headers['x-content-type-options']).toBe('nosniff')
   })

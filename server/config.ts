@@ -22,6 +22,7 @@ export interface Config {
   cartellaDati: string
   percorsoDb: string
   cartellaBackup: string
+  cartellaFoto: string
   cartellaStatici: string | null
   origini: string[]
   rilascio: string
@@ -42,6 +43,7 @@ export function leggiConfig(env: NodeJS.ProcessEnv = process.env): Config {
     cartellaDati,
     percorsoDb: resolve(cartellaDati, 'menuapp.db'),
     cartellaBackup: resolve(cartellaDati, 'backup'),
+    cartellaFoto: resolve(cartellaDati, 'foto'),
     cartellaStatici: e.MENUAPP_STATICI ? resolve(e.MENUAPP_STATICI) : null,
     origini: e.MENUAPP_ORIGINI.split(',').map((s) => s.trim()).filter(Boolean),
     rilascio: e.MENUAPP_RILASCIO ?? 'sviluppo',

@@ -6,6 +6,9 @@ import { revisione } from './db/repo/meta.ts'
 import { type Contesto } from './api/aiuti.ts'
 import { registraRotte } from './api/rotte.ts'
 import { ErroreApi } from './servizi/errori.ts'
+import { LIMITE_BYTE_FOTO, TIPI_FOTO } from '../src/contratto/foto.ts'
+
+const RE_ROTTE_FOTO = /^\/api\/v1\/(piatti\/[^/]+\/foto|foto\/[^/]+\/file)$/
 
 const METODI_SCRITTURA = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 const LIMITE_CORPO = 1024 * 1024
@@ -63,7 +66,8 @@ export async function costruisciApp(ctx: Contesto, opzioni: { log?: boolean; lan
     }
     if (req.method !== 'DELETE' || req.headers['content-length']) {
       const tipo = (req.headers['content-type'] ?? '').split(';')[0]?.trim()
-      if (tipo !== 'application/json') {
+      const immagine = RE_ROTTE_FOTO.test(percorso) && (TIPI_FOTO as readonly string[]).includes(tipo ?? '')
+      if (tipo !== 'application/json' && !immagine) {
         return reply.code(415).send(corpoErrore('tipo_non_supportato', 'Le scritture richiedono un corpo JSON'))
       }
     }
@@ -101,6 +105,7 @@ export async function costruisciApp(ctx: Contesto, opzioni: { log?: boolean; lan
     reply.code(404).send(corpoErrore('non_trovato', `Risorsa non trovata: ${req.method} ${req.url.split('?')[0]}`))
   })
 
+  app.addContentTypeParser([...TIPI_FOTO], { parseAs: 'buffer', bodyLimit: LIMITE_BYTE_FOTO }, (_req, corpo, fatto) => fatto(null, corpo))
   registraRotte(app, ctx)
 
   if (ctx.config.cartellaStatici) {

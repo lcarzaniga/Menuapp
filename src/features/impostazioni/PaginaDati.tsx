@@ -1,6 +1,8 @@
 // Impostazioni → Dati: stato del server, backup, esportazione, ripristino (SPEC §11, F10).
 import { AlertTriangle, CheckCircle2, Database, Download, HardDriveDownload, RotateCcw, Upload } from 'lucide-react'
+import { strFromU8, unzipSync } from 'fflate'
 import { useRef, useState } from 'react'
+import { tipoDaNome } from '@/lib/immagini'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import { useSalute, useStatoBackup } from '@/api/query'
@@ -54,12 +56,28 @@ export function PaginaDati() {
   const [conferma, setConferma] = useState('')
   const [verifica, setVerifica] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  // Foto di un'esportazione ZIP, da rimettere sul server dopo il ripristino.
+  const fotoZip = useRef<Record<string, Uint8Array>>({})
 
   const backupOra = useScrittura(() => api.crea<InfoBackupApi>('/backup', {}), {
     successo: (b) => `Backup creato e verificato (${dimensione(b.byte)})`,
   })
   const esegui = useScrittura(
-    (r: RiepilogoRipristino) => api.crea<{ backupPrecedente: string }>('/ripristino/esegui', { token: r.token, conferma: FRASE_CONFERMA_RIPRISTINO }),
+    async (r: RiepilogoRipristino) => {
+      const esito = await api.crea<{ backupPrecedente: string; fotoMancanti: string[] }>('/ripristino/esegui', { token: r.token, conferma: FRASE_CONFERMA_RIPRISTINO })
+      let assenti = 0
+      for (const id of esito.fotoMancanti) {
+        const nome = Object.keys(fotoZip.current).find((k) => k.startsWith(`foto/${id}.`))
+        if (!nome) {
+          assenti++
+          continue
+        }
+        await api.file('PUT', `/foto/${id}/file`, new Blob([fotoZip.current[nome]! as Uint8Array<ArrayBuffer>], { type: tipoDaNome(nome) }))
+      }
+      fotoZip.current = {}
+      if (assenti) toast.warning(`${assenti} foto non disponibili: le ricette restano, senza quelle immagini`)
+      return esito
+    },
     {
       successo: 'Ripristino completato',
       dopo: () => {
@@ -93,10 +111,19 @@ export function PaginaDati() {
       return
     }
     let contenuto: unknown
+    fotoZip.current = {}
     try {
-      contenuto = JSON.parse(await file.text())
-    } catch {
-      toast.error('Il file non è un JSON valido')
+      const byte = new Uint8Array(await file.arrayBuffer())
+      if (byte[0] === 0x50 && byte[1] === 0x4b) {
+        const zip = unzipSync(byte)
+        if (!zip['esportazione.json']) throw new Error('Nel file ZIP manca esportazione.json')
+        contenuto = JSON.parse(strFromU8(zip['esportazione.json']))
+        fotoZip.current = Object.fromEntries(Object.entries(zip).filter(([k]) => k.startsWith('foto/')))
+      } else {
+        contenuto = JSON.parse(strFromU8(byte))
+      }
+    } catch (e) {
+      toast.error(e instanceof Error && e.message.includes('esportazione.json') ? e.message : 'Il file non è un\'esportazione valida (JSON o ZIP)')
       return
     }
     await verificaSorgente({ origine: 'file', contenuto })
@@ -218,14 +245,19 @@ export function PaginaDati() {
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             <Button asChild variante="contorno">
+              <a href="/api/v1/esportazione?foto=1" download onClick={() => setTimeout(() => void stato.refetch(), 1500)}>
+                <Download /> Esporta con le foto (ZIP)
+              </a>
+            </Button>
+            <Button asChild variante="fantasma">
               <a href="/api/v1/esportazione" download onClick={() => setTimeout(() => void stato.refetch(), 1500)}>
-                <Download /> Esporta (JSON)
+                <Download /> Solo dati (JSON)
               </a>
             </Button>
             <Button variante="contorno" disabled={!puoScrivere || verifica} onClick={() => fileRef.current?.click()}>
               <Upload /> {verifica ? 'Verifica in corso…' : 'Ripristina da file…'}
             </Button>
-            <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={(e) => void daFile(e.target.files?.[0])} />
+            <input ref={fileRef} type="file" accept="application/json,.json,application/zip,.zip" className="hidden" onChange={(e) => void daFile(e.target.files?.[0])} />
           </CardContent>
         </Card>
       </div>

@@ -73,3 +73,12 @@ permessi: Loris la esegue con `! comando`.
 - Da fare: rilascio (merge su main con autorizzazione; Loris rilancia `installa-servizio.sh`
   per aggiungere `MENUAPP_PORTA_LAN` all'unità).
 - Aperto: standard di importazione ricette con foto (proposta da definire con Loris).
+
+## In corso (branch `import-ricette`, non ancora su `main` né in produzione)
+
+- Formato ricetta v1 (`docs/FORMATO-RICETTA.md`): pacchetto con foto, JSON, scrittura a mano.
+- Foto dei piatti (max 10, ridotte a 1600 px), galleria e principale, esportazione della
+  ricetta, condivisione come testo, importazione con anteprima, esportazione dati ZIP con
+  foto e ripristino che rimette le foto.
+- Migrazione `0002_foto.sql`: in produzione parte all'avvio del nuovo rilascio, con backup
+  pre-migrazione automatico (serve autorizzazione: database con dati reali).

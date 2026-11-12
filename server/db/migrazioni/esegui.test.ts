@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { elencaBackup } from '../../backup/backup.ts'
@@ -31,9 +31,14 @@ function preparaCartella() {
 function migrazioniConExtra(cartella: string, sqlExtra: string): string {
   const dir = join(cartella, 'migrazioni')
   mkdirSync(dir)
-  copyFileSync(join(CARTELLA_MIGRAZIONI, '0001_iniziale.sql'), join(dir, '0001_iniziale.sql'))
-  writeFileSync(join(dir, '0002_prova.sql'), sqlExtra)
+  const reali = readdirSync(CARTELLA_MIGRAZIONI).filter((f) => f.endsWith('.sql'))
+  for (const f of reali) copyFileSync(join(CARTELLA_MIGRAZIONI, f), join(dir, f))
+  writeFileSync(join(dir, nomeProva()), sqlExtra)
   return dir
+}
+
+function nomeProva(): string {
+  return `${String(ultimaVersione() + 1).padStart(4, '0')}_prova.sql`
 }
 
 describe('migrazioni', () => {
@@ -63,8 +68,8 @@ describe('migrazioni', () => {
     eseguiSeed(db)
     const dir = migrazioniConExtra(c.cartella, 'ALTER TABLE eventi ADD COLUMN prova TEXT;')
     const esito = await applicaMigrazioni(db, { cartellaBackup: c.backup, cartellaMigrazioni: dir })
-    expect(esito.versioneDopo).toBe(2)
-    expect(esito.backup).toMatch(/^pre-migrazione-.*-v1\.db$/)
+    expect(esito.versioneDopo).toBe(ultimaVersione() + 1)
+    expect(esito.backup).toMatch(new RegExp(`^pre-migrazione-.*-v${ultimaVersione()}\\.db$`))
     const backup = await elencaBackup(c.backup)
     expect(backup).toHaveLength(1)
     expect(backup[0]?.verificato).toBe(true)
@@ -83,7 +88,7 @@ describe('migrazioni', () => {
     await expect(applicaMigrazioni(db, { cartellaBackup: c.backup, cartellaMigrazioni: dir })).rejects.toThrow(
       ErroreMigrazione,
     )
-    expect(versioneSchema(db)).toBe(1)
+    expect(versioneSchema(db)).toBe(ultimaVersione())
     expect(tutti(db, "SELECT name FROM pragma_table_info('eventi') WHERE name = 'prova'")).toEqual([])
     expect(uno<{ n: number }>(db, 'SELECT count(*) AS n FROM reparti')?.n).toBe(14)
     expect((await elencaBackup(c.backup)).map((b) => b.tipo)).toEqual(['pre-migrazione'])
@@ -102,7 +107,7 @@ describe('migrazioni', () => {
     const db = c.apri()
     const dir = migrazioniConExtra(c.cartella, 'CREATE TABLE x (a INTEGER) STRICT;')
     await applicaMigrazioni(db, { cartellaBackup: c.backup, cartellaMigrazioni: dir })
-    writeFileSync(join(dir, '0002_prova.sql'), 'CREATE TABLE x (a INTEGER, b INTEGER) STRICT;')
+    writeFileSync(join(dir, nomeProva()), 'CREATE TABLE x (a INTEGER, b INTEGER) STRICT;')
     await expect(applicaMigrazioni(db, { cartellaBackup: c.backup, cartellaMigrazioni: dir })).rejects.toThrow(
       /modificata/,
     )
