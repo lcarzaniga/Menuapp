@@ -2,301 +2,272 @@
 
 | | |
 |---|---|
-| Riferimento | `docs/SPEC.md` §12–§17 (versione 1.2) |
+| Riferimento | `docs/SPEC.md` v2.0, §6, §11–§17 |
 | Branch | `m0-fondamenta` (da `main`, dopo il merge di `docs-spec`) |
-| Periodo | 13–17 novembre 2026 |
+| Periodo | 13–19 novembre 2026 |
 | Uscita | `v0.1.0` in produzione sul server: https://loris-srv01.dala-tortoise.ts.net:9870/ (solo tailnet) |
 
 ## Obiettivo
 
-Un'app vuota ma completa nelle fondamenta: si installa, funziona offline, naviga fra
-tutte le schermate (segnaposto), ha il database con lo schema definitivo v1, salva e
-ripristina i dati, avvisa degli aggiornamenti, è servita in produzione dal server Debian
-(servizio systemd sulla porta 9870, HTTPS via Tailscale) ed è coperta da test. Dopo M0 ogni
-milestone aggiunge funzioni senza toccare l'infrastruttura.
+Un'applicazione senza funzioni di dominio visibili, ma con tutte le fondamenta definitive:
+database SQLite centrale con schema completo, vincoli e migrazioni; backend Fastify con
+contratto condiviso, controllo delle versioni e revisione globale; backup automatici e
+manuali, esportazione e ripristino; frontend installabile che naviga fra le schermate
+(segnaposto), mostra lo stato del server e passa in sola lettura quando il server non è
+raggiungibile; servizio di produzione con systemd e `tailscale serve`; test a ogni
+livello. Dopo M0 ogni milestone aggiunge rotte, servizi e schermate sulle tabelle già
+pronte, senza toccare l'infrastruttura.
 
-**Priorità assolute**, in quest'ordine: (1) schema e apertura sicura del database,
-(2) persistenza, (3) backup e ripristino, (4) offline e aggiornamenti, (5) navigazione.
-Il servizio di produzione (T13) è necessario per installare la PWA sui dispositivi.
-Tailwind/shadcn, CI e documentazione sono di supporto: si fanno nella misura minima che
-serve a queste priorità.
+**Priorità assolute**, in quest'ordine:
+1. schema SQLite, migrazioni e vincoli;
+2. backend con contratto, errori e concorrenza;
+3. backup, esportazione e ripristino;
+4. servizio di produzione (systemd, `tailscale serve`, rilasci);
+5. frontend: connessione e sola lettura, PWA, navigazione.
 
-**Nessuna anticipazione**: in M0 non si scrive codice di eventi, menù, ricettario,
-catalogo, parser, spesa, piano, stampa, né interfacce di impostazioni diverse da
-*Impostazioni → Dati*. Gli schemi zod di tutte le entità sono l'unica eccezione, perché
-servono a validare i backup. Rinviati da M0: preferenza manuale del tema (M0 segue il
-tema di sistema), banner «Installa l'app» e `shortcuts` del manifest (M4).
+**Nessuna anticipazione**: in M0 non si scrivono rotte, servizi o schermate di eventi,
+menù, ricettario, catalogo, parser, spesa, piano e stampa. Lo **schema** di tutte le
+tabelle invece è completo fin da `0001_iniziale.sql`, perché cambiarlo dopo costa di più.
+Le API di M0 sono solo: salute, revisione, impostazioni (lettura e scrittura, prima
+consumatrice del controllo di versione), reparti (lettura), backup, esportazione,
+ripristino. Interfacce di M0: solo *Impostazioni → Dati* e segnaposto.
 
-## Punto di partenza (già presente su `main`)
+## Punto di partenza (su `main`)
 
-Vite 8.3, React 19.3, TypeScript 7.0.2, Dexie 4.4.7, vite-plugin-pwa 2.0
-(`registerType: 'autoUpdate'`, da cambiare), icone PWA segnaposto, server di sviluppo su
-`127.0.0.1:5173`, `tailscale serve :8443`, `CLAUDE.md`, oxlint.
+Vite 8.3, React 19.3, TypeScript 7.0.2, vite-plugin-pwa 2.0, oxlint, icone segnaposto,
+Vite di sviluppo su `127.0.0.1:5173` con `tailscale serve :8443`, `CLAUDE.md`.
 
-Da **eliminare** in M0 (decisione del 12/11: niente GitHub Pages): `base: '/Menuapp/'`
-in `vite.config.ts`, workflow `.github/workflows/deploy.yml`, riferimenti a Pages in
-`README.md` e `CLAUDE.md`. Il sito Pages già pubblicato resta online finché Loris non
-disattiva Pages nelle impostazioni del repository.
+Da **eliminare** in M0:
+- la dipendenza `dexie` (SQLite sul server è l'unica fonte di verità);
+- `base: '/Menuapp/'`, `.github/workflows/deploy.yml`, riferimenti a Pages in `README.md`
+  e `CLAUDE.md`;
+- `registerType: 'autoUpdate'` (diventa `prompt`).
+
+Verifiche già fatte il 12/11 (SPEC §12.1): Node 24.18 esegue TypeScript senza
+compilazione; `node:sqlite` (SQLite 3.53.1) supporta FK, `STRICT`, WAL, aggiornamento
+condizionato sulla versione e `backup()` online; porta 9870 libera; *linger* attivo.
 
 ## Attività
 
-Ogni attività termina con un commit (o pochi) sul branch e con `npm run check` verde
-dove già disponibile.
+Ogni attività termina con commit sul branch e `npm run check` verde da T2 in poi.
 
-### T1 — Toolchain e TypeScript
-- `tsconfig.app.json`: `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`,
-  alias `@/*`; stesso alias in `vite.config.ts`.
-- Script: `typecheck` (`tsc -b`), `test`, `test:watch`, `test:e2e`, `check`
-  (lint + typecheck + test + build).
-- Verifica TypeScript 7: compilazione di un file con alias, JSX, `import type`,
-  tipi di `virtual:pwa-register/react` e di Dexie.
-- **Dipende da**: nulla. **Test**: `npm run typecheck` verde; un errore volutamente
-  introdotto viene segnalato.
-- **Accettazione**: `npm run check` esiste e passa. Se TypeScript 7 fallisce su un
-  punto bloccante → `typescript@~5.9` e nota nel registro di SPEC.
+### T1 — Toolchain client/server
+- Rimozione di `dexie`, `base: '/Menuapp/'`, `deploy.yml`.
+- Struttura di SPEC §12.2.
+- `tsconfig`: progetti `app` (src, DOM) e `server` (server + src/domain + src/contratto,
+  tipi di Node), entrambi `strict`, `noUncheckedIndexedAccess`, `erasableSyntaxOnly`,
+  `allowImportingTsExtensions`; alias `@/` solo nel frontend (il server usa percorsi
+  relativi con estensione `.ts`, eseguibili da Node).
+- Script: `dev` (Vite), `dev:server` (`node --watch server/main.ts` su 9871),
+  `typecheck`, `lint`, `test`, `test:e2e`, `check`.
+- Vite: proxy `/api` → `http://127.0.0.1:9871`.
+- `.gitignore`: `dati/`, `dati-sviluppo/`, `rilasci/`.
+- **Dipende da**: nulla. **Accettazione**: `node server/main.ts` parte come scheletro;
+  `npm run typecheck` verde su client e server.
 
-### T2 — Test unitari (Vitest)
-- Installazione: `vitest`, `happy-dom`, `@testing-library/react`,
-  `@testing-library/jest-dom`, `fake-indexeddb`.
-- `vitest.config.ts` con due progetti: `dominio` (Node: `src/domain`, `src/db`) e `ui`
-  (happy-dom: `src/**/*.test.tsx`).
-- Primo test: `domain/tempo.ts` (date locali, `oggiISO`, aggiunta giorni).
-- **Dipende da**: T1. **Accettazione**: `npm test` esegue entrambi i progetti.
+### T2 — Infrastruttura di test
+- Vitest con progetti `dominio` (Node), `server` (Node, cartelle temporanee per SQLite),
+  `ui` (happy-dom).
+- Aiutanti: `dbDiProva()` (cartella temporanea + migrazioni), `appDiProva()` (Fastify
+  con `inject`), pulizia automatica.
+- Test di architettura degli import (SPEC §12.3).
+- **Dipende da**: T1. **Accettazione**: un test per progetto verde; il test di
+  architettura fallisce su un import vietato inserito apposta.
 
-### T3 — Tailwind CSS 4 e shadcn/ui
-- `tailwindcss` + `@tailwindcss/vite`; `src/styles/index.css` con token del tema
-  (chiaro/scuro), colore d'accento della PWA, `@media print` di base.
-- `npx shadcn@latest init` (verifica funzionamento con TypeScript 7), poi **solo** i
-  componenti usati in M0: button, card, badge, alert-dialog, sonner (toast). Gli altri
-  si aggiungono nelle milestone che li usano.
-- Tema chiaro/scuro che segue il sistema (`prefers-color-scheme`); la preferenza manuale
-  arriva con le impostazioni (M1 o successive).
-- **Dipende da**: T1. **Test**: componente di prova renderizzato in happy-dom.
-  **Accettazione**: pulsante e dialog funzionano a 360 px, in chiaro e scuro.
+### T3 — Database: connessione, schema, migrazioni, seed (priorità 1)
+- `server/db/connessione.ts`: apertura con i PRAGMA di SPEC §6.3, `transazione(fn)` con
+  `BEGIN IMMEDIATE`, chiusura con checkpoint.
+- `server/db/migrazioni/0001_iniziale.sql`: **tutte** le tabelle, gli indici e i vincoli
+  di SPEC §6.3; elenco delle unità preso dal catalogo di dominio (`src/domain/unita.ts`,
+  solo codici e famiglie in M0; formattazione e riconoscimento in M2) e fissato nel file.
+- `esegui.ts`: procedura di SPEC §6.5 (versione, impronte dei file, backup
+  pre-migrazione verificato, transazioni, `foreign_key_check`, codice 78).
+- Seed `seed_impostazioni` (SPEC §6.6); contatore `meta.revisione`.
+- Repository `impostazioni`, `reparti` (lettura), `meta`.
+- **Dipende da**: T2. **Test** (SQLite reale): vuoto → v1; seconda esecuzione senza
+  effetti; file di migrazione alterato → blocco; `user_version` maggiore → codice 78;
+  migrazione di prova `0002` che fallisce → v1 intatta e backup pre-migrazione presente;
+  **ogni** `CHECK`, FK, unicità e `ON DELETE` dello schema violato o esercitato almeno
+  una volta, anche per le tabelle usate dalle milestone successive; seed idempotente.
+- **Accettazione**: tabella dei vincoli di SPEC §6.4 coperta da test; `dati-sviluppo/`
+  creato al primo avvio.
 
-### T4 — Navigazione e layout
-- `react-router` 8 con `createHashRouter`; rotte di SPEC §5 con pagine segnaposto e
-  titolo; pagina «Non trovata»; `errorElement` con pagina d'errore e link a
-  *Impostazioni → Dati*.
-- `AppShell`: barra inferiore (< 768 px) e laterale (≥ 768 px) con *Eventi, Ricettario,
-  Ingredienti, Impostazioni*; area sicura (`env(safe-area-inset-*)`); titolo pagina in
-  `document.title`.
-- **Dipende da**: T3. **Test**: componente — navigazione fra le quattro sezioni;
-  e2e in T9. **Accettazione**: tutte le rotte raggiungibili, back del telefono coerente,
-  ricarica su una rotta profonda funziona.
+### T4 — Backend: app, contratto, errori, sicurezza (priorità 2)
+- `server/config.ts` (variabili di SPEC §14.2 validate con zod).
+- `server/app.ts`: Fastify, limiti del corpo, controllo di `Content-Type` e `Origin`
+  sulle scritture (SPEC §12.7), formato d'errore unico, 503 durante la manutenzione, file
+  statici con le intestazioni di SPEC §14.1 (solo se `MENUAPP_STATICI` è impostato).
+- `src/contratto/`: schemi comuni (errore, versione, revisione), `salute`,
+  `impostazioni`, `reparti`.
+- Rotte M0: `GET /salute`, `GET /revisione`, `GET|PUT /impostazioni`, `GET /reparti`.
+- `server/main.ts`: avvio e arresto ordinato (SPEC §14.2).
+- **Dipende da**: T3. **Test** (`inject`): ogni codice d'errore di SPEC §12.4 prodotto
+  almeno una volta; risposte conformi al contratto; scrittura senza `Origin` → 403,
+  senza JSON → 415; intestazioni dei file statici.
+- **Accettazione**: `/api/v1/salute` risponde su `127.0.0.1:9871` in sviluppo.
 
-### T5 — Database: schema v1, seed, apertura sicura (priorità 1)
-- `src/db/db.ts`: classe Dexie tipizzata con tutte le tabelle di SPEC §6.3. La classe
-  **non** viene istanziata né aperta all'import del modulo: la crea solo
-  `apriDatabase()`, dopo i controlli. Nessun altro modulo apre `menuapp` direttamente.
-- Tipi delle entità in `src/domain/tipi.ts`; schemi zod in `src/domain/schemi.ts`.
-- `src/domain/id.ts` (`nuovoId()`), repository `settings` e `meta` (solo lettura e
-  scrittura generica, nessuna interfaccia di modifica).
-- Seed idempotente (`meta.seedImpostazioni`): impostazioni predefinite (portate,
-  coefficiente 0,5, reparti di SPEC §7.6 con id stabili, promemoria 7 giorni, tema
-  sistema). Il catalogo ingredienti arriva in M2 con `meta.seedCatalogo`.
-- `src/db/sicurezza.ts`: database `menuapp-sicurezza` con schema proprio,
-  `salvaCopia(motivo, contenuto)`, `elencaCopie()`, ultime 3.
-- `apriDatabase()` secondo SPEC §11.4, passi 1–7, verificati il 12/11 con Dexie 4.4.7 e
-  Chrome 157 (prova isolata):
-  1. `Dexie.exists` → se assente, apertura normale + seed;
-  2. versione installata da `indexedDB.databases()` (nativa / 10), senza aprire;
-  3. uguale → apertura normale; maggiore → schermata «Ricarica»;
-  4. minore → apertura **dinamica** (`new Dexie('menuapp')` senza `version()`), lettura
-     di tutte le tabelle, `close()`;
-  5. copia in `menuapp-sicurezza`; se fallisce, niente migrazione;
-  6. apertura tipizzata con gli `upgrade`;
-  7. `versionchange` → `close()` + avviso; `blocked` → avviso.
-  Errore in qualunque passo → schermata con «Scarica i dati» e «Riprova».
-- **Dipende da**: T2. **Test** (fake-indexeddb): seed eseguito una sola volta; seed non
-  sovrascrive impostazioni modificate; DB v1 di prova → codice con v2 di prova: copia
-  creata **prima** dell'upgrade e contenente i dati v1; copia fallita (errore simulato)
-  → nessun upgrade; upgrade che lancia un errore → dati v1 intatti; limite di 3 copie;
-  DB inesistente → nessuna copia. Gli stessi scenari girano in Chrome reale in T9.
-- **Accettazione**: in *Impostazioni → Dati* compaiono versione dello schema e
-  conteggi delle tabelle letti dal DB; scenari di migrazione verdi in Node e in Chrome.
+### T5 — Concorrenza e revisione (priorità 2)
+- Aiutanti di repository: `aggiornaConVersione()`, riordino con elenco di versioni,
+  creazione idempotente con id del client (struttura generica per M1+).
+- Incremento di `meta.revisione` in ogni transazione di scrittura; intestazione
+  `X-Revisione`.
+- Prima applicazione: `PUT /impostazioni` (coefficiente e portate predefinite con ordine).
+- **Dipende da**: T4. **Test**: due client sulla stessa versione → 200 e 409 con
+  `attuale`; riordino con una versione errata → nessuna modifica; ripetizione dopo una
+  risposta persa riconosciuta; revisione incrementata solo dalle scritture riuscite.
+- **Accettazione**: criterio G3 di SPEC §16 dimostrato sulle impostazioni.
 
-### T6 — Backup e ripristino (priorità 3)
-- `src/db/backup/canonico.ts`: serializzazione canonica e impronta SHA-256
-  (`crypto.subtle`) secondo SPEC §11.1.
-- `esporta.ts`: lettura in una transazione, esclusione delle chiavi `meta` del
-  dispositivo, impronta, nome file con data; `ultimoBackupAt` aggiornato **dopo** il
-  calcolo, alla consegna del file (download o condivisione).
-- `valida.ts`: intestazione → **impronta sul file originale** → migrazione del formato
-  → zod → integrità referenziale; errori leggibili in italiano.
-- `migra.ts`: catena `migraBackup` (vuota per v1, struttura pronta).
-- `ripristina.ts`: **copia di sicurezza obbligatoria** in `menuapp-sicurezza` (se
-  fallisce, stop), poi transazione unica `clear` + `bulkAdd`, poi `ultimoBackupAt` e
-  `ultimaModificaAt` = `esportatoAt`.
-- Interfaccia in *Impostazioni → Dati*: esporta (download; condivisione file se
-  disponibile); ripristina (scelta file → riepilogo → conferma → copia di sicurezza →
-  ripristino → ricarica), con pulsante facoltativo «Scarica anche i dati attuali»;
-  elenco delle copie di sicurezza con *Scarica* e *Ripristina*.
-- **Dipende da**: T5. **Test**: ida e ritorno con dati di prova di tutte le tabelle
-  (impronta identica); due esportazioni consecutive → stessa impronta; file
-  reindentato → impronta valida; chiavi `meta` del dispositivo assenti dal file;
-  impronta errata → avviso, prosecuzione solo con conferma; rifiuto di: JSON non
-  valido, formato estraneo, schema futuro, enum sconosciuto, riferimento obbligatorio
-  rotto; copia di sicurezza che fallisce → nessun ripristino; ripristino che fallisce a
-  metà non altera i dati.
-- **Accettazione**: criteri «Backup» di SPEC §16.
+### T6 — Backup, esportazione e ripristino (priorità 3)
+- `server/backup/`: creazione con verifica e rotazione (SPEC §11.1–11.2), esportazione
+  JSON canonica con impronta (§11.3), ripristino in due passi con database temporaneo,
+  backup pre-ripristino, `ATTACH` e transazione unica (§11.4), `cli.ts` per il timer.
+- Rotte: `GET|POST /backup`, `GET /backup/:nome`, `GET /esportazione`,
+  `POST /ripristino/verifica`, `POST /ripristino/esegui`.
+- `scripts/ripristino-emergenza.sh` e `docs/OPERAZIONI.md` (§11.5).
+- **Dipende da**: T3, T4. **Test** (SQLite reale): backup con scritture concorrenti in
+  corso, anche da `cli.ts` in un processo separato; file corrotto scartato; rotazione per
+  tipo; esportazione → ripristino → stessa impronta; due esportazioni consecutive →
+  stessa impronta; impronta errata → avviso; schema futuro → rifiuto; riga non valida o
+  FK rotta → rifiuto senza modifiche; errore a metà ripristino → dati invariati; backup
+  pre-ripristino fallito → nessun ripristino; token scaduto o riusato → rifiuto; nome di
+  backup con percorso → 400.
+- **Accettazione**: criterio G5 di SPEC §16 in ambiente di test.
 
-### T7 — Persistenza e promemoria backup
-- `src/pwa/persistenza.ts`: `persisted()`, `persist()`, `estimate()`; richiesta al primo
-  salvataggio di dati; stato e spazio usato in *Impostazioni → Dati*.
-- Banner promemoria (SPEC §11.4) con azione «Esporta ora».
-- Repository che aggiornano `meta.ultimaModificaAt` (inizialmente solo `settings`).
-- **Dipende da**: T5, T6. **Test**: logica del promemoria come funzione pura
-  (`serveBackup(ultimaModifica, ultimoBackup, giorni, ora)`).
-- **Accettazione**: in Chrome Android installato lo stato risulta «persistente».
+### T7 — Frontend base, connessione e sola lettura (priorità 5)
+- Tailwind 4 e shadcn con **solo** i componenti usati: button, card, badge, alert-dialog,
+  dialog, sonner. Tema di sistema (preferenza manuale in M1).
+- `react-router` con `createHashRouter`, rotte di SPEC §5 con segnaposto, `AppShell`
+  (barra inferiore/laterale), pagina d'errore.
+- `src/api/`: client tipizzato sul contratto, mappatura degli errori, TanStack Query,
+  interrogazione della revisione ogni 10 s e al ritorno in primo piano.
+- `src/connessione/`: stati, banner, hook `usaPuoScrivere()`; componente
+  `ConflittoVersione`; bozze dei moduli in `sessionStorage`.
+- *Impostazioni → Dati*: stato del server, versioni, ultimo backup, elenco backup,
+  backup ora, scaricamento `.db`, esportazione JSON, ripristino in due passi con
+  riepilogo e conferma testuale.
+- **Dipende da**: T4, T5, T6. **Test** (`ui`): mappatura degli errori, banner e comandi
+  disattivati, `ConflittoVersione`, bozza conservata.
+- **Accettazione**: con il backend fermo i pulsanti di *Dati* sono disattivati e il
+  banner è visibile; al riavvio tutto torna attivo da solo.
 
-### T8 — PWA: aggiornamenti e offline
-- `registerType: 'prompt'`; componente `AvvisoAggiornamento` con
-  `useRegisterSW`: toast «Nuova versione disponibile — Aggiorna», «Pronta per l'uso
-  offline»; controllo all'avvio, al ritorno in primo piano e ogni ora; pulsante
-  «Verifica aggiornamenti» in *Impostazioni → Dati*.
-- Manifest di SPEC §13 senza `shortcuts` (rinviate a M4, quando le rotte avranno
-  contenuto); `id`, `scope` e `start_url` uguali a `/`; `base: '/'`; `navigateFallback:
-  'index.html'`.
-- Versione app: `define` con `versione package` + hash corto del commit; mostrata in
-  *Impostazioni → Dati* insieme alla versione dello schema.
-- **Dipende da**: T4. **Test**: e2e in T9 (offline, aggiornamento).
-- **Accettazione**: con il rilascio A installato, il rilascio B mostra l'avviso;
-  accettandolo l'app ricarica alla B senza perdere dati.
+### T8 — PWA
+- `registerType: 'prompt'`, solo guscio in cache, `/api/*` escluso dal service worker,
+  manifest di SPEC §13 senza `shortcuts`, avviso di aggiornamento, versione e rilascio
+  mostrati in *Dati*.
+- **Dipende da**: T7. **Test**: e2e in T9.
+- **Accettazione**: app installabile da `:8443` in sviluppo; l'avvio senza server mostra
+  il messaggio dedicato.
 
-### T9 — Test end-to-end (Playwright)
-- `@playwright/test`; `playwright.config.ts` con `channel: 'chrome'` (Chrome 157 di
-  sistema), `webServer` = `vite preview --host 127.0.0.1 --port 4174 --strictPort`,
-  progetti *Pixel 7* e *Desktop Chrome*, base URL `http://127.0.0.1:4174/`.
-- Scenari M0:
-  - avvio e navigazione su tutte le rotte; ricarica su rotta profonda;
-  - backup: ripristino di un **file di prova** (`test/fixture/backup-v1.json`, dati in
-    tutte le tabelle) → esportazione → stessa impronta; file manomesso rifiutato con
-    dati intatti (nessuna interfaccia delle milestone successive necessaria);
-  - apertura sicura in Chrome reale: una pagina di prova crea `menuapp` alla v1 con
-    dati; l'app avviata con una v2 di prova (solo build di test) crea la copia e migra;
-    con un upgrade che fallisce i dati v1 restano intatti;
-  - offline: attesa del service worker, `setOffline(true)`, ricarica, app funzionante;
-  - aggiornamento: due build in cartelle diverse servite in sequenza, comparsa
-    dell'avviso, nessun ricaricamento automatico.
-- **Dipende da**: T4, T6, T8. **Accettazione**: `npm run test:e2e` verde sul server
-  senza scaricare browser.
+### T9 — End-to-end (Playwright)
+- `webServer`: backend su `127.0.0.1:4174` con `MENUAPP_STATICI` = build di prova e
+  `MENUAPP_DATI` temporanea; `channel: 'chrome'`; progetti *Pixel 7* e *Desktop*.
+- Scenari M0 (SPEC §17.5): due contesti che vedono la stessa modifica delle impostazioni
+  entro 15 s (scritta via API, senza interfaccia di M1) e il conflitto; server arrestato →
+  sola lettura → riavvio; backup ora, esportazione, ripristino da JSON e da backup;
+  service worker con `/api` mai in cache; avviso di aggiornamento.
+- **Dipende da**: T7, T8. **Accettazione**: `npm run test:e2e` verde senza scaricare
+  browser.
 
-### T10 — Dismissione di Pages e CI di soli controlli
-- Eliminazione di `.github/workflows/deploy.yml` e di `base: '/Menuapp/'`.
-- Workflow `ci.yml` su push e pull request: `npm ci`, lint, typecheck, test unitari,
-  build. Nessuna pubblicazione.
-- **Dipende da**: T1, T2. **Accettazione**: nessun workflow con permessi `pages` o
-  `id-token`; al primo push autorizzato i controlli risultano verdi su GitHub.
-  Azione di Loris: disattivare Pages in *Settings → Pages* del repository.
+### T10 — CI di soli controlli
+- `ci.yml` su push e pull request: `npm ci`, lint, typecheck, test `dominio`, `server`
+  (SQLite reale in cartella temporanea), `ui`, build. Nessuna pubblicazione.
+- **Dipende da**: T2. **Accettazione**: nessun workflow con permessi `pages`; controlli
+  verdi al primo push autorizzato. Azione di Loris: disattivare Pages su GitHub.
 
-### T11 — Documentazione
-- `README.md`: comandi, sviluppo da PC e Android, test, backup, rilascio e ritorno a un
-  rilascio precedente, URL di produzione, installazione della PWA.
-- `CLAUDE.md`: comandi aggiornati (`check`, `test:e2e`), regole architetturali (SPEC
-  §12.3), regola «niente push/merge senza autorizzazione».
-- `docs/collaudo/M0.md`: lista di controllo manuale.
-- **Dipende da**: tutte. **Accettazione**: un nuovo avvio di sessione può lavorare
-  leggendo solo `CLAUDE.md` e `docs/`.
+### T11 — Servizio di produzione (priorità 4)
+- `scripts/installa-servizio.sh`: crea `menuapp.service`, `menuapp-backup.service`,
+  `menuapp-backup.timer` (SPEC §14.3), **solo** file con prefisso `menuapp`;
+  `daemon-reload`, `enable --now`; propone
+  `tailscale serve --bg --https=9870 http://127.0.0.1:9870` e lo esegue solo con conferma
+  esplicita; registra prima e dopo lo stato di `dailymeals`, `kidscalendar`,
+  `dailymeals-backup.timer`, `apache2` e di `tailscale serve status`, e si ferma
+  segnalando l'anomalia se qualcosa di esterno a Menù & Co. risulta cambiato.
+- `scripts/rilascia.sh` e `scripts/ripristina-rilascio.sh` (SPEC §14.4), compresa la
+  prova del rilascio su una copia del database su `127.0.0.1:9872`.
+- **Dipende da**: T4, T6, T8 (per il primo rilascio completo).
+- **Test**: operativi di SPEC §17.6, eseguiti la prima volta insieme a Loris.
+- **Accettazione**: servizio attivo e abilitato; timer programmato;
+  `https://loris-srv01.dala-tortoise.ts.net:9870/` risponde con certificato valido;
+  `http://192.168.1.160:9870/` non risponde; altri servizi e regola `:8443` invariati.
+  **La prima installazione richiede l'autorizzazione di Loris.**
 
-### T13 — Servizio di produzione sul server (SPEC §14)
-- `scripts/serve.mjs`: server statico senza dipendenze, `127.0.0.1:9870`, radice
-  `rilasci/attuale` risolta a ogni richiesta, intestazioni di cache e sicurezza,
-  protezione dei percorsi, `/__salute` (SPEC §14.2).
-- `scripts/installa-servizio.sh`: scrive `~/.config/systemd/user/menuapp.service`
-  (SPEC §14.3), `daemon-reload`, `enable --now menuapp`; stampa il comando
-  `tailscale serve --bg --https=9870 http://127.0.0.1:9870` e lo esegue **solo** con
-  conferma esplicita. Non tocca altre unità né altre configurazioni di `tailscale serve`
-  (si aggiunge accanto a `:8443`).
-- `scripts/rilascia.sh` e `scripts/ripristina-rilascio.sh` (SPEC §14.4); `rilasci/` in
-  `.gitignore`; `rilascio.json` scritto nella build.
-- Prima installazione: richiede l'autorizzazione di Loris (crea un servizio e una
-  configurazione Tailscale nuovi); nessun riavvio di altri servizi.
-- **Dipende da**: T1 (script), T8 (build PWA definitiva per il primo rilascio).
-- **Test**: unitari di `serve.mjs` (SPEC §17.1) eseguiti da Vitest in Node; controlli
-  automatici di `rilascia.sh` (SPEC §17.3); prova di `systemctl --user kill menuapp` →
-  riavvio automatico entro pochi secondi; `ss -tln` mostra 9870 solo su `127.0.0.1` e
-  sull'indirizzo Tailscale.
-- **Accettazione**: `https://loris-srv01.dala-tortoise.ts.net:9870/` raggiungibile da
-  telefono e PC nel tailnet con certificato valido; `http://192.168.1.160:9870/` non
-  risponde; dailyMeals, sharedKidsCalendar, Apache e la configurazione `:8443`
-  invariati.
+### T12 — Documentazione
+- `README.md` (comandi, sviluppo, test, rilascio, URL, installazione), `CLAUDE.md`
+  (architettura a livelli, regole, niente push/merge/rilasci senza autorizzazione),
+  `docs/OPERAZIONI.md` (servizi, log, backup, ripristino d'emergenza, ritorno a un
+  rilascio), `docs/collaudo/M0.md`.
+- **Dipende da**: tutte. **Accettazione**: una nuova sessione può operare leggendo solo
+  `CLAUDE.md` e `docs/`.
 
-### T12 — Collaudo su Android e rilascio
-- Build di anteprima su `127.0.0.1:4173` + `tailscale serve --https=8444` (temporaneo)
-  per le prove distruttive; chiusura di `:8444` a fine collaudo.
-- Con approvazione: merge su `main`, primo rilascio con `rilascia.sh` (tag locale
-  `v0.1.0`; push solo se autorizzato).
-- Lista di controllo `docs/collaudo/M0.md` sul Galaxy S23 e sul PC, **sull'URL di
-  produzione**: installazione da `:9870`, avvio in modalità aereo e con Tailscale spento,
-  persistenza, backup scaricato e ripristinato, secondo rilascio con avviso di
-  aggiornamento, ritorno al rilascio precedente, tema scuro, tasto indietro, riavvio del
-  server con servizio ripartito da solo.
-- **Dipende da**: T1–T11, T13.
+### T13 — Collaudo e primo rilascio
+- Con autorizzazione: merge su `main`, `rilascia.sh` (tag locale `v0.1.0`).
+- `docs/collaudo/M0.md` su S23, tablet e PC sull'URL di produzione: installazione; stessa
+  modifica vista da due dispositivi; conflitto; Tailscale spento → sola lettura; backup
+  ora, esportazione scaricata sul PC, ripristino; secondo rilascio con avviso di
+  aggiornamento; riavvio del server con servizio e timer ripartiti; backup notturno
+  presente il mattino dopo.
+- **Dipende da**: T1–T12.
 
 ## Ordine di esecuzione e dipendenze
 
 ```
-T1 ─▶ T2 ─▶ T5 (logica) ─▶ T6 (logica) ─▶ T7 (logica) ─┐
- │                                                     ├─▶ interfacce T5–T7 ─┐
- └─▶ T3 ─▶ T4 ─────────────────────────────────────────┘                     │
-                └─▶ T8 ───────────────────────────────────────────────────────┼─▶ T9 ─▶ T13 ─▶ T11 ─▶ T12
- T10 (dopo T2) ────────────────────────────────────────────────────────────────┘
+T1 ─▶ T2 ─▶ T3 ─▶ T4 ─▶ T5 ─▶ T6 ─▶ T7 ─▶ T8 ─▶ T9 ─┐
+       │                       │                     ├─▶ T11 ─▶ T12 ─▶ T13
+       └─▶ T10                 └─────────────────────┘
 ```
-
-Le priorità si riflettono nell'ordine: la **logica** di database, apertura sicura,
-backup e persistenza (con i loro test in Node) viene prima di qualsiasi interfaccia;
-Tailwind/shadcn e navigazione arrivano dopo e servono solo a esporre *Impostazioni →
-Dati* e le rotte segnaposto.
 
 | Giorno | Attività |
 |---|---|
-| 13 nov | T1, T2, T5 (logica e test) |
-| 14 nov | T6, T7 (logica e test) |
-| 15 nov | T3, T4, interfacce di T5–T7 in *Impostazioni → Dati* |
-| 16 nov | T8, T9, T10, T13 (script e test; installazione solo dopo autorizzazione) |
-| 17 nov | T11, T12 (primo rilascio, collaudo) |
+| 13 nov | T1, T2, T3 (schema e migrazioni) |
+| 14 nov | T3 (test dei vincoli), T4 |
+| 15 nov | T5, T6 (backup ed esportazione) |
+| 16 nov | T6 (ripristino), T10, T11 (script, senza installazione) |
+| 17 nov | T7 |
+| 18 nov | T8, T9 |
+| 19 nov | T11 (installazione autorizzata), T12, T13 |
 
 ## Dipendenze da installare (tutte locali al progetto)
 
 | Gruppo | Pacchetti |
 |---|---|
-| Interfaccia | `tailwindcss`, `@tailwindcss/vite`, `radix-ui`, `lucide-react`, `class-variance-authority`, `clsx`, `tailwind-merge`, `tw-animate-css`, `sonner` |
-| Applicazione | `react-router`, `dexie-react-hooks`, `zod` |
-| Test | `vitest`, `happy-dom`, `@testing-library/react`, `@testing-library/jest-dom`, `fake-indexeddb`, `@playwright/test` |
+| Backend | `fastify`, `@fastify/static`, `zod` |
+| Frontend | `react-router`, `@tanstack/react-query`, `tailwindcss`, `@tailwindcss/vite`, `radix-ui`, `lucide-react`, `class-variance-authority`, `clsx`, `tailwind-merge`, `tw-animate-css`, `sonner` |
+| Test | `vitest`, `happy-dom`, `@testing-library/react`, `@testing-library/jest-dom`, `@playwright/test` |
+| Da rimuovere | `dexie` |
 
-Nessuna installazione globale; nessun download di browser (si usa Chrome di sistema).
-Il server di produzione non aggiunge dipendenze: usa solo moduli di Node.
-`shadcn` si esegue con `npx` senza diventare dipendenza.
+SQLite è incluso in Node (`node:sqlite`): nessun modulo nativo. Nessuna installazione
+globale, nessun pacchetto di sistema, nessun download di browser.
 
 ## Criteri di accettazione di M0
 
-1. `npm run check` e `npm run test:e2e` verdi sul server; CI di soli controlli verde su
-   GitHub (al primo push autorizzato); nessun riferimento a Pages né a `/Menuapp/`.
-2. L'app servita da `https://loris-srv01.dala-tortoise.ts.net:9870/` si installa su
-   Android e PC e si apre in modalità aereo e con Tailscale spento.
-3. Tutte le rotte di SPEC §5 esistono (segnaposto) e la navigazione funziona da telefono
-   e da PC, in tema chiaro e scuro, a 360 px senza scroll orizzontale.
-4. Il database `menuapp` v1 contiene tutte le tabelle definitive; impostazioni e
-   reparti predefiniti presenti dopo il primo avvio; seed idempotente.
-5. Backup → ripristino riproduce i dati con la stessa impronta; impronta verificata sul
-   file originale; esportazioni ripetute senza modifiche hanno la stessa impronta; file
-   non validi rifiutati senza modificare i dati; copia di sicurezza in
-   `menuapp-sicurezza` scritta prima di ogni ripristino e migrazione, senza dipendere da
-   un download; scenari di migrazione verdi anche in Chrome reale.
-6. Persistenza richiesta e mostrata; promemoria backup funzionante.
-7. Un nuovo rilascio mostra l'avviso di aggiornamento, che non ricarica mai da solo;
-   il ritorno al rilascio precedente funziona.
-8. Versione app e schema visibili in *Impostazioni → Dati*.
-9. `menuapp.service` attivo, abilitato all'avvio, ripartito da solo dopo un errore;
-   porta 9870 solo su `127.0.0.1` e via `tailscale serve` (mai `funnel`), non
-   raggiungibile dalla LAN; `:8444` chiuso a fine collaudo; altri servizi del server
-   invariati.
-10. Decisione su TypeScript 7 registrata in SPEC.
+1. `npm run check` e `npm run test:e2e` verdi sul server; CI di soli controlli pronta.
+2. Database `dati/menuapp.db` alla versione 1 con tutte le tabelle definitive; ogni
+   vincolo di SPEC §6.3–6.4 coperto da test su SQLite reale; migrazioni con backup
+   pre-migrazione verificato e arresto sicuro (codice 78).
+3. API di M0 conformi al contratto; errori 400/403/404/409/415/422/503 coperti da test;
+   controllo di versione dimostrato con due client.
+4. Una modifica fatta da un dispositivo è visibile su un altro entro 15 s; il conflitto
+   è mostrato con *Ricarica* / *Sovrascrivi*.
+5. Server non raggiungibile → banner, comandi di scrittura disattivati, nessuna scrittura
+   in coda; ritorno automatico alla normalità.
+6. Backup giornaliero automatico verificato (timer), backup ora, esportazione JSON e
+   `.db`, ripristino in due passi con backup pre-ripristino; ripristino fallito senza
+   effetti; stessa impronta su esportazione → ripristino → esportazione.
+7. PWA installabile da `https://loris-srv01.dala-tortoise.ts.net:9870/` su Android,
+   tablet e PC; avviso di aggiornamento dopo un nuovo rilascio, mai ricaricamento
+   automatico; nessun dato dell'API nella cache del service worker.
+8. `menuapp.service` attivo, abilitato, ripartito da solo dopo un errore e dopo il
+   riavvio; 9870 solo su loopback e via `tailscale serve`; `:8444` chiuso dopo il
+   collaudo.
+9. Nessun altro servizio del server modificato: `dailymeals`, `kidscalendar`,
+   `dailymeals-backup.timer`, `apache2`, regola `tailscale serve :8443` e unità systemd
+   esistenti invariati (verificato da `installa-servizio.sh` prima e dopo).
+10. Nessun riferimento residuo a Dexie, a IndexedDB come archivio, a GitHub Pages o a
+    `/Menuapp/`.
 
 ## Fuori da M0
 
-Qualsiasi funzione di eventi, menù, ricettario, spesa, piano, stampa (solo pagine
-segnaposto); catalogo ingredienti e `seedCatalogo`; parser; impostazioni modificabili
-(portate, coefficiente e tema in M1, reparti in M2); banner di installazione; `shortcuts` del
-manifest; componenti shadcn non usati in M0; `@dnd-kit`; font di stampa.
+Rotte, servizi e schermate di eventi, menù, ricettario, catalogo, parser, spesa, piano,
+stampa e archiviazione; interfaccia delle impostazioni (M1) e dei reparti (M2); seed del
+catalogo (M2); scorciatoie del manifest (M4); `@dnd-kit`; font di stampa; aggiornamenti
+in tempo reale; copia dei backup su un secondo supporto (decisione aperta).

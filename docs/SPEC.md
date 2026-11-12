@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| Versione documento | 1.2 — 12 novembre 2026 (revisione 2: hosting sul server) |
-| Stato | Approvata in principio, da rivedere a fine M0 |
-| Repository | `github.com/lcarzaniga/Menuapp` |
+| Versione documento | 2.0 — 12 novembre 2026 (database centralizzato sul server) |
+| Stato | Da approvare prima di M0 |
+| Repository | `github.com/lcarzaniga/Menuapp` (solo codice) |
 | Produzione | https://loris-srv01.dala-tortoise.ts.net:9870/ — server Debian `loris-srv01`, solo tailnet (§14) |
 | Obiettivo | v1.0 completa entro il **15 dicembre 2026** (pranzo di Natale) |
 
@@ -15,27 +15,37 @@ fanno qui, prima del codice, con una riga nel registro in fondo.
 
 ## 1. Visione del prodotto
 
-Menù & Co. è una Progressive Web App **local-first** per organizzare pranzi, cene e
-ricorrenze familiari. Una sola persona, che è insieme cuoco e organizzatore, la usa per:
+Menù & Co. è una web app installabile (PWA) per organizzare pranzi, cene e ricorrenze
+familiari, con **un unico archivio centrale** sul server di casa. Da PC, smartphone e
+tablet si vedono e si modificano sempre gli stessi eventi, menù, ricette, ingredienti,
+liste della spesa e attività.
+
+Una persona, che è insieme cuoco e organizzatore, la usa per:
 
 1. creare l'evento (chi, quando, quanti);
 2. comporre in pochi secondi un menù diviso in portate, anche solo con nomi di piatti;
 3. far crescere nel tempo un ricettario personale, senza obbligo di inserire ricette;
 4. ottenere una lista della spesa aggregata e scalata sui coperti, che non perde gli
-   acquisti già fatti quando il menù cambia;
+   acquisti già segnati quando il menù cambia, e usarla dal telefono al supermercato
+   mentre il menù si modifica dal PC;
 5. pianificare le preparazioni nei giorni precedenti;
-6. cucinare con la ricetta sotto gli occhi, alle porzioni giuste;
+6. cucinare con la ricetta sotto gli occhi, alle porzioni giuste, dal tablet in cucina;
 7. stampare un menù elegante per la tavola;
-8. non perdere mai i dati: tutto resta sul dispositivo, con backup JSON.
+8. non perdere mai i dati: database unico sul server, backup automatici giornalieri,
+   esportazione e ripristino.
 
 Principi:
 
+- **Un'unica fonte di verità**: il database SQLite sul server. I dispositivi non
+  conservano copie modificabili dei dati.
 - **Prima veloce, poi completo.** Un menù deve poter esistere in 30 secondi; ricette e
   ingredienti si aggiungono quando servono.
 - **Niente magie silenziose.** Nessuna interpretazione incerta è presentata come certa;
-  nessun dato dell'utente viene cancellato senza che lo sappia.
-- **Offline sempre.** Nessuna funzione richiede la rete dopo il primo caricamento.
-- **Telefono prima di tutto** (Android, Chrome), ma pienamente usabile da PC.
+  nessun dato viene cancellato o sovrascritto senza che l'utente lo sappia, anche quando
+  due dispositivi modificano la stessa cosa.
+- **Rete privata.** L'app è raggiungibile solo dai dispositivi autorizzati del tailnet;
+  senza connessione al server l'app lo dice chiaramente e non permette modifiche.
+- **Telefono prima di tutto** (Android, Chrome), ma pienamente usabile da PC e tablet.
 - **Italiano** in interfaccia, dati, messaggi, codice di dominio e documentazione.
 
 ## 2. Perimetro MVP (v1.0)
@@ -48,32 +58,36 @@ Incluso:
 | Menù | Portate per evento (dalle predefinite, modificabili); voci libere; inserimento rapido anche multiriga; collegamento facoltativo a un piatto; porzioni; incaricato; inclusione nella spesa; note; riordino e spostamento fra portate |
 | Ricettario | Piatti con porzioni base, tempi, attrezzature, procedimento, ingredienti; creazione esplicita da una voce di menù; ricerca |
 | Ingredienti | Catalogo con nome canonico, sinonimi, reparto, unità preferita; catalogo iniziale italiano; parser delle righe ingrediente con conferma |
-| Spesa | Lista calcolata e aggregata per reparto; articoli manuali; stati *Da comprare / Ce l'ho / Comprato*; quantità corrette a mano; riconciliazione dopo modifiche del menù; condivisione testo |
+| Spesa | Lista calcolata dal server e aggregata per reparto; articoli manuali; stati *Da comprare / Ce l'ho / Comprato*; quantità corrette a mano; riconciliazione dopo modifiche del menù; condivisione testo |
 | Piano | Attività per evento con data, ora facoltativa, stato, collegamento facoltativo a una voce di menù; checklist per giorno |
 | Cucina | Vista ricetta a caratteri grandi, porzioni scalate, spunta ingredienti e passaggi, schermo sempre acceso |
 | Stampa | Menù stampabile elegante (A4 e A5) |
-| Dati | Backup JSON, ripristino validato, archiviazione persistente, copia di sicurezza prima delle migrazioni, promemoria backup |
-| PWA | Installabile dal server via Tailscale (HTTPS), offline completo anche senza Tailscale, avviso di nuova versione con aggiornamento su richiesta |
+| Dati condivisi | Database SQLite unico sul server; aggiornamento automatico delle viste quando un altro dispositivo modifica i dati; controllo di versione con avviso di conflitto |
+| Backup | Backup automatici giornalieri del database con verifica di integrità; backup prima di migrazioni e ripristini; backup su richiesta; esportazione JSON e copia del database; ripristino validato |
+| PWA | Installabile da Chrome via HTTPS Tailscale; avvio rapido; avviso di nuova versione; senza server raggiungibile: dati non modificabili e messaggio chiaro |
 
 ## 3. Funzionalità rinviate (dopo il 15 dicembre)
 
-Duplicazione di eventi · foto di piatti ed eventi · sincronizzazione fra dispositivi ·
-budget e prezzi · importazione ricette da URL · valori nutrizionali e allergeni ·
-timer di cucina · unione (merge) dei backup invece della sostituzione · condivisione con
-altre persone · stampa di ricette e lista della spesa con layout dedicato (si usa la
-stampa del browser) · cronologia completa delle versioni dei piatti · conversioni
-peso↔volume per densità · statistiche · temi grafici personalizzati.
+Modifiche offline (con coda di sincronizzazione) · consultazione offline dei dati già
+visti · account, login e ruoli · duplicazione di eventi · foto di piatti ed eventi ·
+budget e prezzi · importazione ricette da URL · valori nutrizionali e allergeni · timer
+di cucina · stampa di ricette e lista della spesa con layout dedicato · cronologia delle
+versioni dei piatti · conversioni peso↔volume per densità · statistiche · aggiornamenti
+in tempo reale via WebSocket/SSE (nell'MVP: interrogazione periodica, §12.6) · copia dei
+backup su un secondo supporto (decisione aperta, §11.6).
 
-Sono esclusi in modo permanente salvo nuova decisione: backend, autenticazione,
-servizi cloud, AI, Redux o altri store globali.
+Esclusi in modo permanente salvo nuova decisione: servizi cloud, AI, Redux o altri store
+globali, sincronizzazione bidirezionale fra database locali e server, pubblicazione su
+GitHub Pages.
 
 ## 4. Flussi utente
 
-### F1 — Primo avvio
-1. L'app si apre su *Eventi* (vuoto) con un invito: «Crea il tuo primo evento».
-2. Al primo salvataggio di dati l'app chiede l'archiviazione persistente
-   (`navigator.storage.persist()`); l'esito è visibile in *Impostazioni → Dati*.
-3. Se l'app non è installata, un banner discreto suggerisce «Installa sul telefono».
+### F1 — Primo avvio su un dispositivo
+1. Da Chrome, con Tailscale attivo, si apre `https://loris-srv01.dala-tortoise.ts.net:9870/`.
+2. L'app mostra *Eventi* con i dati del server (vuoto alla prima installazione) e un
+   invito: «Crea il tuo primo evento».
+3. Menu di Chrome → *Installa app*. Da quel momento si apre come app; i dati restano
+   quelli del server.
 
 ### F2 — Creare un evento e un menù veloce
 1. *Eventi → Nuovo*: nome (suggerito da occasione + anno, es. «Natale 2026»), tipo,
@@ -96,22 +110,25 @@ servizi cloud, AI, Redux o altri store globali.
 
 ### F4 — Inserire gli ingredienti di un piatto
 1. Nell'editor: area di testo «Incolla gli ingredienti, uno per riga».
-2. Anteprima: ogni riga mostra quantità, unità, nome, ingrediente di catalogo e un badge
-   **Certo** o **Da verificare**, con il testo originale sempre visibile.
+2. Anteprima (calcolata nel browser con il parser del dominio): ogni riga mostra
+   quantità, unità, nome, ingrediente di catalogo e un badge **Certo** o **Da
+   verificare**, con il testo originale sempre visibile.
 3. Le righe *Da verificare* vanno corrette o confermate una a una; si può salvare anche
    senza confermarle, ma restano marcate e segnalate nella spesa.
 4. Ingredienti non presenti nel catalogo: «Aggiungi al catalogo» (nome, reparto
    proposto, unità) oppure lasciarli come testo libero.
+5. «Salva» invia piatto e ingredienti insieme; il server li registra in un'unica
+   transazione.
 
 ### F5 — Spesa
-1. *Evento → Spesa*: lista per reparto, calcolata dalle voci incluse nella spesa con un
-   piatto che ha ingredienti.
+1. *Evento → Spesa*: lista per reparto, calcolata dal server dalle voci incluse nella
+   spesa con un piatto che ha ingredienti.
 2. Tocco su una riga: *Da comprare → Comprato*. Menu della riga: *Ce l'ho*, correggi
    quantità, nota, cambia reparto, nascondi, provenienza (da quali piatti arriva).
 3. «Aggiungi articolo» per voci manuali (tovaglioli, ghiaccio…).
-4. Se il menù cambia, la lista si aggiorna; gli acquisti già fatti restano e le
-   differenze vengono segnalate (vedi §10).
-5. «Condividi»: testo con le sole righe da comprare, raggruppate per reparto.
+4. Se il menù cambia (anche da un altro dispositivo), la lista si aggiorna; gli
+   acquisti già segnati restano e le differenze vengono segnalate (vedi §10).
+5. «Condividi»: testo con le righe da comprare, raggruppate per reparto.
 
 ### F6 — Piano e preparazione
 1. *Evento → Piano*: attività per giorno, con scelte rapide («il giorno prima», «la
@@ -122,7 +139,8 @@ servizi cloud, AI, Redux o altri store globali.
 ### F7 — Cucinare
 1. Da voce di menù o dal ricettario: «Cucina». Si apre la vista cucina alle porzioni
    della voce (o alle porzioni base dal ricettario), modificabili.
-2. Ingredienti e passaggi si spuntano; lo schermo resta acceso (Wake Lock) se supportato.
+2. Ingredienti e passaggi si spuntano (spunte solo sul dispositivo, non salvate sul
+   server); lo schermo resta acceso (Wake Lock) se supportato.
 
 ### F8 — Stampa
 1. *Evento → Stampa menù*: anteprima con formato A4/A5, mostra/nascondi portate vuote,
@@ -137,15 +155,33 @@ servizi cloud, AI, Redux o altri store globali.
 4. «Riapri» su un evento archiviato segue la procedura di §7.4.
 
 ### F10 — Backup e ripristino
-1. *Impostazioni → Dati → Esporta backup*: scarica `menuapp-backup-AAAA-MM-GG-HHmm.json`
-   (o lo condivide con Web Share, se disponibile).
-2. *Ripristina*: scelta del file → validazione → riepilogo (data, versione, conteggi) →
-   avviso che i dati attuali saranno sostituiti → l'app salva una copia di sicurezza dei
-   dati attuali nel database `menuapp-sicurezza` (passo obbligatorio; il download della
-   stessa copia è solo offerto) → ripristino in un'unica transazione → ricarica.
-3. *Copie di sicurezza*: elenco delle ultime 3 copie automatiche con data e motivo;
-   ciascuna si può scaricare o ripristinare con la stessa procedura.
-3. Se l'ultimo backup ha più di 7 giorni e i dati sono cambiati, banner di promemoria.
+1. Ogni notte il server crea un backup verificato del database; in *Impostazioni →
+   Dati* si vedono data e esito dell'ultimo backup e l'elenco dei backup disponibili.
+2. *Backup ora*: crea subito un backup sul server (es. prima di modifiche importanti).
+3. *Esporta*: scarica un file JSON portabile (`menuapp-esportazione-AAAA-MM-GG-HHmm.json`)
+   o la copia del database (`.db`), da conservare fuori dal server.
+4. *Ripristina*: da un backup del server oppure da un file JSON caricato → verifica →
+   riepilogo (data, versione, conteggi) → conferma esplicita → il server crea un backup
+   dei dati attuali → sostituzione in un'unica transazione → tutti i dispositivi si
+   ricaricano con i nuovi dati.
+
+### F11 — Due dispositivi sulla stessa cosa
+1. Dal PC si modifica il menù mentre dal telefono si spunta la spesa: nessun conflitto,
+   sono record diversi; entro pochi secondi ciascun dispositivo vede le modifiche
+   dell'altro.
+2. Se due dispositivi modificano **lo stesso** elemento (es. le note dell'evento), il
+   secondo salvataggio viene respinto: l'app mostra «Modificato da un altro dispositivo»
+   con il valore attuale e le scelte *Ricarica* (perde la propria modifica, mostrata per
+   copiarla) o *Sovrascrivi* (salva la propria sopra quella dell'altro).
+
+### F12 — Server non raggiungibile
+1. Tailscale spento, rete assente o server fermo: banner fisso «Server non
+   raggiungibile — le modifiche sono disabilitate».
+2. I dati già mostrati restano visibili finché l'app è aperta; tutti i comandi che
+   scrivono sono disattivati; un modulo in compilazione conserva il testo e si può
+   salvare quando la connessione torna.
+3. Se l'app viene aperta senza server raggiungibile, mostra la stessa spiegazione con
+   «Riprova» al posto dei dati.
 
 ## 5. Schermate
 
@@ -165,262 +201,411 @@ Da 768 px: barra laterale con le stesse voci. Il contenuto dell'evento usa sched
 | `#/eventi/:id/stampa` | Stampa menù | Anteprima e opzioni |
 | `#/eventi/:id/voci/:voceId/cucina` | Vista cucina | Ricetta alle porzioni della voce |
 | `#/ricettario` | Ricettario | Ricerca, elenco piatti, filtro «senza ingredienti» |
-| `#/ricettario/nuovo`, `#/ricettario/:id` | Piatto | Scheda; modifica in linea |
+| `#/ricettario/nuovo`, `#/ricettario/:id` | Piatto | Scheda; modifica |
 | `#/ricettario/:id/cucina` | Vista cucina | Ricetta con porzioni scelte |
 | `#/ingredienti` | Catalogo | Ricerca, reparto, sinonimi, unità preferita |
-| `#/impostazioni` | Impostazioni | Portate predefinite, coefficiente bambini, reparti, tema |
-| `#/impostazioni/dati` | Dati | Backup, ripristino, copie di sicurezza, persistenza, spazio usato, versione app e schema |
+| `#/impostazioni` | Impostazioni | Portate predefinite, coefficiente bambini, reparti, tema (del dispositivo) |
+| `#/impostazioni/dati` | Dati | Stato del server, ultimo backup, elenco backup, backup ora, esportazione JSON e `.db`, ripristino, versione app e schema |
 | `*` | Non trovata | Link a Eventi |
 
-Requisiti trasversali dell'interfaccia: tema chiaro/scuro/sistema; bersagli di tocco
-≥ 44 px; rispetto delle *safe area*; nessuno scroll orizzontale a 360 px; moduli che non
-perdono il testo inserito se si cambia scheda; conferma per ogni eliminazione; annulla
-(toast «Annulla» per 5 s) per l'eliminazione di voci di menù, attività e articoli manuali.
+Requisiti trasversali dell'interfaccia: tema chiaro/scuro/sistema (preferenza del
+singolo dispositivo, in `localStorage`); bersagli di tocco ≥ 44 px; rispetto delle
+*safe area*; nessuno scroll orizzontale a 360 px; moduli che non perdono il testo
+inserito se si cambia scheda o cade la connessione; conferma per ogni eliminazione;
+annulla (toast «Annulla» per 5 s) per l'eliminazione di voci di menù, attività e
+articoli manuali; indicatore di stato della connessione sempre visibile in caso di
+problemi.
 
-## 6. Modello dati
+## 6. Modello dati e database
 
 ### 6.1 Convenzioni
 
-- **ID**: UUID v4 da `crypto.randomUUID()`, stringa. Eccezioni: `settings` (id fisso
-  `"settings"`), voci della tabella `meta` (chiave testuale), reparti e ingredienti del
-  catalogo iniziale (id stabili `rep-…`, `ing-…` per idempotenza del seed).
-- **Timestamp**: `createdAt`, `updatedAt` in millisecondi epoch (`number`). Aggiornati
-  sempre dai repository, mai dai componenti.
-- **Date di calendario**: stringa locale `YYYY-MM-DD`; **ore**: `HH:mm`. Nessun oggetto
-  `Date` o fuso orario per date ed ore di eventi e attività.
-- **Quantità**: `number` non arrotondato in archivio; l'arrotondamento esiste solo in
-  visualizzazione (§9.4).
-- **Testi**: salvati come inseriti (NFC); per ricerche e confronti si usa un campo
-  normalizzato (`norm(s)`: minuscolo, senza accenti, spazi compattati, apostrofi
-  uniformati).
-- **Enumerazioni**: stringhe italiane in `snake_case` (`da_comprare`, `ce_lho`…).
+- **Database**: SQLite 3.53 tramite `node:sqlite` (incluso in Node 24, nessun modulo
+  nativo), file `/srv/apps/menuapp/dati/menuapp.db`. Unico processo scrittore: il
+  backend.
+- **Nomi**: tabelle e colonne in italiano `snake_case` nel database; tipi TypeScript in
+  `camelCase`. La conversione avviene solo nei repository (§12.3).
+- **ID**: UUID v4 testuali generati **dal client** alla creazione (`crypto.randomUUID()`),
+  così una creazione ripetuta dopo un errore di rete non produce duplicati (§12.5).
+  Eccezioni con id stabili: reparti (`rep-…`) e ingredienti del catalogo iniziale
+  (`ing-…`), impostazioni (`id = 1`).
+- **Versione**: ogni record modificabile ha `versione INTEGER NOT NULL DEFAULT 1`,
+  incrementata dal server a ogni modifica (controllo di concorrenza, §12.5).
+- **Timestamp**: `creato_il`, `aggiornato_il` in millisecondi epoch (`INTEGER`), impostati
+  dal server.
+- **Date di calendario**: testo `YYYY-MM-DD`; **ore**: testo `HH:mm`. Nessun fuso orario.
+- **Quantità**: `REAL` non arrotondato; l'arrotondamento esiste solo in visualizzazione
+  (§9.4).
+- **Booleani**: `INTEGER` 0/1 con `CHECK`.
+- **Elenchi** (attrezzature, passaggi, motivi del parser): testo JSON con
+  `CHECK (json_valid(...))`.
+- **Testi**: salvati come inseriti (NFC); per ricerche e unicità si usa una colonna
+  `*_norm` (minuscolo, senza accenti, spazi compattati, apostrofi uniformati) calcolata
+  dal server con la funzione di dominio `norm()`.
+- **Enumerazioni**: testo italiano `snake_case` con `CHECK (... IN (...))`.
+- Tutte le tabelle sono `STRICT` (tipi verificati da SQLite).
 
-### 6.2 Entità (TypeScript)
+### 6.2 Tipi di dominio (TypeScript, condivisi da client e server)
+
+I tipi stanno in `src/domain/tipi.ts`; gli schemi zod che li validano sulle API in
+`src/contratto/` (§12.4).
 
 ```ts
-type Id = string
-type DataISO = string   // 'YYYY-MM-DD'
-type Ora = string       // 'HH:mm'
-type Epoch = number
+type Id = string; type DataISO = string; type Ora = string; type Epoch = number
+interface Base { id: Id; versione: number; creatoIl: Epoch; aggiornatoIl: Epoch }
 
-interface Base { id: Id; createdAt: Epoch; updatedAt: Epoch }
-
-// ── Evento ───────────────────────────────────────────────
 type TipoEvento = 'pranzo' | 'cena' | 'aperitivo' | 'brunch'
 type StatoEvento = 'attivo' | 'concluso' | 'archiviato'
 
-interface Portata { id: Id; nome: string; ordine: number }
+interface Portata { id: Id; eventId: Id; nome: string; ordine: number }
 
 interface Event extends Base {
-  nome: string
-  data: DataISO
-  oraServizio: Ora | null
+  nome: string; data: DataISO; oraServizio: Ora | null
   tipo: TipoEvento
-  occasione: string            // testo libero; suggerimenti: Natale, Vigilia, Capodanno,
-                               // Pasqua, Compleanno, Anniversario, Domenica in famiglia…
-  adulti: number               // intero ≥ 0
-  bambini: number              // intero ≥ 0
-  coefficienteBambini: number  // 0–1, passo 0,05; copiato dalle impostazioni alla creazione
+  occasione: string            // libero; suggerimenti: Natale, Vigilia, Capodanno, Pasqua…
+  adulti: number; bambini: number          // interi ≥ 0
+  coefficienteBambini: number              // 0–1, passo 0,05
   note: string
-  portate: Portata[]           // copiate dalle predefinite alla creazione, poi per evento
   stato: StatoEvento
-  conclusoAt: Epoch | null
-  archiviatoAt: Epoch | null
-  snapshotCorrenteId: Id | null   // snapshot valido mentre l'evento è archiviato
+  conclusoAt: Epoch | null; archiviatoAt: Epoch | null
+  portate: Portata[]                       // restituite insieme all'evento
 }
 
-// ── Voce di menù ─────────────────────────────────────────
 interface MenuItem extends Base {
-  eventId: Id
-  portataId: Id                // una delle portate dell'evento
-  ordine: number               // 0..n-1 dentro la portata, senza buchi
-  nome: string                 // sempre presente, anche se c'è un piatto
-  dishId: Id | null
+  eventId: Id; portataId: Id; ordine: number
+  nome: string; dishId: Id | null
   porzioni: number | null      // null = coperti equivalenti dell'evento
-  incaricato: string           // testo libero, '' se nessuno
-  inSpesa: boolean             // default true
-  note: string
+  incaricato: string; inSpesa: boolean; note: string
 }
 
-// ── Piatto (piatto e ricetta sono la stessa entità) ──────
 interface Dish extends Base {
-  nome: string
-  nomeNorm: string
-  portataSuggerita: string | null   // nome di portata, solo come suggerimento
-  porzioniBase: number | null       // null = ricetta non scalabile finché non si indica
-  tempoPreparazioneMin: number | null
-  tempoCotturaMin: number | null
+  nome: string; portataSuggerita: string | null
+  porzioniBase: number | null
+  tempoPreparazioneMin: number | null; tempoCotturaMin: number | null
   tempoRiposoMin: number | null
-  attrezzature: string[]
-  procedimento: string[]            // un passaggio per elemento
-  note: string
-  fonte: string                     // es. "nonna Pina", libro, sito: solo testo
+  attrezzature: string[]; procedimento: string[]
+  note: string; fonte: string
+  ingredienti: DishIngredient[]           // salvati e versionati insieme al piatto
 }
 
-// ── Ingrediente del piatto ───────────────────────────────
 type StatoParsing = 'certo' | 'da_verificare' | 'confermato'
 type Scalatura = 'proporzionale' | 'fissa'
 
-interface DishIngredient extends Base {
-  dishId: Id
-  ordine: number
-  testoOriginale: string            // riga come scritta o incollata, mai modificata
-  nome: string                      // nome come mostrato (es. "parmigiano grattugiato")
-  ingredientId: Id | null           // collegamento al catalogo
-  quantita: number | null           // null con unita 'qb' o quantità non indicata
-  quantitaMax: number | null        // intervalli "2-3": quantita=2, quantitaMax=3
-  unita: CodiceUnita | null         // null = numero puro di pezzi ("2 uova") o assente
-  scalatura: Scalatura              // 'fissa' = non dipende dalle porzioni
-  facoltativo: boolean
-  nota: string                      // "tritato", "a temperatura ambiente", "(230 g)"
-  statoParsing: StatoParsing
-  problemiParsing: string[]         // motivi del 'da_verificare', leggibili
+interface DishIngredient {
+  id: Id; ordine: number
+  testoOriginale: string; nome: string; ingredientId: Id | null
+  quantita: number | null; quantitaMax: number | null; unita: CodiceUnita | null
+  scalatura: Scalatura; facoltativo: boolean; nota: string
+  statoParsing: StatoParsing; problemiParsing: string[]
 }
 
-// ── Catalogo ingredienti ─────────────────────────────────
 interface Ingredient extends Base {
-  nome: string                      // canonico, es. "Parmigiano Reggiano"
-  nomeNorm: string
-  sinonimi: string[]                // es. ["parmigiano", "grana"]
-  sinonimiNorm: string[]            // indice multi-valore
-  repartoId: Id
-  unitaPreferita: CodiceUnita | null
-  scalaturaAbituale: Scalatura      // 'fissa' per alloro, chiodi di garofano… (§8.3)
+  nome: string; sinonimi: string[]; repartoId: Id
+  unitaPreferita: CodiceUnita | null; scalaturaAbituale: Scalatura
 }
 
-// ── Spesa: solo stato e interventi dell'utente ───────────
+interface Reparto { id: Id; nome: string; ordine: number; diSistema: boolean; versione: number }
+
 type StatoSpesa = 'da_comprare' | 'ce_lho' | 'comprato'
 
-interface ShoppingItem extends Base {
+interface ShoppingItem extends Base {     // tabella articoli_spesa
   eventId: Id
   tipo: 'calcolato' | 'manuale'
-  chiave: string | null             // solo 'calcolato': chiave della riga (§10.2)
+  chiave: string | null                   // solo 'calcolato' (§10.2)
   stato: StatoSpesa
-  // Fabbisogno che l'utente ha dichiarato coperto segnando 'comprato' o 'ce_lho':
-  // è la quantità che la lista MOSTRAVA in quel momento (unità base), NON una quantità
-  // acquistata misurata. null per 'da_comprare', per righe senza quantità e per i manuali.
-  fabbisognoCoperto: number | null
-  // interventi dell'utente
-  quantitaUtente: number | null     // correzione manuale (unità base della chiave)
-  quantitaCalcolataAllaCorrezione: number | null
-  repartoId: Id | null              // override del reparto
-  nascosto: boolean                 // riga calcolata tolta dalla vista dall'utente
-  inclusa: boolean                  // solo righe facoltative: aggiunta alla spesa (§10.1)
-  nota: string                      // anche per annotare acquisti parziali (§10.3)
-  // solo 'manuale'
-  nome: string
-  quantitaTesto: string             // libero: "2 sacchetti"
+  fabbisognoCoperto: number | null        // §10.3; calcolato dal server
+  quantitaUtente: number | null; quantitaCalcolataAllaCorrezione: number | null
+  repartoId: Id | null; nascosto: boolean; inclusa: boolean; nota: string
+  nome: string; quantitaTesto: string     // solo 'manuale'
 }
 
-// ── Attività ─────────────────────────────────────────────
 interface Task extends Base {
-  eventId: Id
-  titolo: string
-  data: DataISO
-  ora: Ora | null
-  stato: 'da_fare' | 'fatto'
-  menuItemId: Id | null
-  note: string
-  ordine: number                    // ordine dentro lo stesso giorno senza ora
+  eventId: Id; titolo: string; data: DataISO; ora: Ora | null
+  stato: 'da_fare' | 'fatto'; menuItemId: Id | null; note: string; ordine: number
 }
 
-// ── Impostazioni (record unico) ──────────────────────────
-interface Reparto { id: Id; nome: string; ordine: number }
-
-interface Settings {
-  id: 'settings'
-  portatePredefinite: { nome: string; ordine: number }[]
-  coefficienteBambini: number       // default 0,5
-  reparti: Reparto[]
-  backup: { promemoriaGiorni: number }   // default 7; 0 = disattivato
-  preferenze: { tema: 'sistema' | 'chiaro' | 'scuro' }
-  updatedAt: Epoch
+interface Settings {                       // record unico
+  coefficienteBambini: number              // default 0,5
+  portatePredefinite: { id: Id; nome: string; ordine: number }[]
+  versione: number
 }
 
-// ── Snapshot di evento archiviato ────────────────────────
-// Storico AUTONOMO: contiene tutto ciò che serve a mostrare, stampare e consultare
-// l'evento archiviato senza leggere altre tabelle. Copie con id originali, nomi già
-// risolti (portate, reparti, ingredienti), nessun riferimento da seguire.
-interface EventSnapshot extends Base {
-  eventId: Id
-  stato: 'valido' | 'superato'      // 'superato' dopo una riapertura (resta come storico)
-  superatoAt: Epoch | null
+interface EventSnapshot {                  // contenuto autonomo, §7.3
+  id: Id; eventId: Id; stato: 'valido' | 'superato'
+  creatoIl: Epoch; superatoIl: Epoch | null
   versioneFormato: 1
-  evento: Omit<Event, 'createdAt' | 'updatedAt' | 'snapshotCorrenteId'>  // con portate
-  copertiEquivalenti: number
-  voci: (Omit<MenuItem, 'createdAt' | 'updatedAt'> & {
-    portataNome: string
-    porzioniEffettive: number
-  })[]                              // tutte, con ordine e nomi liberi, anche senza piatto
-  piatti: SnapshotPiatto[]          // solo i piatti collegati dalle voci
-  spesa: SnapshotRigaSpesa[]        // lista riconciliata come appariva all'archiviazione
-  articoliManuali: Omit<ShoppingItem, 'createdAt' | 'updatedAt'>[]
-  attivita: Omit<Task, 'createdAt' | 'updatedAt'>[]
+  contenuto: {
+    evento: Omit<Event, 'versione' | 'creatoIl' | 'aggiornatoIl'>   // con portate
+    copertiEquivalenti: number
+    voci: (Omit<MenuItem, 'versione' | 'creatoIl' | 'aggiornatoIl'>
+           & { portataNome: string; porzioniEffettive: number })[]
+    piatti: { dishId: Id; dati: Omit<Dish, 'versione' | 'creatoIl' | 'aggiornatoIl'>
+              & { ingredienti: (DishIngredient & { ingredienteNome: string | null;
+                                                   repartoNome: string | null })[] } }[]
+    spesa: { chiave: string; sezione: string; nome: string; reparto: string
+             quantita: number | null; unita: CodiceUnita | null; stato: StatoSpesa
+             provenienze: string[] }[]
+    articoliManuali: Omit<ShoppingItem, 'versione' | 'creatoIl' | 'aggiornatoIl'>[]
+    attivita: Omit<Task, 'versione' | 'creatoIl' | 'aggiornatoIl'>[]
+  }
 }
-
-interface SnapshotPiatto {
-  dishId: Id                        // id originale (può non esistere più)
-  dati: Omit<Dish, 'createdAt' | 'updatedAt'>
-  ingredienti: (Omit<DishIngredient, 'createdAt' | 'updatedAt'> & {
-    ingredienteNome: string | null
-    repartoNome: string | null
-  })[]
-}
-
-interface SnapshotRigaSpesa {
-  chiave: string; sezione: string; nome: string; reparto: string
-  quantita: number | null; unita: CodiceUnita | null; stato: StatoSpesa
-  provenienze: string[]             // nomi delle voci di menù
-}
-
-// ── Meta (chiave/valore) ─────────────────────────────────
-// Due gruppi:
-//  - di contenuto, inclusi nel backup: 'seedImpostazioni', 'seedCatalogo' (number: versione del seed applicata)
-//  - del dispositivo, ESCLUSI dal backup: 'ultimoBackupAt', 'ultimaModificaAt' (Epoch),
-//    'persistenzaRichiesta' (boolean), 'avvisoInstallazioneChiuso' (boolean)
-interface Meta { chiave: string; valore: unknown }
 ```
 
-### 6.3 Schema Dexie (versione 1)
+La preferenza del tema non è un dato condiviso: sta nel `localStorage` di ciascun
+dispositivo.
 
-Database `menuapp`. Tutte le tabelle esistono fin dalla v1, anche se usate da milestone
-successive, per evitare migrazioni premature.
+### 6.3 Schema SQLite (migrazione `0001_iniziale.sql`)
 
-```ts
-db.version(1).stores({
-  events:          'id, data, stato, updatedAt',
-  menuItems:       'id, eventId, [eventId+portataId], dishId',
-  dishes:          'id, nomeNorm, updatedAt',
-  dishIngredients: 'id, dishId, ingredientId',
-  ingredients:     'id, nomeNorm, *sinonimiNorm, repartoId',
-  shoppingItems:   'id, eventId, [eventId+chiave]',
-  tasks:           'id, eventId, [eventId+data], menuItemId',
-  eventSnapshots:  'id, eventId',
-  settings:        'id',
-  meta:            'chiave',
-})
+Impostazioni di connessione, applicate a ogni apertura dal backend:
+
+```sql
+PRAGMA journal_mode = WAL;      -- letture concorrenti alle scritture, backup a caldo
+PRAGMA synchronous = FULL;      -- durabilità massima (carico minimo, nessun costo percepibile)
+PRAGMA foreign_keys = ON;       -- vincoli referenziali attivi (per connessione)
+PRAGMA busy_timeout = 5000;
 ```
 
-Database separato `menuapp-sicurezza`, schema proprio e stabile
-(`copie: '++id, creataAt'`; record `{ creataAt, motivo: 'migrazione' | 'ripristino',
-versioneSchema, contenuto }` dove `contenuto` è un file di backup completo nel formato di
-§11.1, come stringa). Copie automatiche prima di migrazioni e ripristini (§11.4); tiene le
-ultime 3. Essendo un database diverso, non è mai coinvolto nelle migrazioni di `menuapp`.
+```sql
+CREATE TABLE meta (
+  chiave TEXT PRIMARY KEY,
+  valore TEXT NOT NULL                     -- JSON
+) STRICT;
+-- chiavi: 'revisione' (contatore globale, §12.6), 'seed_impostazioni', 'seed_catalogo'
 
-### 6.4 Integrità referenziale
+CREATE TABLE impostazioni (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  coefficiente_bambini REAL NOT NULL DEFAULT 0.5
+    CHECK (coefficiente_bambini BETWEEN 0 AND 1),
+  versione INTEGER NOT NULL DEFAULT 1,
+  aggiornato_il INTEGER NOT NULL
+) STRICT;
 
-IndexedDB non ha vincoli: li garantiscono i repository, sempre in transazione.
+CREATE TABLE portate_predefinite (
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL CHECK (length(trim(nome)) > 0),
+  ordine INTEGER NOT NULL CHECK (ordine >= 0)
+) STRICT;
 
-| Operazione | Effetto |
-|---|---|
-| Elimina evento | Elimina voci di menù, articoli di spesa, attività, snapshot dell'evento |
-| Elimina portata dell'evento | Consentita solo se vuota, oppure spostando le voci in un'altra portata |
-| Elimina voce di menù | Le attività collegate restano con `menuItemId = null` |
-| Elimina piatto | Le voci collegate restano con `dishId = null` e il loro nome; avviso con elenco eventi; gli snapshot non cambiano |
-| Elimina ingrediente di catalogo | Gli ingredienti dei piatti restano con `ingredientId = null` e il loro nome |
-| Elimina reparto | Gli ingredienti passano a *Altro*; *Altro* non è eliminabile |
+CREATE TABLE reparti (
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL CHECK (length(trim(nome)) > 0),
+  nome_norm TEXT NOT NULL UNIQUE,
+  ordine INTEGER NOT NULL CHECK (ordine >= 0),
+  di_sistema INTEGER NOT NULL DEFAULT 0 CHECK (di_sistema IN (0, 1)),   -- 'rep-altro'
+  versione INTEGER NOT NULL DEFAULT 1,
+  creato_il INTEGER NOT NULL, aggiornato_il INTEGER NOT NULL
+) STRICT;
 
-Il ripristino da backup verifica le stesse regole (§11.3).
+CREATE TABLE eventi (
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL CHECK (length(trim(nome)) > 0),
+  data TEXT NOT NULL CHECK (data GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]'),
+  ora_servizio TEXT CHECK (ora_servizio IS NULL OR ora_servizio GLOB '[0-2][0-9]:[0-5][0-9]'),
+  tipo TEXT NOT NULL CHECK (tipo IN ('pranzo', 'cena', 'aperitivo', 'brunch')),
+  occasione TEXT NOT NULL DEFAULT '',
+  adulti INTEGER NOT NULL CHECK (adulti >= 0),
+  bambini INTEGER NOT NULL CHECK (bambini >= 0),
+  coefficiente_bambini REAL NOT NULL CHECK (coefficiente_bambini BETWEEN 0 AND 1),
+  note TEXT NOT NULL DEFAULT '',
+  stato TEXT NOT NULL DEFAULT 'attivo' CHECK (stato IN ('attivo', 'concluso', 'archiviato')),
+  concluso_il INTEGER, archiviato_il INTEGER,
+  versione INTEGER NOT NULL DEFAULT 1,
+  creato_il INTEGER NOT NULL, aggiornato_il INTEGER NOT NULL,
+  CHECK ((stato = 'archiviato') = (archiviato_il IS NOT NULL))
+) STRICT;
+CREATE INDEX eventi_data ON eventi (data);
+
+CREATE TABLE portate_evento (
+  id TEXT PRIMARY KEY,
+  evento_id TEXT NOT NULL REFERENCES eventi (id) ON DELETE CASCADE,
+  nome TEXT NOT NULL CHECK (length(trim(nome)) > 0),
+  ordine INTEGER NOT NULL CHECK (ordine >= 0),
+  UNIQUE (id, evento_id)                   -- destinazione della FK composta delle voci
+) STRICT;
+CREATE INDEX portate_evento_evento ON portate_evento (evento_id);
+
+CREATE TABLE piatti (
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL CHECK (length(trim(nome)) > 0),
+  nome_norm TEXT NOT NULL,
+  portata_suggerita TEXT,
+  porzioni_base REAL CHECK (porzioni_base IS NULL OR porzioni_base > 0),
+  tempo_preparazione_min INTEGER CHECK (tempo_preparazione_min IS NULL OR tempo_preparazione_min >= 0),
+  tempo_cottura_min INTEGER CHECK (tempo_cottura_min IS NULL OR tempo_cottura_min >= 0),
+  tempo_riposo_min INTEGER CHECK (tempo_riposo_min IS NULL OR tempo_riposo_min >= 0),
+  attrezzature TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(attrezzature)),
+  procedimento TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(procedimento)),
+  note TEXT NOT NULL DEFAULT '', fonte TEXT NOT NULL DEFAULT '',
+  versione INTEGER NOT NULL DEFAULT 1,
+  creato_il INTEGER NOT NULL, aggiornato_il INTEGER NOT NULL
+) STRICT;
+CREATE INDEX piatti_nome ON piatti (nome_norm);
+
+CREATE TABLE voci_menu (
+  id TEXT PRIMARY KEY,
+  evento_id TEXT NOT NULL REFERENCES eventi (id) ON DELETE CASCADE,
+  portata_id TEXT NOT NULL,
+  ordine INTEGER NOT NULL CHECK (ordine >= 0),
+  nome TEXT NOT NULL CHECK (length(trim(nome)) > 0),
+  piatto_id TEXT REFERENCES piatti (id) ON DELETE SET NULL,
+  porzioni REAL CHECK (porzioni IS NULL OR porzioni > 0),
+  incaricato TEXT NOT NULL DEFAULT '',
+  in_spesa INTEGER NOT NULL DEFAULT 1 CHECK (in_spesa IN (0, 1)),
+  note TEXT NOT NULL DEFAULT '',
+  versione INTEGER NOT NULL DEFAULT 1,
+  creato_il INTEGER NOT NULL, aggiornato_il INTEGER NOT NULL,
+  -- la portata deve appartenere allo stesso evento; una portata con voci non si elimina
+  FOREIGN KEY (portata_id, evento_id) REFERENCES portate_evento (id, evento_id) ON DELETE RESTRICT
+) STRICT;
+CREATE INDEX voci_menu_evento ON voci_menu (evento_id, portata_id, ordine);
+CREATE INDEX voci_menu_piatto ON voci_menu (piatto_id);
+
+CREATE TABLE ingredienti (
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL CHECK (length(trim(nome)) > 0),
+  nome_norm TEXT NOT NULL UNIQUE,
+  reparto_id TEXT NOT NULL REFERENCES reparti (id) ON DELETE RESTRICT,
+  unita_preferita TEXT CHECK (unita_preferita IS NULL OR unita_preferita IN (/* §8.1 */)),
+  scalatura_abituale TEXT NOT NULL DEFAULT 'proporzionale'
+    CHECK (scalatura_abituale IN ('proporzionale', 'fissa')),
+  versione INTEGER NOT NULL DEFAULT 1,
+  creato_il INTEGER NOT NULL, aggiornato_il INTEGER NOT NULL
+) STRICT;
+CREATE INDEX ingredienti_reparto ON ingredienti (reparto_id);
+
+CREATE TABLE sinonimi_ingrediente (
+  ingrediente_id TEXT NOT NULL REFERENCES ingredienti (id) ON DELETE CASCADE,
+  sinonimo TEXT NOT NULL,
+  sinonimo_norm TEXT NOT NULL UNIQUE,      -- un sinonimo appartiene a un solo ingrediente
+  PRIMARY KEY (ingrediente_id, sinonimo_norm)
+) STRICT;
+
+CREATE TABLE ingredienti_piatto (
+  id TEXT PRIMARY KEY,
+  piatto_id TEXT NOT NULL REFERENCES piatti (id) ON DELETE CASCADE,
+  ordine INTEGER NOT NULL CHECK (ordine >= 0),
+  testo_originale TEXT NOT NULL,
+  nome TEXT NOT NULL,
+  ingrediente_id TEXT REFERENCES ingredienti (id) ON DELETE SET NULL,
+  quantita REAL CHECK (quantita IS NULL OR quantita >= 0),
+  quantita_max REAL CHECK (quantita_max IS NULL OR (quantita IS NOT NULL AND quantita_max >= quantita)),
+  unita TEXT CHECK (unita IS NULL OR unita IN (/* §8.1 */)),
+  scalatura TEXT NOT NULL CHECK (scalatura IN ('proporzionale', 'fissa')),
+  facoltativo INTEGER NOT NULL DEFAULT 0 CHECK (facoltativo IN (0, 1)),
+  nota TEXT NOT NULL DEFAULT '',
+  stato_parsing TEXT NOT NULL CHECK (stato_parsing IN ('certo', 'da_verificare', 'confermato')),
+  problemi_parsing TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(problemi_parsing)),
+  CHECK (unita IS NOT 'qb' OR quantita IS NULL)
+) STRICT;
+CREATE INDEX ingredienti_piatto_piatto ON ingredienti_piatto (piatto_id, ordine);
+CREATE INDEX ingredienti_piatto_ingrediente ON ingredienti_piatto (ingrediente_id);
+
+CREATE TABLE articoli_spesa (
+  id TEXT PRIMARY KEY,
+  evento_id TEXT NOT NULL REFERENCES eventi (id) ON DELETE CASCADE,
+  tipo TEXT NOT NULL CHECK (tipo IN ('calcolato', 'manuale')),
+  chiave TEXT,
+  stato TEXT NOT NULL DEFAULT 'da_comprare' CHECK (stato IN ('da_comprare', 'ce_lho', 'comprato')),
+  fabbisogno_coperto REAL,
+  quantita_utente REAL CHECK (quantita_utente IS NULL OR quantita_utente >= 0),
+  quantita_calcolata_alla_correzione REAL,
+  reparto_id TEXT REFERENCES reparti (id) ON DELETE SET NULL,
+  nascosto INTEGER NOT NULL DEFAULT 0 CHECK (nascosto IN (0, 1)),
+  inclusa INTEGER NOT NULL DEFAULT 0 CHECK (inclusa IN (0, 1)),
+  nota TEXT NOT NULL DEFAULT '',
+  nome TEXT NOT NULL DEFAULT '',
+  quantita_testo TEXT NOT NULL DEFAULT '',
+  versione INTEGER NOT NULL DEFAULT 1,
+  creato_il INTEGER NOT NULL, aggiornato_il INTEGER NOT NULL,
+  CHECK ((tipo = 'calcolato' AND chiave IS NOT NULL)
+      OR (tipo = 'manuale' AND chiave IS NULL AND length(trim(nome)) > 0)),
+  CHECK (stato <> 'da_comprare' OR fabbisogno_coperto IS NULL)
+) STRICT;
+CREATE UNIQUE INDEX articoli_spesa_chiave ON articoli_spesa (evento_id, chiave) WHERE chiave IS NOT NULL;
+CREATE INDEX articoli_spesa_evento ON articoli_spesa (evento_id);
+
+CREATE TABLE attivita (
+  id TEXT PRIMARY KEY,
+  evento_id TEXT NOT NULL REFERENCES eventi (id) ON DELETE CASCADE,
+  titolo TEXT NOT NULL CHECK (length(trim(titolo)) > 0),
+  data TEXT NOT NULL CHECK (data GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]'),
+  ora TEXT CHECK (ora IS NULL OR ora GLOB '[0-2][0-9]:[0-5][0-9]'),
+  stato TEXT NOT NULL DEFAULT 'da_fare' CHECK (stato IN ('da_fare', 'fatto')),
+  voce_menu_id TEXT REFERENCES voci_menu (id) ON DELETE SET NULL,
+  note TEXT NOT NULL DEFAULT '',
+  ordine INTEGER NOT NULL DEFAULT 0,
+  versione INTEGER NOT NULL DEFAULT 1,
+  creato_il INTEGER NOT NULL, aggiornato_il INTEGER NOT NULL
+) STRICT;
+CREATE INDEX attivita_evento ON attivita (evento_id, data);
+
+CREATE TABLE snapshot_eventi (
+  id TEXT PRIMARY KEY,
+  evento_id TEXT NOT NULL REFERENCES eventi (id) ON DELETE CASCADE,
+  stato TEXT NOT NULL CHECK (stato IN ('valido', 'superato')),
+  versione_formato INTEGER NOT NULL,
+  contenuto TEXT NOT NULL CHECK (json_valid(contenuto)),
+  creato_il INTEGER NOT NULL,
+  superato_il INTEGER,
+  CHECK ((stato = 'superato') = (superato_il IS NOT NULL))
+) STRICT;
+CREATE UNIQUE INDEX snapshot_valido ON snapshot_eventi (evento_id) WHERE stato = 'valido';
+```
+
+L'elenco delle unità nei `CHECK` (`/* §8.1 */`) è generato dal catalogo delle unità del
+dominio al momento di scrivere la migrazione e poi fissato nel file SQL (una nuova unità
+richiede una migrazione).
+
+### 6.4 Vincoli e azioni referenziali
+
+| Operazione | Garanzia | Dove |
+|---|---|---|
+| Elimina evento | Elimina portate, voci, articoli di spesa, attività, snapshot | `ON DELETE CASCADE` |
+| Elimina portata dell'evento | Rifiutata se ha voci; l'interfaccia propone di spostarle prima | `ON DELETE RESTRICT` + servizio |
+| Voce in una portata di un altro evento | Impossibile | FK composta `(portata_id, evento_id)` |
+| Elimina voce di menù | Le attività collegate restano con `voce_menu_id = NULL` | `ON DELETE SET NULL` |
+| Attività collegata a una voce di un altro evento | Rifiutata | servizio (422) |
+| Elimina piatto | Le voci collegate restano con il loro nome e `piatto_id = NULL`; gli snapshot non cambiano | `ON DELETE SET NULL`; snapshot in JSON |
+| Elimina ingrediente di catalogo | Gli ingredienti dei piatti restano con il loro nome e `ingrediente_id = NULL`; sinonimi eliminati | `SET NULL` / `CASCADE` |
+| Elimina reparto | Il servizio sposta prima gli ingredienti su `rep-altro` nella stessa transazione; `rep-altro` (`di_sistema`) non è eliminabile | `RESTRICT` + servizio |
+| Modifiche a un evento archiviato | Rifiutate con 422 `evento_archiviato` | servizio |
+| Sinonimo uguale a un nome canonico di un altro ingrediente | Rifiutato | servizio (l'unicità fra tabelle non è esprimibile in SQL) |
+| Una sola versione archiviata valida per evento | Garantito | indice univoco parziale |
+
+### 6.5 Migrazioni
+
+- File SQL numerati in `server/db/migrazioni/` (`0001_iniziale.sql`, `0002_….sql`),
+  applicati in ordine dal backend **all'avvio**, prima di accettare richieste.
+- Versione corrente in `PRAGMA user_version`; una tabella `migrazioni_applicate (versione,
+  nome, sha256, applicata_il)` conserva lo storico e l'impronta dei file: un file già
+  applicato e poi modificato blocca l'avvio.
+- Procedura all'avvio:
+  1. apertura del database e lettura di `user_version`;
+  2. se il database è più recente del codice → arresto con codice d'uscita 78 e messaggio
+     nel journal («rilascio più vecchio del database»);
+  3. se ci sono migrazioni da applicare → **backup a caldo** (`backup()` di `node:sqlite`)
+     in `dati/backup/pre-migrazione-v<N>-<data>.db` e `PRAGMA integrity_check` sul
+     backup; se fallisce, nessuna migrazione e arresto con codice 78;
+  4. ogni migrazione in una transazione `BEGIN IMMEDIATE … COMMIT` insieme
+     all'aggiornamento di `user_version` e di `migrazioni_applicate`;
+  5. dopo l'ultima: `PRAGMA foreign_key_check` e `PRAGMA integrity_check`; un errore
+     annulla l'ultima transazione e arresta con codice 78.
+- Il servizio systemd non riavvia in ciclo dopo il codice 78
+  (`RestartPreventExitStatus=78`, §14.3).
+- Le migrazioni sono solo in avanti. Tornare indietro significa ripristinare il backup
+  pre-migrazione e il rilascio precedente (§14.4).
+- Ogni migrazione ha un test che parte da un database reale della versione precedente
+  popolato con dati di prova (§17).
+
+### 6.6 Dati iniziali (seed)
+
+- Eseguiti dal backend all'avvio dopo le migrazioni, idempotenti, in transazione.
+- `seed_impostazioni` (M0): impostazioni (coefficiente 0,5), portate predefinite
+  (Antipasti, Primi, Secondi, Contorni, Dolci, Frutta e caffè, Bevande), reparti di
+  §7.6 con id stabili e `rep-altro` di sistema.
+- `seed_catalogo` (M2): catalogo ingredienti (§7.5).
+- Ogni seed registra la propria versione in `meta`; una versione nuova aggiunge solo ciò
+  che manca e non tocca i record modificati dall'utente.
 
 ## 7. Regole di business
 
@@ -470,7 +655,8 @@ Il ripristino da backup verifica le stesse regole (§11.3).
    portate, tutte le voci di menù (ordine, nomi liberi, porzioni effettive, incaricati,
    note), i piatti collegati con ingredienti e nomi di catalogo/reparto risolti, la
    spesa riconciliata, gli articoli manuali, le attività;
-3. evento → `archiviato`, `archiviatoAt`, `snapshotCorrenteId`.
+3. evento → `archiviato`, `archiviatoAt`; lo snapshot è l'unico `valido` dell'evento
+   (indice univoco parziale, §6.3).
 
 I record vivi (voci, stati della spesa, attività) restano nel database ma l'interfaccia
 non li usa finché l'evento è archiviato. Le modifiche o eliminazioni di piatti nel
@@ -490,8 +676,7 @@ di fondere snapshot e ricettario.
    **attuali** del ricettario. La versione archiviata resta consultabile nello storico.»
    Se alcuni piatti sono cambiati o eliminati dopo l'archiviazione, la conferma li elenca
    (solo informazione) e ricorda l'azione «Copia nel ricettario».
-2. In un'unica transazione: lo snapshot passa a `superato`, l'evento torna `attivo` con
-   `snapshotCorrenteId = null`.
+2. In un'unica transazione: lo snapshot passa a `superato`, l'evento torna `attivo`.
 3. L'evento riprende i propri record vivi: voci (quelle di piatti eliminati sono già senza
    piatto, §6.4), stati della spesa, articoli manuali, attività. La riconciliazione
    (§10.4) segnala le differenze dovute a ricette cambiate.
@@ -504,16 +689,16 @@ di fondere snapshot e ricettario.
 - Nome piatto obbligatorio; nomi duplicati permessi ma segnalati («Esiste già un piatto
   con questo nome»).
 - `porzioniBase` vuoto: il piatto è usabile, ma la spesa non può scalarlo (§10.3).
-- Un ingrediente di catalogo ha nome canonico unico (su `nomeNorm`) e sinonimi unici
+- Un ingrediente di catalogo ha nome canonico unico (su `nome_norm`) e sinonimi unici
   nell'intero catalogo; un conflitto blocca il salvataggio con messaggio.
 - Il catalogo iniziale conta **200–250 ingredienti italiani**, ognuno con reparto, unità
   preferita, sinonimi principali e, dove serve, `scalaturaAbituale: 'fissa'` (§8.3).
   Copre tutti i 14 reparti di §7.6 (almeno 5 ingredienti ciascuno, *Altro* escluso).
-- Seed **idempotente**: id stabili (`ing-…`), `meta.seedCatalogo` per sapere quale
+- Seed **idempotente**: id stabili (`ing-…`), la riga `seed_catalogo` della tabella `meta` per sapere quale
   versione del seed è stata applicata. Un'esecuzione ripetuta non crea duplicati;
   una versione nuova del seed aggiunge solo gli id mancanti e aggiorna solo le voci mai
-  modificate dall'utente (`updatedAt === createdAt`); non elimina nulla. Un ingrediente
-  dell'utente con lo stesso `nomeNorm` di una nuova voce del seed vince: la voce del
+  modificate dall'utente (`aggiornato_il = creato_il` e `versione = 1`); non elimina nulla. Un ingrediente
+  dell'utente con lo stesso `nome_norm` di una nuova voce del seed vince: la voce del
   seed non viene inserita.
 
 ### 7.6 Reparti
@@ -699,7 +884,9 @@ Formattazione italiana (virgola decimale) con `Intl.NumberFormat('it-IT')`.
 
 ## 10. Calcolo e riconciliazione della spesa
 
-Tutto in `src/domain/spesa/`, funzioni pure senza Dexie né React, con test esaustivi.
+Tutto in `src/domain/spesa/`, funzioni pure senza SQLite, Fastify né React, con test
+esaustivi. Le esegue il **server** (servizio `spesa`), che legge i dati in una
+transazione di sola lettura e restituisce al client la lista già riconciliata (§12.4).
 
 Principio: **si somma solo ciò che è certo**. Ogni contributo incompleto o dubbio resta
 visibile come riga a sé, con la sua provenienza, e non entra in alcun totale.
@@ -784,7 +971,7 @@ famiglia di unità, si rinomina un ingrediente non collegato, un contributo pass
 
 ### 10.3 Significato degli stati e acquisti parziali
 
-Gli `ShoppingItem` di tipo `calcolato` nascono **solo** quando l'utente interviene su una
+Le righe di `articoli_spesa` di tipo `calcolato` nascono **solo** quando l'utente interviene su una
 riga (stato, quantità, reparto, nascosto, inclusa, nota). Una riga mai toccata non ha
 record: è `da_comprare`.
 
@@ -794,7 +981,8 @@ record: è `da_comprare`.
 | `comprato` | L'utente dichiara **coperto** il fabbisogno mostrato in quel momento, comprandolo |
 | `ce_lho` | L'utente dichiara **coperto** il fabbisogno mostrato in quel momento, con ciò che ha già |
 
-`fabbisognoCoperto` registra la quantità mostrata (unità base: `quantitaUtente` se
+`fabbisognoCoperto` è calcolato **dal server** al momento della richiesta (mai
+preso dal client, che potrebbe mostrare una lista vecchia) e registra la quantità mostrata (unità base: `quantitaUtente` se
 presente, altrimenti calcolata) nel momento in cui la riga passa a `comprato` o `ce_lho`;
 torna `null` con `da_comprare`. **Non è una quantità acquistata**: l'app non sa quanto
 è stato comprato, sa solo quale fabbisogno è stato dichiarato coperto. Per questo i testi
@@ -816,7 +1004,7 @@ comportano come righe sommate (stati, confronti, condivisione).
 
 ### 10.4 Riconciliazione (`riconciliaSpesa`)
 
-Input: righe calcolate, `ShoppingItem` dell'evento. Output: `VoceListaSpesa[]` raggruppate
+Input: righe calcolate, righe di `articoli_spesa` dell'evento. Output: `VoceListaSpesa[]` raggruppate
 in sezioni. Nessuna scrittura: la funzione è pura; eventuali pulizie sono azioni
 esplicite. «Fabbisogno attuale» = `quantitaUtente` se presente, altrimenti quantità
 calcolata.
@@ -870,314 +1058,427 @@ sola lettura.
 
 ## 11. Backup e ripristino
 
-### 11.1 Formato
+Il database è unico e sta sul server: i backup sono **centralizzati** e non dipendono da
+alcun dispositivo.
+
+### 11.1 Tipi di backup
+
+| Tipo | Quando | Formato | Conservazione |
+|---|---|---|---|
+| Giornaliero | Timer systemd `menuapp-backup.timer`, ogni giorno alle 03:45 (dopo il backup di dailyMeals delle 03:30) | Copia `.db` a caldo | Ultimi 14 |
+| Settimanale | La copia giornaliera della domenica viene conservata anche come settimanale | `.db` | Ultime 8 |
+| Pre-migrazione | All'avvio, prima di applicare migrazioni (§6.5) | `.db` | Ultimi 5 |
+| Pre-ripristino | Prima di ogni ripristino (§11.4) | `.db` | Ultimi 5 |
+| Manuale | *Impostazioni → Dati → Backup ora* | `.db` | Ultimi 10 |
+| Esportazione | Su richiesta, scaricata dal browser | JSON portabile (§11.3) | Fuori dal server, a cura di Loris |
+
+Cartella: `/srv/apps/menuapp/dati/backup/` (fuori da Git), nomi
+`<tipo>-<AAAAMMGG-HHmmss>-v<schema>.db`, accompagnati da `<nome>.json` con impronta
+SHA-256 del file, versione dello schema, conteggi delle tabelle ed esito della verifica.
+
+### 11.2 Creazione e verifica
+
+1. `backup()` di `node:sqlite` (API di backup online di SQLite) dal database aperto: copia
+   coerente anche durante le scritture (WAL), su un file temporaneo nella stessa cartella.
+2. Apertura del file in sola lettura: `PRAGMA integrity_check` = `ok`,
+   `PRAGMA foreign_key_check` vuoto, `user_version` letto, conteggi.
+3. Solo se la verifica riesce: `fsync`, rinomina al nome definitivo, scrittura del file
+   `.json` di accompagnamento, rotazione secondo §11.1. Altrimenti il file temporaneo
+   viene eliminato e l'errore registrato.
+4. Esito in `meta` (`ultimo_backup`: data, tipo, esito, nome) e nel journal; in
+   *Impostazioni → Dati* un avviso compare se l'ultimo backup giornaliero riuscito ha
+   più di 36 ore o se l'ultimo tentativo è fallito.
+
+Il timer esegue `server/backup/cli.ts giornaliero`, che apre il database in un processo
+separato e usa lo stesso modulo `server/backup/` dell'API: in modalità WAL la copia a
+caldo legge in modo coerente mentre il servizio continua a scrivere. Il servizio resta
+l'unico processo che modifica il contenuto.
+
+### 11.3 Esportazione JSON
+
+Formato portabile e leggibile, indipendente da SQLite, utile per conservare i dati fuori
+dal server e per i test:
 
 ```json
 {
-  "formato": "menuapp-backup",
+  "formato": "menuapp-esportazione",
   "versioneFormato": 1,
   "versioneSchema": 1,
   "versioneApp": "1.0.0+abc1234",
   "esportatoAt": "2026-12-01T18:30:00.000Z",
-  "conteggi": { "events": 3, "menuItems": 41, "...": 0 },
+  "conteggi": { "eventi": 3, "voci_menu": 41, "…": 0 },
   "impronta": "sha256:…",
-  "dati": {
-    "events": [], "menuItems": [], "dishes": [], "dishIngredients": [],
-    "ingredients": [], "shoppingItems": [], "tasks": [], "eventSnapshots": [],
-    "settings": [], "meta": []
-  }
+  "dati": { "<tabella>": [ { "<colonna>": "<valore>" } ] }
 }
 ```
 
-**Impronta**: `SHA-256` della serializzazione **canonica** di
-`{ versioneFormato, versioneSchema, dati }`:
-- tabelle nell'ordine fisso sopra; record di ogni tabella ordinati per chiave primaria;
-- chiavi degli oggetti ordinate alfabeticamente a ogni livello, ordine degli array
-  conservato;
-- `JSON.stringify` senza spazi; codifica UTF-8.
+- `dati` contiene **tutte** le tabelle di contenuto con i nomi e i valori delle colonne
+  SQL, letti in una transazione di sola lettura. Esclusi: `migrazioni_applicate`,
+  `meta.revisione`, `meta.ultimo_backup` (dati di servizio, non di contenuto).
+- **Impronta**: SHA-256 della serializzazione canonica di
+  `{ versioneFormato, versioneSchema, dati }` (tabelle in ordine alfabetico, righe
+  ordinate per chiave primaria, chiavi degli oggetti in ordine alfabetico, `JSON.stringify`
+  senza spazi, UTF-8). Due esportazioni senza modifiche intermedie hanno la stessa
+  impronta; un file reindentato resta valido.
+- È disponibile anche lo scaricamento di un backup `.db` dall'elenco dei backup.
 
-La serializzazione canonica rende l'impronta indipendente dall'ordine di lettura e dalla
-formattazione del file (un file reindentato a mano resta valido).
+### 11.4 Ripristino
 
-**Coerenza con `ultimoBackupAt`**: le chiavi `meta` del dispositivo (`ultimoBackupAt`,
-`ultimaModificaAt`, `persistenzaRichiesta`, …, §6.2) **non** fanno parte del backup.
-L'esportazione calcola l'impronta su `dati` già privi di quelle chiavi e **dopo** aggiorna
-`ultimoBackupAt` nel database: il file e la sua impronta non cambiano per effetto
-dell'esportazione stessa, e due esportazioni consecutive senza modifiche producono
-`dati` e impronta identici.
+Due sorgenti: un **backup del server** (`.db` dall'elenco) o un **file JSON** caricato
+(max 50 MB). Il ripristino avviene in due passi, per evitare sostituzioni accidentali.
 
-### 11.2 Esportazione
+**Passo 1 — Verifica** (`POST /api/v1/ripristino/verifica`), nessuna scrittura:
+1. JSON: lettura, controllo dell'intestazione, **verifica dell'impronta sul contenuto
+   originale** (se non corrisponde: avviso «file modificato o danneggiato», si può
+   proseguire solo con conferma esplicita), migrazione del formato alla versione corrente
+   con funzioni pure, validazione zod di ogni riga, caricamento in un database
+   **temporaneo** con lo schema corrente (che applica tutti i vincoli SQL).
+   `.db`: copia temporanea, `integrity_check`, migrazioni fino alla versione corrente
+   (stesse migrazioni dell'avvio), `foreign_key_check`.
+2. Versione dello schema più recente del codice → rifiuto («aggiorna l'app»).
+3. Risposta: riepilogo (data, origine, versione, conteggi, avvisi) e un `token` valido 10
+   minuti che identifica il database temporaneo verificato.
 
-- Lettura di tutte le tabelle in **una** transazione in sola lettura (dati coerenti),
-  esclusione delle chiavi `meta` del dispositivo, calcolo dell'impronta.
-- File `menuapp-backup-AAAA-MM-GG-HHmm.json`; su Android si offre anche la condivisione
-  del file (`navigator.share({ files })`) per salvarlo su Drive o inviarlo.
-- `ultimoBackupAt` viene aggiornato quando il file è stato consegnato al browser
-  (download avviato o condivisione completata). L'app non può sapere se il file è stato
-  davvero salvato: il promemoria resta l'ultima difesa.
+**Passo 2 — Esecuzione** (`POST /api/v1/ripristino/esegui` con `token` e conferma
+testuale «RIPRISTINA»):
+1. backup **pre-ripristino** del database attuale (§11.2); se fallisce, stop;
+2. in un'unica transazione `BEGIN IMMEDIATE`: `ATTACH` del database temporaneo,
+   cancellazione del contenuto di tutte le tabelle di contenuto in ordine inverso alle
+   dipendenze, `INSERT … SELECT` da quello temporaneo, `foreign_key_check`, incremento di
+   `meta.revisione`; un errore annulla tutto;
+3. `DETACH`, eliminazione del temporaneo, voce nel journal;
+4. tutti i dispositivi vedono cambiare la revisione e ricaricano i dati (§12.6); le
+   modifiche in corso su altri dispositivi ricevono 409 (le versioni non coincidono più).
 
-### 11.3 Ripristino validato
+Il file del database non viene mai sostituito sul disco mentre il servizio è attivo:
+il ripristino è una transazione, quindi atomico.
 
-1. Lettura file (max 50 MB) e `JSON.parse` con messaggio chiaro in caso di errore.
-2. Controlli dell'intestazione: `formato`, `versioneFormato` supportata,
-   `versioneSchema` ≤ versione dell'app (se maggiore: «Backup creato da una versione più
-   recente: aggiorna l'app»).
-3. **Verifica dell'impronta sui dati originali del file**, prima di qualsiasi
-   trasformazione. Se non corrisponde: avviso «file modificato o danneggiato», si
-   prosegue solo con conferma esplicita (utile per backup corretti a mano), e il
-   riepilogo lo segnala.
-4. Migrazione del contenuto alla versione corrente con funzioni pure
-   (`migraBackup[v]`), le stesse regole delle migrazioni Dexie. L'impronta non viene
-   ricalcolata: si riferisce al file così com'era.
-5. Validazione di ogni record con schemi **zod** (tipi, enum, formati data/ora, UUID).
-6. Integrità referenziale (§6.4): i riferimenti facoltativi rotti vengono annullati
-   (`dishId → null`) e elencati; quelli obbligatori bloccano il ripristino.
-7. Riepilogo e conferma (data, versione, conteggi, avvisi).
-8. **Copia di sicurezza obbligatoria** dei dati attuali nel database
-   `menuapp-sicurezza`, nello stesso formato di §11.1. Se la scrittura fallisce (spazio
-   esaurito, errore), il ripristino si interrompe e nulla cambia. Il download della
-   stessa copia è **offerto** con un pulsante, ma il ripristino non dipende da esso (il
-   browser potrebbe bloccare o ritardare i download automatici).
-9. Unica transazione `rw` su tutte le tabelle di `menuapp`: `clear()` + `bulkAdd()`
-   per le tabelle di contenuto; per `meta` si eliminano e sostituiscono **solo** le
-   chiavi di contenuto, mentre quelle del dispositivo restano. Nella stessa transazione
-   `ultimoBackupAt` e `ultimaModificaAt` diventano `esportatoAt` del file (i dati
-   coincidono con quel backup, quindi nessun promemoria immediato);
-   `persistenzaRichiesta` e le altre chiavi del dispositivo restano invariate. Se la
-   transazione fallisce, nulla cambia.
-10. Ricarica dell'app.
+### 11.5 Ripristino d'emergenza (servizio non avviabile)
 
-L'MVP prevede solo «sostituisci tutto». L'unione è rinviata.
+Procedura documentata in `docs/OPERAZIONI.md` e in `scripts/ripristino-emergenza.sh`:
+fermare `menuapp.service`, copiare il database attuale in `dati/backup/emergenza-…`,
+copiare il backup scelto su `dati/menuapp.db` (rimuovendo i file `-wal` e `-shm`),
+`integrity_check`, riavviare. Richiede l'intervento di Loris.
 
-### 11.4 Archiviazione persistente e sicurezza
+### 11.6 Limite noto: un solo disco
 
-- `navigator.storage.persist()` richiesto al primo salvataggio di dati e
-  all'installazione; stato e spazio (`storage.estimate()`) in *Impostazioni → Dati*.
-- Promemoria backup: banner se `ultimaModificaAt > ultimoBackupAt` e sono passati più di
-  `promemoriaGiorni` dall'ultimo backup.
-- Copie di sicurezza: database `menuapp-sicurezza` (§6.3), ultime 3, consultabili,
-  scaricabili e ripristinabili da *Impostazioni → Dati*.
-
-**Apertura sicura e copia pre-migrazione** (procedura verificata il 12/11/2026 con Dexie
-4.4.7 e Chrome 157, vedi §12.1):
-
-1. `Dexie.exists('menuapp')`: se il database non esiste, apertura normale (creazione e
-   seed), fine. `exists` non crea il database.
-2. Lettura della versione installata **senza aprire** il database:
-   `indexedDB.databases()` → `version` nativa; per Dexie `versione = nativa / 10`.
-3. Se la versione installata è uguale a quella del codice: apertura normale.
-   Se è maggiore: l'app è più vecchia dei dati (es. scheda rimasta aperta) → schermata
-   «Ricarica per aggiornare l'app», nessuna apertura.
-4. Se è minore: apertura **in modalità dinamica** (`new Dexie('menuapp')` senza
-   `version()`): Dexie apre alla versione esistente, senza `upgradeneeded` e senza
-   modificare nulla; lettura di tutte le tabelle e chiusura esplicita (`close()`), che
-   evita il blocco dell'apertura successiva.
-5. Scrittura della copia (formato §11.1, con la `versioneSchema` installata) in
-   `menuapp-sicurezza`. Se fallisce: nessuna migrazione, schermata d'errore con
-   «Scarica i dati» (esportazione dalla modalità dinamica) e «Riprova».
-6. Apertura dell'istanza tipizzata con tutte le `version(n)`: Dexie esegue gli `upgrade`
-   in un'unica transazione di versione; se un `upgrade` lancia un errore, IndexedDB
-   annulla tutto e il database resta alla versione precedente con i dati intatti
-   (verificato). L'app mostra la schermata d'errore con le stesse azioni.
-7. Più schede: l'istanza registra `on('versionchange')` → `close()` e avviso «Ricarica»;
-   `on('blocked')` → avviso «Chiudi le altre schede di Menù & Co.».
-
-Regole per le migrazioni: mai modificare una `version(n)` già pubblicata; ogni nuova
-versione ha un test che parte da dati fittizi della versione precedente, sia con
-fake-indexeddb sia in Chrome (e2e); il formato di backup e le migrazioni del backup
-evolvono insieme.
+Database e backup stanno sullo stesso disco NVMe del server. I backup proteggono da
+errori, migrazioni fallite e corruzione logica, **non** dalla rottura del disco. Mitigazione
+nell'MVP: esportazione JSON periodica scaricata su un altro dispositivo (promemoria in
+*Impostazioni → Dati* se l'ultima esportazione ha più di 14 giorni). Una copia automatica
+su un secondo supporto è una decisione aperta.
 
 ## 12. Architettura tecnica
 
 ### 12.1 Stack e versioni verificate (12/11/2026)
 
-| Pacchetto | Versione | Note sulla verifica |
+| Componente | Versione | Note sulla verifica |
 |---|---|---|
-| Node | 24.18 (nvm, `.nvmrc`) | engines `>=22.12` |
-| TypeScript | **7.0.2** | Installato e funzionante con `tsc -b` e `vite build`. **Strict è attivo per impostazione predefinita** (verificato: TS7006 e TS2322 su un file di prova); lo dichiariamo comunque esplicitamente. Il pacchetto **non espone l'API JavaScript** (`require('typescript').createProgram` è assente): gli strumenti che la richiedono non funzionano. Non la usano: Vite/oxc, Vitest, oxlint, Tailwind. `shadcn` usa `ts-morph`, che porta con sé TypeScript 6.0.2: compatibile. Ripiego documentato: `typescript@~5.9` |
-| Vite | 8.3 | solo per sviluppo e build; in produzione i file sono serviti da `scripts/serve.mjs` (Node 24, nessuna dipendenza) |
+| Node | 24.18 (nvm, `.nvmrc`) | engines `>=22.12`. Esegue TypeScript **senza compilazione** (rimozione dei tipi): verificato con import fra moduli `.ts` e `import type`. Richiede solo sintassi cancellabile, già imposta da `erasableSyntaxOnly` |
+| SQLite | 3.53.1 via `node:sqlite` | Verificato: `PRAGMA foreign_keys` e violazioni FK, tabelle `STRICT`, WAL, `ON DELETE CASCADE`, aggiornamento condizionato sulla versione (`changes` 1 / 0), `backup()` online con `integrity_check` = `ok`. Nessun avviso sperimentale in Node 24.18. Nessun modulo nativo da compilare (alternativa scartata: `better-sqlite3` 13) |
+| Fastify | 5.12 | `app.inject()` per i test delle API senza porte |
+| @fastify/static | 10.1 | file del frontend dallo stesso processo |
+| zod | 4.6 | contratto API condiviso, validazione delle esportazioni |
+| TypeScript | 7.0.2 | strict di default (verificato); `tsc -b` solo per il controllo dei tipi di client e server. Il pacchetto non espone l'API JS: non serve a nessuno strumento dello stack; ripiego `~5.9` |
+| Vite | 8.3 | build del frontend; in sviluppo, proxy `/api` verso il backend |
 | React / React DOM | 19.3 | |
-| @vitejs/plugin-react | 6.1 | peer `vite ^8` |
-| Tailwind CSS + @tailwindcss/vite | 4.3.5 | peer `vite ^5–^8` |
-| shadcn (CLI, via `npx`) | 4.23 | componenti copiati nel progetto; dipendenze: `radix-ui` 1.8, `lucide-react`, `class-variance-authority`, `clsx`, `tailwind-merge`, `tw-animate-css` |
-| Dexie / dexie-react-hooks | 4.4.7 / 4.4.0 | `useLiveQuery`. Procedura di §11.4 provata in Chrome 157 headless: `Dexie.exists` non crea il DB; `indexedDB.databases()` restituisce versione nativa 10 per la v1 Dexie; l'apertura dinamica legge i dati senza upgrade; un `upgrade` che lancia un errore lascia DB e dati alla versione precedente |
-| react-router | 8.5 | solo `createHashRouter` (peer React ≥ 19.2.7) |
-| zod | 4.6 | validazione backup e moduli |
-| vite-plugin-pwa / @vite-pwa/assets-generator | 2.0 / 1.x | |
-| Vitest | 5.1 | peer `vite ^6–^8`, `@types/node ^22 ∥ ≥24` |
+| @tanstack/react-query | 5.107 | cache dei dati del server nel client, invalidazione, ricarica al ritorno in primo piano (non è uno store globale dell'applicazione) |
+| react-router | 8.5 | solo `createHashRouter` |
+| Tailwind CSS + @tailwindcss/vite | 4.3.5 | |
+| shadcn (CLI via `npx`) | 4.23 | componenti copiati nel progetto |
+| vite-plugin-pwa | 2.0 | solo guscio dell'app in cache, nessun dato |
+| Vitest | 5.1 | progetti `dominio`, `server`, `ui` |
 | happy-dom / @testing-library/react | 21 / 16.3 | componenti |
-| fake-indexeddb | 6.2 | test Dexie in Node |
-| @playwright/test | 1.65 | con **Chrome di sistema** (`channel: 'chrome'`, v157): niente download di browser; i Chromium in `~/.cache/ms-playwright` (rev. 1228) sono troppo vecchi |
+| @playwright/test | 1.65 | Chrome di sistema 157 (`channel: 'chrome'`) |
 | oxlint | 1.90 | |
-| @dnd-kit/core, sortable (M1) | da fissare in M1 | riordino con tocco prolungato; già usato in dailyMeals |
-| @fontsource-variable (M4) | da fissare in M4 | font serif per la stampa, inclusi nel bundle (offline) |
+| @dnd-kit (M1), font di stampa (M4) | da fissare | |
 
-Gli avvisi `npm audit` attuali (glob/minimatch via workbox-build) riguardano solo la build,
-non il codice distribuito.
-
-Configurazione TypeScript aggiuntiva: `strict`, `noUncheckedIndexedAccess`,
-`noImplicitOverride`, `noFallthroughCasesInSwitch`, alias `@/*` → `src/*`.
+Rimossi rispetto alla v1.2: `dexie`, `dexie-react-hooks`, `fake-indexeddb`.
 
 ### 12.2 Struttura delle cartelle
 
 ```
 src/
-  app/            App, router, layout (AppShell, navigazione), provider, pagina errore
-  components/ui/  componenti shadcn (generati)
-  components/     componenti condivisi (ConfermaElimina, CampoQuantita, Vuoto…)
-  domain/         logica pura, senza React né Dexie
-    tempo.ts        date locali, scelte rapide
-    unita.ts        catalogo unità, famiglie, conversioni, formattazione
-    porzioni.ts     coperti equivalenti, fattore, scalatura
-    parser/         analizzaRiga, numeri in parola, casi di test
-    spesa/          calcolaSpesa, chiavi, riconciliaSpesa, testoCondivisione
-    snapshot.ts     creazione dello snapshot completo, piatti cambiati dopo l'archiviazione
-    schemi.ts       schemi zod delle entità
+  domain/         logica pura condivisa (nessun import da React, Fastify, SQLite, DOM)
+    tipi.ts  norm.ts  tempo.ts  unita.ts  porzioni.ts  parser/  spesa/  snapshot.ts
+    regole/        transizioni di stato dell'evento, ordinamenti, validazioni di dominio
+  contratto/      schemi zod e tipi delle API (richieste, risposte, codici d'errore)
+  app/            frontend: App, router, layout, pagina errore
+  api/            client HTTP tipizzato + hook TanStack Query
+  connessione/    stato del server, modalità sola lettura
+  components/ui/  componenti shadcn
+  components/     componenti condivisi (ConflittoVersione, ConfermaElimina, …)
+  features/       eventi/ menu/ ricettario/ ingredienti/ spesa/ piano/ cucina/ stampa/ impostazioni/
+  pwa/            registrazione service worker, avviso aggiornamento
+  styles/
+server/
+  main.ts         avvio: configurazione, migrazioni, seed, ascolto
+  app.ts          costruzione dell'app Fastify (iniettabile nei test)
+  config.ts       variabili d'ambiente validate
   db/
-    db.ts           istanza Dexie, versioni, apertura sicura
-    seed/           impostazioni, reparti, catalogo ingredienti
-    repo/           un modulo per entità: letture e scritture in transazione
-    backup/         esporta, valida, migra, ripristina
-    sicurezza.ts    database delle copie di sicurezza
-  features/
-    eventi/  menu/  ricettario/  ingredienti/  spesa/  piano/  cucina/  stampa/
-    impostazioni/
-  pwa/            avviso aggiornamento, installazione, persistenza
-  styles/         index.css (Tailwind, token del tema, stampa)
-test/e2e/         Playwright
-scripts/          serve.mjs, installa-servizio.sh, rilascia.sh, ripristina-rilascio.sh
-rilasci/          build di produzione (fuori da Git), collegamento `attuale`
+    connessione.ts   apertura, PRAGMA, transazioni
+    migrazioni/      0001_iniziale.sql …  +  esegui.ts
+    seed/            impostazioni, reparti, catalogo
+    repo/            un modulo per tabella/aggregato: SQL e conversione di nomi
+  servizi/        casi d'uso: transazioni, controlli di versione, regole, chiamate al dominio
+  api/            rotte Fastify: validazione col contratto, chiamata ai servizi, mappatura errori
+  backup/         crea, verifica, ruota, esporta, ripristina, cli.ts
+scripts/          installa-servizio.sh, rilascia.sh, ripristina-rilascio.sh, ripristino-emergenza.sh
+test/             e2e/ (Playwright), fixture/ (database ed esportazioni di prova)
+dati/             database e backup di produzione (fuori da Git)
+dati-sviluppo/    database di sviluppo (fuori da Git)
+rilasci/          rilasci installati (fuori da Git), collegamento `attuale`
 ```
 
-### 12.3 Regole architetturali
+### 12.3 Livelli e regole di dipendenza
 
-- **Dominio puro**: `src/domain` non importa React, Dexie, `window`. Tutta la logica con
-  regole (porzioni, parser, spesa, snapshot, validazione) sta lì ed è testata.
-- **Accesso ai dati solo dai repository** (`src/db/repo`). I componenti leggono con
-  `useLiveQuery` tramite hook di feature (`useEvento(id)`, `useListaSpesa(eventId)`) e
-  scrivono chiamando funzioni dei repository. Niente store globale: lo stato condiviso è
-  il database (reattivo) più l'URL.
-- Ogni scrittura multi-tabella è una transazione Dexie.
-- I repository impostano `updatedAt` e `meta.ultimaModificaAt`.
-- Stato effimero della vista cucina (spunte) in `sessionStorage`.
-- Nessuna chiamata di rete a runtime: font, icone e dati inclusi nel bundle.
+```
+ interfaccia (src/features, src/app) ──▶ src/api ──HTTP──▶ server/api ──▶ server/servizi ──▶ server/db/repo ──▶ SQLite
+            │                                 │                 │                │
+            └──────────────▶ src/domain ◀─────┴── src/contratto ─┴────────────────┘
+```
 
-## 13. PWA e funzionamento offline
+- `src/domain`: funzioni pure, testate senza server né browser. Usato dal client
+  (anteprima del parser, scalatura in vista cucina, testo di condivisione) e dal server
+  (calcolo e riconciliazione della spesa, snapshot, regole).
+- `src/contratto`: unico punto in cui è definita la forma dei dati scambiati; il client
+  lo usa per tipizzare le chiamate, il server per validare ingressi e uscite.
+- `server/api` non contiene regole: valida, chiama un servizio, traduce il risultato.
+- `server/servizi` contiene i casi d'uso: apre la transazione, controlla le versioni,
+  applica le regole (anche quelle del dominio) e incrementa la revisione.
+- `server/db/repo` è l'unico codice che scrive SQL.
+- Un test di architettura (Vitest) analizza gli import e fallisce se una regola è violata
+  (es. `src/domain` che importa `react` o `node:sqlite`, `src/features` che importa
+  `server/`).
 
-- `vite-plugin-pwa` in modalità `generateSW` con **`registerType: 'prompt'`**: la nuova
-  versione si installa in background e l'app mostra «Nuova versione disponibile —
-  Aggiorna». L'aggiornamento non avviene mai da solo (si potrebbe essere a metà di una
-  ricetta). Se ci sono modifiche non salvate in un modulo, l'aggiornamento chiede conferma.
-- Controllo aggiornamenti all'avvio, al ritorno in primo piano e ogni ora, solo se il
-  server è raggiungibile (Tailscale attivo); in caso contrario nessun errore visibile.
-- Precache di tutti gli asset (JS, CSS, HTML, icone, font). `navigateFallback:
-  'index.html'`. L'hash routing evita problemi di rotte profonde.
-- Avviso «Pronta per l'uso offline» alla prima installazione del service worker.
-- Manifest: `name` e `short_name` «Menù & Co.», `id: '/'`, `scope: '/'`,
-  `start_url: '/'`, `lang: 'it'`, `display: 'standalone'`, colori tema chiaro, icone
-  64/192/512 + maskable 512, `shortcuts` verso *Nuovo evento* e *Ricettario* (M4).
-- `base: '/'` in tutte le modalità: l'app è servita alla radice della propria origine.
-- Versione visibile in *Impostazioni → Dati*: `versione package + hash del commit`
-  iniettati in build (`define`), più l'identificativo del rilascio servito.
-- **Installazione**: da Chrome (Android o PC) con Tailscale attivo, aprire
-  `https://loris-srv01.dala-tortoise.ts.net:9870/` → menu → *Installa app*. Dopo
-  l'installazione l'app si apre e funziona **anche con Tailscale spento o senza rete**:
-  tutto è in cache e i dati sono nel browser. Tailscale serve solo per installare e per
-  ricevere aggiornamenti.
-- **Dove stanno i dati**: in IndexedDB del browser di ciascun dispositivo, mai sul
-  server. Il server distribuisce solo file statici; perdere il server non fa perdere dati,
-  e il backup resta la protezione dei dati (§11).
-- **Origini e dati**: IndexedDB è legato all'origine (schema + host + porta).
+### 12.4 API REST e contratto
 
-  | Uso | Origine | Dati |
-  |---|---|---|
-  | Produzione | `https://loris-srv01.dala-tortoise.ts.net:9870` | reali |
-  | Sviluppo da Android | `https://loris-srv01.dala-tortoise.ts.net:8443` | di prova |
-  | Sviluppo da PC (tunnel) | `http://localhost:5173` | di prova |
-  | Anteprima di collaudo | `https://loris-srv01.dala-tortoise.ts.net:8444` | di prova |
-  | Test e2e | `http://127.0.0.1:4174` | temporanei |
+Prefisso `/api/v1`. JSON UTF-8. Gli schemi di ogni richiesta e risposta sono in
+`src/contratto/` e coincidono con i tipi di §6.2.
 
-  L'origine di produzione è **definitiva**: cambiarne host o porta dopo l'uso reale
-  richiede di spostare i dati con backup e ripristino su ogni dispositivo.
+**Convenzioni**
+- Creazione: `POST` con `id` generato dal client. Se l'id esiste già con lo stesso
+  contenuto → `200` con il record (ripetizione dopo un errore di rete); con contenuto
+  diverso → `409 id_esistente`.
+- Modifica: `PUT` dell'intero aggregato con il campo `versione` letto in precedenza.
+- Eliminazione: `DELETE …?versione=N`.
+- Azioni di stato: `POST /…/<azione>` con `{ versione }`.
+- Risposte di scrittura: il record aggiornato (con la nuova `versione`) e l'intestazione
+  `X-Revisione` (§12.6).
+- Errori: `{ "errore": { "codice": "…", "messaggio": "testo italiano", "dettagli": … } }`.
+
+| Stato | Codice | Quando |
+|---|---|---|
+| 400 | `richiesta_non_valida` | Corpo o parametri non conformi al contratto (dettagli per campo) |
+| 403 | `origine_non_ammessa` | Scrittura senza `Origin` ammessa (§12.7) |
+| 404 | `non_trovato` | Risorsa assente |
+| 409 | `conflitto_versione` | Versione diversa da quella attuale; `dettagli.attuale` contiene il record aggiornato |
+| 409 | `id_esistente` | Creazione con id già usato per un altro contenuto |
+| 415 | `tipo_non_supportato` | Scrittura senza `Content-Type: application/json` |
+| 422 | `regola_violata` | Regola di dominio (es. `evento_archiviato`, `portata_non_vuota`, `sinonimo_duplicato`); `dettagli.regola` la identifica |
+| 503 | `servizio_non_pronto` | Avvio o manutenzione (migrazioni, ripristino) in corso |
+
+**Risorse** (in grassetto le rotte implementate in M0)
+
+| Metodo e percorso | Scopo | Milestone |
+|---|---|---|
+| **`GET /api/v1/salute`** | `{ ok, versioneApp, versioneSchema, rilascio, revisione }` | M0 |
+| **`GET /api/v1/revisione`** | `{ revisione }` (interrogazione leggera, §12.6) | M0 |
+| **`GET /api/v1/impostazioni`** · **`PUT`** | coefficiente bambini e portate predefinite | M0 (API), M1 (interfaccia) |
+| **`GET /api/v1/reparti`** | elenco ordinato | M0 |
+| `POST /api/v1/reparti` · `PUT /…/:id` · `DELETE /…/:id` · `PUT /api/v1/reparti/ordine` | gestione reparti | M2 |
+| `GET /api/v1/eventi?stato=` · `POST /api/v1/eventi` | elenco e creazione (con portate copiate dalle predefinite) | M1 |
+| `GET /api/v1/eventi/:id` · `PUT` · `DELETE` | evento con portate | M1 |
+| `POST /api/v1/eventi/:id/concludi` · `/riapri` · `/archivia` | stati (§7.3–7.4) | M1 / M4 |
+| `POST /api/v1/eventi/:id/portate` · `PUT /api/v1/portate/:id` · `DELETE` · `PUT /api/v1/eventi/:id/portate/ordine` | portate dell'evento | M1 |
+| `GET /api/v1/eventi/:id/menu` | portate con voci ordinate | M1 |
+| `POST /api/v1/eventi/:id/voci` (una o più, inserimento multiriga) · `PUT /api/v1/voci/:id` · `DELETE` | voci di menù | M1 |
+| `PUT /api/v1/eventi/:id/voci/ordine` | `{ portataId, voci: [{ id, versione }] }` — riordino e spostamento | M1 |
+| `POST /api/v1/voci/:id/crea-piatto` | crea il piatto e collega la voce in una transazione | M2 |
+| `GET /api/v1/piatti?q=` · `POST` · `GET /api/v1/piatti/:id` · `PUT` · `DELETE` | piatto con ingredienti come unico aggregato | M2 |
+| `GET /api/v1/ingredienti` · `POST` · `PUT /api/v1/ingredienti/:id` · `DELETE` | catalogo con sinonimi | M2 |
+| `GET /api/v1/eventi/:id/spesa` | lista calcolata e riconciliata dal server, sezioni, avvisi | M3 |
+| `PUT /api/v1/eventi/:id/spesa/righe/:chiave` | stato, quantità utente, reparto, nascosto, inclusa, nota (`versione` 0 se la riga non ha ancora un record) | M3 |
+| `DELETE /api/v1/eventi/:id/spesa/righe/:chiave` · `POST /…/spesa/ripulisci` · `POST /…/spesa/trasferisci` | casi R5, R6, R10 | M3 |
+| `POST /api/v1/eventi/:id/spesa/manuali` · `PUT /api/v1/spesa/manuali/:id` · `DELETE` | articoli manuali | M3 |
+| `GET /api/v1/eventi/:id/attivita` · `POST` · `PUT /api/v1/attivita/:id` · `DELETE` · `POST /api/v1/eventi/:id/attivita/sposta` | piano | M4 |
+| `GET /api/v1/eventi/:id/snapshot` · `GET /api/v1/snapshot/:id` · `POST /api/v1/snapshot/:id/copia-piatto` | storico archiviato | M4 |
+| **`GET /api/v1/backup`** · **`POST /api/v1/backup`** · **`GET /api/v1/backup/:nome`** | elenco, backup ora, scaricamento `.db` | M0 |
+| **`GET /api/v1/esportazione`** | esportazione JSON (§11.3) | M0 |
+| **`POST /api/v1/ripristino/verifica`** · **`POST /api/v1/ripristino/esegui`** | ripristino in due passi (§11.4) | M0 |
+
+Il parser degli ingredienti gira nel client (anteprima immediata); il server riceve le
+righe già analizzate e confermate e ne valida la forma. La spesa invece è calcolata **solo
+dal server**, che è l'unico a vedere sempre tutti i dati aggiornati.
+
+### 12.5 Concorrenza fra dispositivi
+
+**Controllo ottimistico per aggregato.** Ogni aggregato ha una `versione`:
+
+| Aggregato | Contiene |
+|---|---|
+| Impostazioni | coefficiente, portate predefinite |
+| Reparto | singolo reparto |
+| Evento | dati dell'evento e sue portate (nomi e ordine) |
+| Voce di menù | singola voce |
+| Piatto | piatto con tutti i suoi ingredienti |
+| Ingrediente | ingrediente con sinonimi |
+| Articolo di spesa | singola riga (calcolata o manuale) |
+| Attività | singola attività |
+
+- Scrittura: `UPDATE … SET …, versione = versione + 1 WHERE id = ? AND versione = ?`
+  dentro `BEGIN IMMEDIATE` (le transazioni di scrittura sono serializzate da SQLite).
+  `changes = 0` → se il record esiste: `409 conflitto_versione` con il record attuale;
+  altrimenti `404`.
+- Riordino di più record (`…/ordine`): il client invia `{ id, versione }` di ogni record;
+  se anche uno solo non coincide, nessuna modifica e `409` con lo stato attuale.
+- Operazioni che toccano più aggregati (es. «crea nel ricettario», archiviazione,
+  ripristino) avvengono in un'unica transazione e controllano le versioni di tutti gli
+  aggregati che modificano.
+- La granularità è scelta perché i casi comuni non entrino in conflitto: spuntare la
+  spesa dal telefono mentre si modifica il menù dal PC tocca aggregati diversi.
+
+**Gestione nel client.** Componente unico `ConflittoVersione`: mostra «Modificato da un
+altro dispositivo», il valore attuale accanto a quello che si stava salvando e due
+scelte: *Ricarica* (scarta la propria modifica, che resta visibile per copiarla) e
+*Sovrascrivi* (ripete il salvataggio con la nuova versione: scelta esplicita, mai
+automatica). Le eliminazioni in conflitto propongono solo *Ricarica*.
+
+**Ripetizioni sicure.** Creazioni con id del client (idempotenti); le modifiche, se la
+risposta si perde, al nuovo tentativo ricevono 409 con il record già aggiornato: il
+client confronta e, se coincide con quanto voleva salvare, lo considera riuscito senza
+mostrare il conflitto.
+
+### 12.6 Aggiornamento delle viste fra dispositivi
+
+- `meta.revisione` è un contatore globale incrementato da ogni transazione di scrittura.
+- Il client interroga `GET /api/v1/revisione` ogni 10 s mentre l'app è visibile (e
+  subito al ritorno in primo piano); se la revisione è cambiata, invalida le query di
+  TanStack Query, che ricaricano solo le viste aperte. Costo trascurabile: una lettura di
+  una riga.
+- Dopo una propria scrittura il client aggiorna la revisione nota dall'intestazione
+  `X-Revisione`, per non ricaricare inutilmente.
+- In tempo reale (SSE/WebSocket): rinviato; l'interfaccia del client non cambia.
+
+### 12.7 Sicurezza
+
+- Nessun login: l'accesso è deciso da Tailscale (§14.5). Il backend ascolta solo su
+  `127.0.0.1`.
+- Protezione dalle richieste da altri siti (un sito qualsiasi aperto nel browser di un
+  dispositivo del tailnet potrebbe tentare di chiamare l'API): ogni scrittura richiede
+  `Content-Type: application/json` (che obbliga il browser a una richiesta preliminare
+  CORS, mai autorizzata) **e** un'intestazione `Origin` uguale all'origine di produzione
+  o di sviluppo configurata; altrimenti 403/415. Nessuna intestazione CORS permissiva.
+- Limiti: corpo delle richieste 1 MB (50 MB solo per `ripristino/verifica`), file
+  serviti solo dalla cartella del rilascio, nomi dei backup validati con un'espressione
+  regolare (niente percorsi arbitrari).
+
+## 13. PWA e connessione al server
+
+- `vite-plugin-pwa` (`generateSW`, **`registerType: 'prompt'`**): in cache solo il guscio
+  dell'app (HTML, JS, CSS, icone, font). **Nessun dato** in cache: le chiamate `/api/*`
+  sono escluse dal service worker (`NetworkOnly`, nessun fallback).
+- Avviso «Nuova versione disponibile — Aggiorna», mai ricaricamento automatico; se c'è un
+  modulo non salvato chiede conferma. Controllo all'avvio, al ritorno in primo piano e
+  ogni ora, solo con server raggiungibile.
+- Compatibilità client/server: `GET /salute` restituisce la versione dell'app servita; se
+  il client in esecuzione è più vecchio, l'avviso di aggiornamento diventa insistente e le
+  scritture restano possibili solo se la versione dell'API (`/api/v1`) coincide.
+- **Stato della connessione** (`src/connessione/`): `connesso` | `non_raggiungibile` |
+  `in_manutenzione`. Determinato da `navigator.onLine`, dall'interrogazione della revisione
+  (§12.6) e dall'esito delle chiamate (errore di rete o 503). Due fallimenti consecutivi →
+  `non_raggiungibile`; il primo successo → `connesso` e ricarica dei dati.
+- In `non_raggiungibile`: banner fisso, tutti i comandi di scrittura disattivati tramite un
+  unico hook (`usaPuoScrivere()`), nessuna scrittura messa in coda; i dati già caricati
+  restano visibili; i moduli aperti conservano il testo (bozza in `sessionStorage`).
+- Avvio senza server: il guscio si apre dalla cache e mostra «Server non raggiungibile:
+  verifica che Tailscale sia attivo» con *Riprova*.
+- Manifest: `name` e `short_name` «Menù & Co.», `id`, `scope` e `start_url` uguali a `/`,
+  `lang: 'it'`, `display: 'standalone'`, icone 64/192/512 + maskable, `shortcuts` (M4).
+- Installazione: Chrome su Android, PC e tablet nel tailnet → `https://loris-srv01.dala-tortoise.ts.net:9870/`
+  → *Installa app*.
+- Unico dato locale del dispositivo: la preferenza del tema (`localStorage`) e le spunte
+  temporanee della vista cucina (`sessionStorage`).
 
 ## 14. Hosting e rilascio
 
-Tutto sul server Debian `loris-srv01`, nella directory `/srv/apps/menuapp`, come le altre
-applicazioni (dailyMeals, sharedKidsCalendar). Nessun servizio cloud; GitHub è solo il
-repository del codice.
+Tutto sul server Debian `loris-srv01`, in `/srv/apps/menuapp`, come le altre applicazioni.
+Nessun servizio cloud; GitHub è solo il repository del codice.
 
 ### 14.1 Architettura di produzione
 
 ```
- Telefono / PC (tailnet)                         loris-srv01
- ───────────────────────     HTTPS (cert. Let's Encrypt di Tailscale)
- Chrome ──── tailnet ────▶ tailscaled  100.114.50.37:9870  (tailscale serve)
-                                    │  HTTP in chiaro, solo loopback
-                                    ▼
-                           node scripts/serve.mjs  127.0.0.1:9870
-                                    │  file statici
-                                    ▼
-                           /srv/apps/menuapp/rilasci/attuale → rilasci/<id>/
+ PC / telefono / tablet (tailnet)
+ Chrome ── HTTPS (certificato Tailscale) ──▶ tailscaled 100.114.50.37:9870   (tailscale serve)
+                                                   │ HTTP, solo loopback
+                                                   ▼
+                    menuapp.service: node rilasci/attuale/server/main.ts   127.0.0.1:9870
+                       ├── /api/v1/*  → Fastify: servizi → SQLite  dati/menuapp.db (WAL)
+                       └── /*         → @fastify/static: rilasci/attuale/dist/
+ menuapp-backup.timer (03:45) ──▶ server/backup/cli.ts ──▶ dati/backup/
 ```
 
-- **Server statico**: `scripts/serve.mjs`, script Node senza dipendenze (solo
-  `node:http`, `node:fs`, `node:path`), sullo stesso modello di `serve.mjs` di dailyMeals
-  e sharedKidsCalendar. Ascolta **solo su `127.0.0.1:9870`**: non raggiungibile da LAN
-  né da Internet.
-- **HTTPS**: `tailscale serve --bg --https=9870 http://127.0.0.1:9870`. tailscaled
-  ascolta sulla stessa porta ma sull'indirizzo del tailnet (100.114.50.37 e IPv6
-  Tailscale), quindi non c'è conflitto con il loopback (verificato: due socket sulla
-  stessa porta con indirizzi diversi coesistono). Il certificato è emesso e rinnovato
-  da Tailscale. La configurazione `--bg` persiste ai riavvii. **Mai `tailscale funnel`.**
-- **Perché non Apache**: è già attivo sulla porta 80 per altri usi e il suo
-  `ports.conf` contiene `Listen 443` (inattivo finché `mod_ssl` è spento). Aggiungere un
-  sito o un proxy richiederebbe di modificarne la configurazione e ricaricarlo, cioè di
-  toccare un servizio condiviso. Il server Node dedicato è isolato: un errore di Menù &
-  Co. non tocca nulla d'altro.
-- **Perché non `vite preview`**: è pensato per anteprime, non per un servizio
-  permanente; il server dedicato controlla con precisione intestazioni di cache e
-  sicurezza.
+- **Un solo processo** serve frontend e backend: stessa origine, nessun CORS, un solo
+  servizio da gestire.
+- **HTTPS**: `tailscale serve --bg --https=9870 http://127.0.0.1:9870`; tailscaled
+  ascolta sull'indirizzo del tailnet, il backend su loopback (coesistenza sulla stessa
+  porta verificata). Certificato rinnovato da Tailscale. **Mai `tailscale funnel`.**
+- **Apache** (porta 80) non viene usato né modificato.
+- Intestazioni dei file statici: `index.html`, `sw.js`, `registerSW.js`,
+  `manifest.webmanifest`, `workbox-*.js` → `no-cache`; `assets/*` →
+  `public, max-age=31536000, immutable`; sicurezza: `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`,
+  `Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:;
+  style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'`.
 
-### 14.2 Server statico (`scripts/serve.mjs`)
+### 14.2 Configurazione del backend
 
-| Aspetto | Comportamento |
-|---|---|
-| Configurazione | Variabili `HOST` (default `127.0.0.1`), `PORT` (default `9870`), `RADICE` (default `rilasci/attuale`) |
-| Metodi | Solo `GET` e `HEAD`; altri → 405 |
-| Percorsi | Decodifica, normalizzazione e `realpath` dentro la radice risolta; ogni uscita (`..`, link simbolici esterni) → 404. Nessun elenco di cartelle |
-| Radice | La radice (`rilasci/attuale`) viene risolta a ogni richiesta, così il cambio di rilascio non richiede riavvio |
-| `/` | `index.html`. Nessun altro fallback (hash routing): file inesistente → 404 |
-| Tipi MIME | Tabella interna: html, js, mjs, css, json, webmanifest (`application/manifest+json`), svg, png, ico, woff2, txt |
-| Cache | `index.html`, `sw.js`, `registerSW.js`, `manifest.webmanifest`, `workbox-*.js` → `Cache-Control: no-cache`; `assets/*` (nomi con hash) → `public, max-age=31536000, immutable`; altro → `no-cache` |
-| Sicurezza | `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, `Permissions-Policy` minima, `Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'` (lo script inline del tema, se presente, va spostato in un file) |
-| Salute | `GET /__salute` → `200` con `{ rilascio, versione }` letti da `rilasci/attuale/rilascio.json`; usato dai controlli dopo il rilascio |
-| Log | Una riga per richiesta con errore (≥ 400) e all'avvio, su stdout → journald |
-| Arresto | Chiusura ordinata su `SIGTERM` |
+Variabili d'ambiente validate all'avvio (`server/config.ts`):
 
-### 14.3 Servizio systemd
+| Variabile | Produzione | Sviluppo |
+|---|---|---|
+| `MENUAPP_HOST` | `127.0.0.1` | `127.0.0.1` |
+| `MENUAPP_PORTA` | `9870` | `9871` |
+| `MENUAPP_DATI` | `/srv/apps/menuapp/dati` | `/srv/apps/menuapp/dati-sviluppo` |
+| `MENUAPP_STATICI` | `/srv/apps/menuapp/rilasci/attuale/dist` | (non servito: ci pensa Vite) |
+| `MENUAPP_ORIGINI` | `https://loris-srv01.dala-tortoise.ts.net:9870` | `http://localhost:5173`, `https://loris-srv01.dala-tortoise.ts.net:8443` |
 
-Servizio **utente** `menuapp.service` (come `dailymeals.service` e
-`kidscalendar.service`; *linger* già attivo per `loris`, quindi parte all'avvio del
-server senza login), file `~/.config/systemd/user/menuapp.service` installato da
-`scripts/installa-servizio.sh`:
+Avvio: configurazione → apertura DB → migrazioni (§6.5) → seed → ascolto. Arresto
+ordinato su `SIGTERM`: smette di accettare richieste, attende quelle in corso (max 5 s),
+esegue `PRAGMA wal_checkpoint(TRUNCATE)` e chiude il database.
+
+### 14.3 Servizi systemd
+
+Servizi **utente** come `dailymeals.service` e `kidscalendar.service` (*linger* attivo per
+`loris`: partono all'avvio del server). Installati da `scripts/installa-servizio.sh`, che
+crea **solo** file con prefisso `menuapp` in `~/.config/systemd/user/` e non tocca altre
+unità.
+
+`menuapp.service`:
 
 ```ini
 [Unit]
-Description=Menù & Co. (file statici di produzione)
+Description=Menù & Co. (frontend e API)
 Documentation=file:///srv/apps/menuapp/docs/SPEC.md
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
 [Service]
 Type=simple
 WorkingDirectory=/srv/apps/menuapp
 Environment=NODE_ENV=production
-Environment=HOST=127.0.0.1
-Environment=PORT=9870
-ExecStart=/home/loris/.nvm/versions/node/v24.18.0/bin/node /srv/apps/menuapp/scripts/serve.mjs
+Environment=MENUAPP_HOST=127.0.0.1
+Environment=MENUAPP_PORTA=9870
+Environment=MENUAPP_DATI=/srv/apps/menuapp/dati
+Environment=MENUAPP_STATICI=/srv/apps/menuapp/rilasci/attuale/dist
+Environment=MENUAPP_ORIGINI=https://loris-srv01.dala-tortoise.ts.net:9870
+ExecStart=/home/loris/.nvm/versions/node/v24.18.0/bin/node /srv/apps/menuapp/rilasci/attuale/server/main.ts
 Restart=on-failure
 RestartSec=3
-TimeoutStopSec=10
+RestartPreventExitStatus=78
+TimeoutStopSec=15
 NoNewPrivileges=yes
 PrivateTmp=yes
 
@@ -1185,43 +1486,49 @@ PrivateTmp=yes
 WantedBy=default.target
 ```
 
-Il percorso di Node è fissato come negli altri servizi: un cambio di versione di Node
-via nvm richiede di aggiornare il servizio (`installa-servizio.sh` lo rigenera).
+`menuapp-backup.service` (`Type=oneshot`, stesso Node, `ExecStart=… server/backup/cli.ts
+giornaliero`) e `menuapp-backup.timer` (`OnCalendar=*-*-* 03:45:00`, `Persistent=true`:
+se il server era spento, il backup parte al riavvio).
+
+Il percorso di Node è fissato come negli altri servizi; un cambio di versione via nvm
+richiede di rieseguire `installa-servizio.sh`.
 
 ### 14.4 Rilasci
 
-- Struttura: `rilasci/<AAAAMMGG-HHmm>-<hash>/` (contenuto di `dist/` + `rilascio.json`)
-  e il collegamento simbolico `rilasci/attuale`. La cartella `rilasci/` è in
-  `.gitignore`.
+- Un rilascio contiene codice del server, dominio, contratto, dipendenze di produzione e
+  frontend compilato: `rilasci/<AAAAMMGG-HHmm>-<hash>/` con `server/`, `src/domain/`,
+  `src/contratto/`, `package.json`, `node_modules/` (`npm ci --omit=dev`), `dist/` e
+  `rilascio.json`. La cartella `dati/` **non** fa parte dei rilasci.
 - `scripts/rilascia.sh`:
   1. verifica: albero Git pulito, ramo `main`, `npm run check` verde;
-  2. `vite build` in una cartella temporanea, poi copia in `rilasci/<id>/`;
-  3. cambio **atomico** del collegamento (`ln -sfn` su un nome temporaneo + `mv -T`);
-  4. controllo: `curl` su `http://127.0.0.1:9870/__salute` e su
-     `https://loris-srv01.dala-tortoise.ts.net:9870/` (rilascio atteso, intestazioni
-     `no-cache` su `sw.js`);
-  5. tiene gli ultimi 5 rilasci.
-- `scripts/ripristina-rilascio.sh <id>`: riporta `attuale` a un rilascio precedente.
-  I dati dei dispositivi non sono toccati; attenzione però alle migrazioni dello schema:
-  un rilascio più vecchio dello schema già installato sui dispositivi mostra «Ricarica per
-  aggiornare l'app» (§11.4, passo 3). Si torna indietro solo fra rilasci con lo stesso
-  schema.
-- Il rilascio **non** riavvia il servizio. I dispositivi ricevono l'avviso di
-  aggiornamento al successivo controllo (§13).
-- Ogni rilascio richiede l'autorizzazione di Loris; il tag Git (`v0.N.0`) si crea
-  localmente e si pubblica su GitHub solo se autorizzato.
+  2. `git archive` del commit in una cartella temporanea, `npm ci --omit=dev`,
+     `vite build`, spostamento in `rilasci/<id>/`;
+  3. prova del rilascio su una **copia** del database di produzione: avvio temporaneo
+     su `127.0.0.1:9872` con `MENUAPP_DATI` su una cartella di prova, migrazioni,
+     `/salute`, arresto;
+  4. backup manuale del database di produzione;
+  5. cambio atomico del collegamento `attuale` (`ln -sfn` + `mv -T`) e
+     `systemctl --user restart menuapp` (interruzione di circa un secondo; all'avvio il
+     nuovo codice applica le migrazioni con backup pre-migrazione);
+  6. controlli: `/api/v1/salute` su loopback e via HTTPS Tailscale (rilascio atteso,
+     certificato valido), `no-cache` su `sw.js`, porta 9870 assente dagli indirizzi LAN;
+     se falliscono → ritorno automatico al rilascio precedente, se lo schema non è
+     cambiato;
+  7. conserva gli ultimi 5 rilasci.
+- `scripts/ripristina-rilascio.sh <id>`: solo verso un rilascio con la stessa versione
+  dello schema; altrimenti indica la procedura con il backup pre-migrazione (§11.5).
+- Ogni rilascio richiede l'autorizzazione di Loris; tag Git locali, pubblicati su GitHub
+  solo se autorizzato.
 
 ### 14.5 Accesso e autorizzazioni (Tailscale)
 
-- La porta 9870 è raggiungibile solo dai dispositivi del tailnet tramite
-  `tailscale serve`. Il server non ha firewall, ma `serve.mjs` ascolta solo su loopback
-  e la porta del tailnet esiste solo dentro Tailscale.
-- **Chi accede** si decide nella policy del tailnet (console di amministrazione
-  Tailscale, *Access controls*), che filtra il traffico **prima** che arrivi a
-  `tailscale serve`. Oggi il tailnet ha un solo utente (`loris.carzaniga@gmail.com`) e
-  la policy predefinita consente tutto fra i suoi dispositivi.
-- Regola proposta, da aggiungere quando serve limitare per dispositivo o aprire ad altre
-  persone (una *grant* per porta):
+- La porta 9870 esiste solo dentro il tailnet (`tailscale serve`); il backend ascolta su
+  loopback; il server non ha firewall ma nulla di Menù & Co. ascolta sugli indirizzi LAN.
+- Chi accede è deciso nella policy del tailnet (console di amministrazione, *Access
+  controls*), che filtra il traffico prima di `tailscale serve`. Oggi: un solo utente,
+  policy predefinita «consenti tutto» fra i suoi dispositivi.
+- Regola da aggiungere quando si vuole limitare per dispositivo o aprire ad altre
+  persone:
 
   ```jsonc
   {
@@ -1233,74 +1540,76 @@ via nvm richiede di aggiornare il servizio (`installa-servizio.sh` lo rigenera).
   }
   ```
 
-  Per limitare a dispositivi specifici: `src` con gli IP Tailscale dei dispositivi (o
-  tag come `tag:telefono`), oppure condizioni di postura. Per un familiare: invito nel
-  tailnet o condivisione del solo nodo `loris-srv01`, più la sua email in
-  `group:menuapp`.
-- **Attenzione**: quando la policy predefinita «consenti tutto» viene sostituita, ogni
-  accesso non elencato viene bloccato, anche per gli altri servizi del server (SSH 22,
-  RDP 3389/3390, dailyMeals 9876, sharedKidsCalendar 9878, Samba, open-webui 3000,
-  lobe-chat 3210, sviluppo 8443). La modifica va fatta da Loris nella console, con le
-  regole esistenti riportate esplicitamente; Claude prepara la proposta ma non può né
-  deve applicarla.
+  Per un familiare: invito nel tailnet o condivisione del solo nodo `loris-srv01`, più
+  la sua email nel gruppo. Senza login applicativo, chi raggiunge la porta può leggere e
+  modificare tutto: la policy Tailscale è l'unico controllo d'accesso.
+- **Attenzione**: sostituire la policy «consenti tutto» blocca ogni accesso non elencato,
+  anche agli altri servizi del server (SSH 22, RDP 3389/3390, dailyMeals 9876,
+  sharedKidsCalendar 9878, Samba, open-webui 3000, lobe-chat 3210, sviluppo 8443). La
+  modifica la fa Loris nella console, con le regole esistenti riportate esplicitamente.
 
 ### 14.6 Sviluppo e collaudo
 
-- Sessione tmux `menuapp`.
-- Vite su `127.0.0.1:5173`, mai su `0.0.0.0` (il server non ha firewall).
-  - PC: `https://loris-srv01.dala-tortoise.ts.net:8443/` (il PC è nel tailnet), oppure
-    `ssh -L 5173:localhost:5173 loris@loris-srv01.dala-tortoise.ts.net` →
-    `http://localhost:5173/`.
-  - Android: `tailscale serve --bg --https=8443 http://127.0.0.1:5173` (già attivo).
-- Collaudo della build prima del rilascio (service worker, offline, installazione,
-  aggiornamento): `npm run build && npm run preview` su `127.0.0.1:4173`, esposto con
-  `tailscale serve --bg --https=8444 http://127.0.0.1:4173` solo durante il collaudo,
-  poi `tailscale serve --https=8444 off`.
-- Test e2e: anteprima isolata su `127.0.0.1:4174` (§17.3), più un controllo finale sul
-  servizio di produzione dopo ogni rilascio.
+- Sessione tmux `menuapp`: finestra `server` (`node --watch server/main.ts` su
+  `127.0.0.1:9871`, database in `dati-sviluppo/`) e finestra `dev` (Vite su
+  `127.0.0.1:5173` con proxy `/api` → `127.0.0.1:9871`).
+- PC: `https://loris-srv01.dala-tortoise.ts.net:8443/` oppure tunnel SSH su 5173.
+- Android/tablet: `tailscale serve --https=8443` → 5173 (già attivo).
+- Collaudo prima del rilascio: avvio del rilascio candidato su `127.0.0.1:9872` con una
+  **copia** del database di produzione, esposto temporaneamente con
+  `tailscale serve --bg --https=8444 http://127.0.0.1:9872`, poi chiuso.
+- Test e2e: backend + frontend compilato su `127.0.0.1:4174`, database temporaneo per
+  ogni esecuzione (§17.4).
+- I dati di sviluppo, collaudo e test non toccano mai `dati/`.
 
 ### 14.7 Git e GitHub
 
-- GitHub (`lcarzaniga/Menuapp`) resta il repository del codice. Nessun push, merge o tag
-  pubblicato senza autorizzazione esplicita.
-- `main` è sempre rilasciabile; un branch per milestone (`m0-fondamenta`,
-  `m1-eventi-menu`, `m2-ricettario`, `m3-spesa`, `m4-piano-stampa`); commit piccoli in
-  italiano; merge su `main` solo con `npm run check` verde e approvazione di Loris.
-- **GitHub Pages dismesso**: si eliminano il workflow `deploy.yml` e `base: '/Menuapp/'`.
-  Al loro posto un workflow `ci.yml` di soli controlli (lint, typecheck, test unitari,
-  build) su push e pull request, senza pubblicazione. La disattivazione di Pages nelle
-  impostazioni del repository è un'azione di Loris.
+- GitHub (`lcarzaniga/Menuapp`) è solo il repository del codice: nessun push, merge o
+  tag pubblicato senza autorizzazione esplicita.
+- `main` sempre rilasciabile; un branch per milestone; commit piccoli in italiano; merge
+  su `main` solo con `npm run check` verde e approvazione di Loris.
+- GitHub Pages dismesso: in M0 si eliminano `deploy.yml` e `base: '/Menuapp/'`;
+  `ci.yml` esegue solo controlli (lint, tipi, test unitari, di database e di API, build).
+  La disattivazione di Pages nelle impostazioni del repository è un'azione di Loris.
 
 ## 15. Roadmap
 
 | Milestone | Date | Contenuto | Uscita |
 |---|---|---|---|
-| **M0 — Fondamenta** | 13–17 nov | Toolchain, Tailwind/shadcn, navigazione, schema Dexie v1 completo, seed impostazioni e reparti, backup/ripristino, persistenza, PWA con avviso aggiornamento, test unitari ed e2e, CI di soli controlli, servizio di produzione sul server (porta 9870, systemd, `tailscale serve`), rilasci | `v0.1.0` |
-| **M1 — Eventi e menù** | 18–23 nov | Eventi (CRUD, stati senza archiviazione), coperti, portate per evento, voci di menù, inserimento rapido multiriga, riordino e spostamento; impostazioni modificabili: portate predefinite, coefficiente bambini, tema | `v0.2.0` |
-| **M2 — Ricettario** | 24 nov – 1 dic | Unità, catalogo di 200–250 ingredienti con seed idempotente, parser, piatti, ingredienti con anteprima e conferma, porzioni e scalatura, «Crea nel ricettario», vista cucina; gestione dei reparti (coerente con il catalogo) | `v0.3.0` |
-| **M3 — Spesa** | 2–7 dic | Calcolo con classificazione dei contributi, chiavi, riconciliazione, stati e fabbisogno coperto, correzioni, facoltativi, manuali, reparti, condivisione | `v0.4.0` |
-| **M4 — Piano e stampa** | 8–12 dic | Attività e checklist, archiviazione con snapshot completo, consultazione da snapshot, «Copia nel ricettario», riapertura semplice, stampa del menù, collaudo completo | `v0.5.0` |
-| **Collaudo reale** | 13–15 dic | Menù di Natale vero inserito sul telefono, backup, correzioni | `v1.0.0` (15 dic) |
+| **M0 — Fondamenta** | 13–19 nov | Toolchain client/server, SQLite con schema completo, migrazioni e vincoli, backend Fastify con contratto, concorrenza e revisione, backup automatici/manuali, esportazione e ripristino, frontend base con stato della connessione e sola lettura, PWA, servizi systemd e `tailscale serve`, rilasci, test a tutti i livelli | `v0.1.0` |
+| **M1 — Eventi e menù** | 20–25 nov | Eventi (CRUD, stati senza archiviazione), coperti, portate per evento, voci di menù, inserimento rapido multiriga, riordino e spostamento; impostazioni modificabili (portate predefinite, coefficiente, tema del dispositivo) | `v0.2.0` |
+| **M2 — Ricettario** | 26 nov – 2 dic | Unità, catalogo di 200–250 ingredienti con seed idempotente, parser, piatti, ingredienti con anteprima e conferma, porzioni e scalatura, «Crea nel ricettario», vista cucina, gestione dei reparti | `v0.3.0` |
+| **M3 — Spesa** | 3–8 dic | Calcolo e riconciliazione sul server, stati e fabbisogno coperto, correzioni, facoltativi, manuali, reparti, condivisione | `v0.4.0` |
+| **M4 — Piano e stampa** | 9–12 dic | Attività e checklist, archiviazione con snapshot, consultazione da snapshot, «Copia nel ricettario», riapertura, stampa del menù, collaudo completo | `v0.5.0` |
+| **Collaudo reale** | 13–15 dic | Menù di Natale vero inserito da telefono e PC, backup, correzioni | `v1.0.0` (15 dic) |
 
-Tagli previsti in caso di ritardo, in quest'ordine: trascinamento (restano Su/Giù) →
-formato A5 → Wake Lock → condivisione file del backup → suggerimenti R10 → scorciatoie
-del manifest.
+M0 si allunga di due giorni rispetto alla v1.2 (backend, database e servizi); i giorni
+sono recuperati comprimendo M1 e M2 di un giorno ciascuno. Tagli previsti in caso di
+ritardo, in quest'ordine: trascinamento (restano Su/Giù) → formato A5 → Wake Lock →
+suggerimenti R10 → scorciatoie del manifest → promemoria dell'esportazione.
 
 ## 16. Criteri di accettazione
 
 ### Generali (v1.0)
-- G1 Tutti i flussi F1–F10 eseguibili su Chrome Android (S23) installato come PWA e su
-  Chrome desktop.
-- G2 Con modalità aereo attiva, dopo il primo caricamento, l'app si apre e ogni
-  funzione è utilizzabile.
-- G3 Nessuna perdita di dati in: chiusura forzata durante un salvataggio, aggiornamento
-  dell'app, migrazione, ripristino fallito.
-- G4 Backup → ripristino su un'altra origine (es. dal telefono al PC) riproduce dati identici (stessa impronta).
-- G8 L'app è raggiungibile solo dal tailnet: `127.0.0.1:9870` non è visibile dalla LAN, nessun `funnel` attivo; il servizio riparte da solo dopo un errore e dopo il riavvio del server; gli altri servizi del server non sono stati modificati.
-- G5 `npm run check` (lint, typecheck, unit, build) verde; e2e verdi.
-- G6 Lighthouse PWA/Best Practices senza errori bloccanti; nessuna richiesta di rete a
-  runtime oltre agli asset dell'app.
-- G7 Usabile a 360 px di larghezza, in tema chiaro e scuro.
+- G1 Tutti i flussi F1–F12 eseguibili su Chrome Android installato come PWA, su PC e
+  tablet.
+- G2 **Dati condivisi**: una modifica fatta da un dispositivo è visibile sugli altri
+  entro 15 secondi senza azioni dell'utente.
+- G3 **Nessuna perdita silenziosa**: due salvataggi concorrenti sullo stesso aggregato
+  producono sempre un 409 e la finestra di conflitto; nessun salvataggio sovrascrive
+  senza scelta esplicita.
+- G4 **Sola lettura senza server**: con server o Tailscale non raggiungibili, nessun
+  comando di scrittura è attivo e il messaggio è chiaro; al ritorno della connessione i
+  dati si ricaricano da soli.
+- G5 **Backup**: backup giornaliero automatico verificato presente ogni giorno; backup
+  pre-migrazione e pre-ripristino sempre creati; esportazione JSON → ripristino riproduce
+  dati identici (stessa impronta); un ripristino fallito non modifica nulla.
+- G6 `npm run check` (lint, tipi, test di dominio, database, API, componenti, build) verde;
+  e2e verdi.
+- G7 **Rete**: `127.0.0.1:9870` non raggiungibile dalla LAN; nessun `funnel`; il servizio
+  riparte da solo dopo un errore e dopo il riavvio del server; gli altri servizi del
+  server non sono stati modificati.
+- G8 Usabile a 360 px di larghezza, in tema chiaro e scuro.
 
 ### Per area
 - **Menù**: aggiungere 10 voci in 4 portate richiede meno di 60 s; nessun piatto creato
@@ -1308,98 +1617,97 @@ del manifest.
 - **Porzioni**: con 8 adulti, 4 bambini e coefficiente 0,5 una voce senza porzioni ha 10
   porzioni; cambiando i bambini a 6 diventa 11; una voce con 6 porzioni resta 6.
 - **Parser**: criteri di §8.4; il testo originale è sempre visibile e conservato.
-- **Spesa**: tutti i casi R1–R10 e le sei classi di contributo di §10.1 coperti da test
-  unitari; nessun contributo incerto, senza quantità o di un piatto senza porzioni base
-  entra in un totale, e ognuno resta visibile con la sua provenienza; nessun testo
-  dell'interfaccia attribuisce all'utente quantità possedute o acquistate; scenario e2e
-  «segno comprato il burro, aumento i coperti, vedo *Da integrare* con il fabbisogno in
-  più; tolgo il piatto, il burro compare in *Non più necessari*».
+- **Spesa**: tutti i casi R1–R10 e le sei classi di contributo di §10.1 coperti da test;
+  nessun contributo incerto, senza quantità o di un piatto senza porzioni base entra in un
+  totale; nessun testo attribuisce all'utente quantità possedute o acquistate; scenario
+  e2e su due dispositivi: «dal telefono segno comprato il burro; dal PC aumento i coperti;
+  il telefono mostra *Da integrare* con il fabbisogno in più; dal PC tolgo il piatto, il
+  burro compare in *Non più necessari*».
 - **Snapshot**: dopo l'archiviazione, modificare o eliminare un piatto, una voce o
-  un'attività viva non cambia nulla di ciò che l'evento archiviato mostra (menù completo
-  con portate, ordine e nomi liberi, ricette, spesa, piano); la riapertura non modifica
-  alcun piatto del ricettario.
-- **Backup**: un file manomesso (enum non valido, riferimento rotto, schema futuro) viene
-  rifiutato con un messaggio comprensibile e i dati attuali restano intatti; impronta
-  verificata sul file originale; due esportazioni consecutive senza modifiche hanno la
-  stessa impronta; il ripristino non parte se la copia di sicurezza non è stata scritta.
+  un'attività non cambia ciò che l'evento archiviato mostra; la riapertura non modifica
+  alcun piatto.
+- **Database**: ogni vincolo di §6.3–6.4 ha un test che ne prova la violazione su SQLite
+  reale.
 - **Stampa**: menù di Natale su una pagina A4 senza tagli, leggibile in bianco e nero.
 
 ## 17. Test automatici e manuali
 
-### 17.1 Unitari (Vitest, ambiente Node)
-- `domain/porzioni`: coperti, fattore, casi limite (0, decimali, fissa, intervalli).
-- `domain/unita`: riconoscimento forme, famiglie, conversioni consentite e **vietate**
-  (test che verificano che cucchiaio→ml e confezione→g non esistano), formattazione.
-- `domain/parser`: tabella ≥ 100 casi (§8.4), numeri in parola, frazioni, nomi con cifre.
-- `domain/spesa`: classificazione dei contributi (§10.1, una prova per riga della
-  tabella), chiavi, ogni caso R1–R10, facoltativi inclusi/non inclusi, idempotenza
-  (riconciliare due volte dà lo stesso risultato), proprietà semplici (somma delle
-  provenienze `sommata` = totale; nessun contributo `da_verificare` nei totali).
-- `domain/snapshot`: lo snapshot contiene evento, portate, tutte le voci (anche senza
-  piatto), piatti, spesa, manuali, attività; è serializzabile e autonomo (nessun id da
-  risolvere per mostrarlo).
-- `db/backup`: serializzazione canonica (ordine di tabelle, record e chiavi), impronta
-  stabile su esportazioni ripetute, chiavi `meta` del dispositivo escluse, impronta
-  verificata prima della migrazione del formato.
-- `db` con fake-indexeddb: seed idempotente (impostazioni in M0, catalogo in M2),
-  repository (cascata eliminazioni), migrazioni (dati vN → vN+1), copia pre-migrazione,
-  backup ida e ritorno, ripristino che fallisce senza toccare i dati, ripristino
-  annullato se la copia di sicurezza non viene scritta.
+### 17.1 Dominio (Vitest, progetto `dominio`, Node)
+Porzioni, unità (conversioni consentite e vietate), parser (≥ 100 casi, §8.4), spesa
+(classificazione dei contributi, chiavi, R1–R10, idempotenza, somme), snapshot (contenuto
+completo e autonomo), regole di stato dell'evento, serializzazione canonica e impronta.
 
-- `scripts/serve.mjs` (Node, server avviato su porta casuale con una radice di prova):
-  tipi MIME, intestazioni di cache per `sw.js`/`index.html`/`assets/*`, intestazioni di
-  sicurezza, 404 per file assenti, tentativi di uscita dalla radice (`..`, codifiche,
-  collegamenti simbolici esterni) respinti, 405 per metodi diversi da GET/HEAD, cambio del
-  collegamento `attuale` visto senza riavvio, `/__salute`.
+### 17.2 Database (Vitest, progetto `server`, SQLite reale)
+Ogni test usa un file SQLite nuovo in una cartella temporanea (non un database in
+memoria, per provare WAL, backup e file reali).
+- Migrazioni: database vuoto → ultima versione; da ogni versione precedente con dati di
+  prova (`test/fixture/db-vN.db`) → ultima, con dati intatti; file di migrazione
+  modificato → avvio bloccato; database più recente del codice → codice 78.
+- Vincoli: ogni `CHECK`, FK, unicità e azione `ON DELETE` di §6.3–6.4 violato o
+  esercitato almeno una volta.
+- Repository e servizi: aggiornamento con versione corretta / errata, riordino con una
+  versione errata (nessuna modifica), transazioni multi-aggregato annullate per intero,
+  seed idempotenti, incremento della revisione.
+- Backup: creazione con scritture concorrenti in corso, verifica di integrità, rotazione,
+  file corrotto scartato; ripristino da `.db` e da JSON; ripristino che fallisce a metà
+  lascia i dati invariati; backup pre-ripristino obbligatorio.
 
-### 17.2 Componenti (Vitest + happy-dom + Testing Library)
-Moduli evento, inserimento rapido, anteprima parser, riga della spesa (cambio stato).
+### 17.3 API (Vitest, progetto `server`, `app.inject()` su SQLite reale)
+Per ogni rotta: risposta corretta, 400 con dettagli, 404, 409 con `dettagli.attuale`, 422
+con la regola, 403 senza `Origin` ammessa, 415 senza JSON. Conformità delle risposte agli
+schemi del contratto (validate nei test). Scenario di concorrenza: due client leggono la
+stessa versione, il primo salva, il secondo riceve 409; creazione ripetuta con lo stesso
+id → 200.
 
-### 17.3 End-to-end (Playwright, Chrome di sistema)
-Server di anteprima isolato su `127.0.0.1:4174`; progetti *Pixel 7* (mobile) e *Desktop*.
-Scenari: avvio e navigazione; evento → menù → piatto → ingredienti → spesa; riconciliazione
-dopo modifica del menù; backup e ripristino; apertura sicura in Chrome reale (DB v1 di
-prova → app con v2 di prova: copia in `menuapp-sicurezza`, upgrade, e upgrade che fallisce
-con dati intatti); offline dopo l'installazione del service
-worker (`context.setOffline(true)` + ricarica); avviso di aggiornamento (due build
-consecutive); stampa (`emulateMedia({ media: 'print' })` + screenshot).
+### 17.4 Frontend (Vitest, progetto `ui`, happy-dom)
+Client API con `fetch` simulato: mappatura degli errori, intestazione `X-Revisione`.
+Componenti: `ConflittoVersione`, banner di connessione e disattivazione dei comandi con
+`usaPuoScrivere()`, moduli che conservano la bozza.
 
-Dopo ogni rilascio, controllo automatico in `rilascia.sh` sul servizio vero: `/__salute`
-su loopback e via `https://loris-srv01.dala-tortoise.ts.net:9870/`, certificato valido,
-`Cache-Control: no-cache` su `sw.js`, porta 9870 assente sugli indirizzi LAN
-(`ss -tln`).
+### 17.5 End-to-end (Playwright, Chrome di sistema)
+Server reale (backend + frontend compilato) su `127.0.0.1:4174` con database temporaneo;
+progetti *Pixel 7* e *Desktop*.
+- Due contesti del browser come due dispositivi: una modifica dell'uno appare nell'altro
+  entro 15 s; modifica concorrente dello stesso elemento → finestra di conflitto.
+- Server arrestato durante l'uso → banner e comandi disattivati; riavviato → dati
+  ricaricati.
+- Backup ora, esportazione, ripristino da JSON e da backup del server.
+- Service worker: guscio servito dalla cache; nessuna chiamata `/api` servita dalla
+  cache; avviso di aggiornamento con due build consecutive.
+- Dalle milestone successive: flussi F2–F9 e lo scenario spesa a due dispositivi.
 
-### 17.4 Manuali (su Android, a fine milestone)
-Installazione da `:8444` e da produzione (`:9870`) · modalità aereo e Tailscale spento ·
-avviso aggiornamento dopo un rilascio · ritorno a un rilascio precedente · stato persistenza · condivisione spesa su WhatsApp/Keep · schermo acceso in
-vista cucina · stampa/Salva PDF · tastiera e tocco su moduli · tema scuro · ripristino
-di un backup da file scaricato.
+### 17.6 Operativi (sul server, a ogni installazione o rilascio)
+`rilascia.sh` (controlli automatici di §14.4); `systemctl --user kill menuapp` → riavvio
+entro pochi secondi; avvio con migrazione fallita simulata (su copia) → codice 78 senza
+riavvii in ciclo; `systemctl --user start menuapp-backup` → backup verificato; `ss -tln`
+→ 9870 solo su loopback e indirizzo Tailscale; stato invariato di `dailymeals`,
+`kidscalendar`, `apache2` e della regola `tailscale serve :8443`.
 
-Una lista di controllo per milestone sta in `docs/collaudo/Mn.md`.
+### 17.7 Manuali (a fine milestone, `docs/collaudo/Mn.md`)
+Installazione su S23, tablet e PC · uso contemporaneo da due dispositivi · Tailscale
+spento (sola lettura e messaggio) · avviso di aggiornamento dopo un rilascio · backup,
+esportazione su un altro dispositivo e ripristino · condivisione spesa su WhatsApp/Keep ·
+schermo acceso in vista cucina · stampa/Salva PDF · tema scuro · riavvio del server.
 
 ## 18. Rischi tecnici
 
 | Rischio | Prob. | Impatto | Mitigazione |
 |---|---|---|---|
-| Ecosistema non pronto per TypeScript 7 (assenza dell'API JS) | Media | Medio | Verificato in M0 (T1); ripiego `typescript@~5.9` con una sola modifica a `package.json` |
-| Cancellazione dei dati da parte del browser (spazio, pulizia) | Bassa | Alto | Persistenza richiesta, PWA installata, promemoria backup, condivisione del file su Drive |
-| Cambio dell'origine di produzione (host o porta) dopo l'uso reale | Bassa | Alto | Origine `…ts.net:9870` decisa prima di M0 e considerata definitiva; in caso di cambio, backup/ripristino su ogni dispositivo |
-| Server o Tailscale non disponibili | Bassa | Basso | L'app installata funziona offline; mancano solo installazione e aggiornamenti |
-| Policy Tailscale troppo restrittiva che blocca altri servizi | Media | Medio | Modifica fatta da Loris con le regole esistenti elencate (§14.5); proposta preparata e rivista prima |
-| `tailscale serve` rimosso o reimpostato per errore | Bassa | Medio | Comando documentato in `scripts/installa-servizio.sh`; controllo HTTPS in `rilascia.sh` |
-| Aggiornamento di Node con nvm che rompe il servizio | Bassa | Medio | Percorso fissato nell'unità, rigenerato da `installa-servizio.sh`; servizio con `Restart=on-failure` e log in journald |
-| Ritorno a un rilascio con schema più vecchio di quello sui dispositivi | Bassa | Medio | `ripristina-rilascio.sh` solo fra rilasci con lo stesso schema; l'app rileva il caso (§11.4) |
-| Service worker che serve una versione vecchia o resta bloccato | Media | Medio | `registerType: 'prompt'`, controllo periodico, pulsante «Verifica aggiornamenti», test e2e di aggiornamento |
-| Migrazione Dexie errata in produzione | Bassa | Alto | Copia di sicurezza pre-migrazione, test di migrazione obbligatori, upgrade atomici |
-| Parser troppo ottimista | Media | Medio | Regola «nel dubbio da verificare», tabella di casi reali, conferma manuale |
-| Riconciliazione confusa per l'utente | Media | Medio | Casi R1–R10 esplicitati, testi chiari, prova reale col menù di Natale nel collaudo |
-| Scadenza del 15 dicembre | Media | Alto | Milestone con uscita pubblicata, tagli ordinati (§15), dominio puro testato prima dell'interfaccia |
-| Stampa diversa fra Chrome Android e desktop | Media | Basso | CSS di stampa semplice, font incluso, prova su entrambi |
-| Browser di Playwright non allineati | Bassa | Basso | Uso del Chrome di sistema (`channel: 'chrome'`) |
-| Più schede aperte con versioni diverse | Bassa | Medio | Gestione `versionchange`, `useLiveQuery` per aggiornamenti reattivi |
+| Rottura del disco del server (database e backup sullo stesso NVMe) | Bassa | Alto | Esportazione JSON periodica su un altro dispositivo con promemoria; copia su secondo supporto da decidere (§11.6) |
+| Migrazione errata in produzione | Bassa | Alto | Prova su copia del database in `rilascia.sh`, backup pre-migrazione verificato, migrazioni transazionali, codice 78 senza riavvii in ciclo, test da ogni versione precedente |
+| Conflitti frequenti che infastidiscono | Bassa | Medio | Aggregati piccoli (§12.5), aggiornamento delle viste ogni 10 s, conflitti solo sullo stesso elemento |
+| Modifiche perse per connessione caduta durante la compilazione | Media | Medio | Bozze in `sessionStorage`, comandi disattivati con messaggio, ripetizioni idempotenti |
+| Server o Tailscale non disponibili il giorno di Natale | Bassa | Alto | Servizio con riavvio automatico e avvio al boot; uso in casa via Tailscale anche su LAN; stampa del menù, della spesa e delle ricette come riserva cartacea il giorno prima |
+| `node:sqlite` cambia comportamento in un aggiornamento di Node | Bassa | Medio | Node fissato nel servizio e in `.nvmrc`; test di database a ogni aggiornamento; ripiego `better-sqlite3` isolato nei repository |
+| TypeScript 7 incompatibile con qualche strumento | Media | Medio | Esecuzione del server senza compilazione (rimozione dei tipi di Node, indipendente da `tsc`); ripiego `typescript@~5.9` |
+| Richieste da siti esterni aperti sul dispositivo (CSRF) | Bassa | Alto | Controllo di `Origin` e `Content-Type` su ogni scrittura (§12.7) |
+| Nessun login: chiunque nel tailnet può modificare | Media | Medio | Policy Tailscale per porta (§14.5); tailnet oggi con un solo utente |
+| Policy Tailscale troppo restrittiva blocca altri servizi | Media | Medio | Modifica di Loris con le regole esistenti elencate; proposta rivista prima |
+| Client vecchio dopo un rilascio con API cambiate | Bassa | Medio | Versione dell'API nel percorso, avviso di aggiornamento insistente, scritture bloccate se l'API non coincide |
+| Ritorno a un rilascio con schema più vecchio | Bassa | Medio | `ripristina-rilascio.sh` solo a parità di schema; altrimenti backup pre-migrazione |
+| Scadenza del 15 dicembre con M0 più grande | Media | Alto | Backend e database prima dell'interfaccia; API delle milestone successive scritte solo quando servono; tagli ordinati (§15) |
+| Aggiornamento di Node con nvm che rompe il servizio | Bassa | Medio | Percorso fissato, `installa-servizio.sh` da rieseguire, `Restart=on-failure`, log nel journal |
 | Floating point nelle somme | Bassa | Basso | Somme in unità base, tolleranza nei confronti, arrotondamento solo in vista |
-| `indexedDB.databases()` non disponibile (browser vecchi) | Bassa | Medio | Supportato da Chrome (obiettivo); ripiego: apertura dinamica per leggere `verno` prima di aprire con lo schema tipizzato |
-| «Comprato» letto come quantità posseduta | Media | Medio | Semantica di fabbisogno coperto (§10.3), testi che non parlano mai di quantità possedute, acquisti parziali solo in nota |
 
 ---
 
@@ -1407,6 +1715,7 @@ Una lista di controllo per milestone sta in `docs/collaudo/Mn.md`.
 
 | Data | Modifica |
 |---|---|
-| 12/11/2026 | Prima versione consolidata |
-| 12/11/2026 | Revisione 1: impronta canonica verificata prima della migrazione e chiavi `meta` del dispositivo escluse dal backup; copia di sicurezza nel DB `menuapp-sicurezza` obbligatoria prima del ripristino, download solo offerto; `quantitaAlloStato` → `fabbisognoCoperto` con semantica di fabbisogno dichiarato coperto, acquisti parziali in nota; classificazione dei contributi della spesa (incompleti visibili e mai sommati, facoltativi separati con `inclusa`); snapshot autonomo con menù completo, piano e spesa; riapertura semplificata e «Copia nel ricettario»; catalogo 200–250 ingredienti; procedura di apertura sicura verificata con Dexie 4.4.7; ripristino che conserva le chiavi `meta` del dispositivo; impostazioni modificabili assegnate a M1 (portate, coefficiente, tema) e M2 (reparti) |
-| 12/11/2026 | Revisione 2: GitHub Pages dismesso; produzione sul server Debian in `/srv/apps/menuapp`, server statico Node `scripts/serve.mjs` su `127.0.0.1:9870` come servizio systemd utente, HTTPS e accesso solo tailnet con `tailscale serve --https=9870`, regole di accesso nella policy Tailscale, rilasci in `rilasci/` con cambio atomico, `base: '/'`, CI di soli controlli |
+| 12/11/2026 | 1.0 — Prima versione consolidata (local-first, IndexedDB) |
+| 12/11/2026 | 1.1 — Impronta del backup, fabbisogno coperto, contributi incompleti della spesa, snapshot autonomo, catalogo 200–250, apertura sicura con Dexie |
+| 12/11/2026 | 1.2 — Produzione sul server Debian (porta 9870, systemd, `tailscale serve`), GitHub Pages dismesso |
+| 12/11/2026 | 2.0 — **Database centralizzato**: backend Node + Fastify, SQLite unica fonte di verità condivisa da tutti i dispositivi; rimossi Dexie/IndexedDB, local-first, backup per dispositivo e sincronizzazione; schema SQL con vincoli e migrazioni; API REST `/api/v1` con contratto zod condiviso; controllo ottimistico delle versioni per aggregato; aggiornamento delle viste via revisione globale; backup automatici, manuali, pre-migrazione e pre-ripristino con verifica; ripristino in due passi; sola lettura senza server; un servizio systemd per frontend e API più timer di backup; strategia di test su SQLite reale e API; M0 riprogettata (13–19 nov) |
