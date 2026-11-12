@@ -2,7 +2,7 @@
 import { AlertTriangle, Check, Minus, Plus, SunMedium } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { useMenu, usePiatto } from '@/api/query'
+import { useMenu, usePiatto, useSnapshot } from '@/api/query'
 import { Caricamento, Pagina, Vuoto } from '@/components/Pagina'
 import { Button } from '@/components/ui/button'
 import { fattoreAnomalo, fattoreScalatura, formattaCoperti, scala } from '@/domain/porzioni.ts'
@@ -173,14 +173,19 @@ export function PaginaCucinaVoce() {
   const menu = useMenu(id)
   const naviga = useNavigate()
   const voce = menu.data?.portate.flatMap((p) => p.voci).find((v) => v.id === voceId)
-  const piatto = usePiatto(voce?.piattoId ?? '')
-  if (menu.isPending || (voce?.piattoId && piatto.isPending)) return <Caricamento />
-  if (!voce?.piattoId || !piatto.data) {
+  const archiviato = menu.data?.evento.stato === 'archiviato'
+  // Evento archiviato: la ricetta viene dallo snapshot, non dal ricettario attuale.
+  const snapshot = useSnapshot(id, archiviato)
+  const daSnapshot = snapshot.data?.find((s) => s.stato === 'valido')?.contenuto.piatti.find((p) => p.id === voce?.piattoId)
+  const piatto = usePiatto(archiviato ? '' : (voce?.piattoId ?? ''))
+  const ricetta: Piatto | undefined = archiviato ? (daSnapshot ? { ...daSnapshot, versione: 0, creatoIl: 0, aggiornatoIl: 0 } : undefined) : piatto.data
+  if (menu.isPending || (voce?.piattoId && (archiviato ? snapshot.isPending : piatto.isPending))) return <Caricamento />
+  if (!voce?.piattoId || !ricetta) {
     return (
       <Pagina titolo="Vista cucina" indietro={`/eventi/${id}/menu`}>
         <Vuoto titolo="Nessuna ricetta collegata" azione={<Button onClick={() => naviga(`/eventi/${id}/menu`)}>Torna al menù</Button>} />
       </Pagina>
     )
   }
-  return <VistaCucina piatto={piatto.data} porzioniIniziali={voce.porzioniEffettive} indietro={`/eventi/${id}/menu`} sottotitolo={`${menu.data!.evento.nome} · ${voce.nome}`} />
+  return <VistaCucina piatto={ricetta} porzioniIniziali={voce.porzioniEffettive} indietro={`/eventi/${id}/menu`} sottotitolo={`${menu.data!.evento.nome} · ${voce.nome}`} />
 }

@@ -3,7 +3,7 @@ import { CalendarCheck, Pencil, Printer, RotateCcw, Trash2, Users } from 'lucide
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { api } from '@/api/client'
-import { useMenu } from '@/api/query'
+import { useAttivita, useMenu } from '@/api/query'
 import { useScrittura } from '@/api/scrittura'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -11,7 +11,7 @@ import { Conferma, Finestra } from '@/components/ui/dialog'
 import { usePuoScrivere } from '@/connessione/stato'
 import { copertiEquivalenti, formattaCoperti } from '@/domain/porzioni.ts'
 import { daConcludere } from '@/domain/regole/evento.ts'
-import { oggiISO } from '@/domain/tempo.ts'
+import { differenzaGiorni, oggiISO } from '@/domain/tempo.ts'
 import type { Evento } from '@/domain/tipi.ts'
 import { plurale } from '@/lib/formato'
 import { PannelloArchivio } from '@/features/archivio/PannelloArchivio'
@@ -27,6 +27,8 @@ export function PaginaPanoramica() {
   const puoScrivere = usePuoScrivere()
   const [modifica, setModifica] = useState(false)
   const [elimina, setElimina] = useState(false)
+  const [spostamento, setSpostamento] = useState(0)
+  const attivita = useAttivita(e.id)
   const archiviato = e.stato === 'archiviato'
 
   const salva = useScrittura(
@@ -34,7 +36,11 @@ export function PaginaPanoramica() {
       api.modifica<Evento>(`/eventi/${e.id}`, { ...d, portate: e.portate.map((p) => ({ id: p.id, nome: p.nome })) }),
     {
       oggetto: 'L\'evento',
-      dopo: () => setModifica(false),
+      dopo: (nuovo) => {
+        setModifica(false)
+        const giorni = differenzaGiorni(e.data, nuovo.data)
+        if (giorni !== 0 && (attivita.data?.length ?? 0) > 0) setSpostamento(giorni)
+      },
       sovrascrivi: (d, attuale) => ({ ...d, versione: (attuale as Evento).versione }),
     },
   )
@@ -48,6 +54,7 @@ export function PaginaPanoramica() {
     dopo: () => naviga('/', { replace: true }),
   })
 
+  const sposta = useScrittura((giorni: number) => api.crea(`/eventi/${e.id}/attivita/sposta`, { giorni }), { successo: 'Attività spostate' })
   const voci = menu.data?.portate.reduce((n, p) => n + p.voci.length, 0) ?? 0
   const coperti = copertiEquivalenti(e)
   return (
@@ -144,6 +151,14 @@ export function PaginaPanoramica() {
           onSalva={(d) => void salva.esegui({ ...d, versione: e.versione })}
         />
       </Finestra>
+      <Conferma
+        aperta={spostamento !== 0}
+        onCambia={(a) => !a && setSpostamento(0)}
+        titolo="Spostare anche le attività?"
+        descrizione={`La data dell'evento è cambiata di ${Math.abs(spostamento)} giorni. Spostare tutte le attività del piano di ${spostamento > 0 ? '+' : '−'}${Math.abs(spostamento)} giorni?`}
+        etichettaConferma="Sposta le attività"
+        onConferma={() => void sposta.esegui(spostamento)}
+      />
       <Conferma
         aperta={elimina}
         onCambia={setElimina}

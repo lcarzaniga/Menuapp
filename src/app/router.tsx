@@ -1,18 +1,22 @@
+import { lazy, Suspense, type ComponentType } from 'react'
 import { createHashRouter } from 'react-router'
-import { Segnaposto } from '@/components/Segnaposto'
-import { PaginaCucinaPiatto, PaginaCucinaVoce } from '@/features/cucina/VistaCucina'
+import { Caricamento } from '@/components/Pagina'
 import { LayoutEvento } from '@/features/eventi/LayoutEvento'
 import { PaginaArchivio, PaginaEventi } from '@/features/eventi/PaginaEventi'
-import { PaginaNuovoEvento } from '@/features/eventi/PaginaNuovoEvento'
 import { PaginaPanoramica } from '@/features/eventi/PaginaPanoramica'
-import { PaginaDati } from '@/features/impostazioni/PaginaDati'
-import { PaginaImpostazioni } from '@/features/impostazioni/PaginaImpostazioni'
-import { PaginaIngredienti } from '@/features/ingredienti/PaginaIngredienti'
 import { PaginaMenu } from '@/features/menu/PaginaMenu'
-import { PaginaNuovoPiatto, PaginaPiatto } from '@/features/ricettario/PaginaPiatto'
-import { PaginaRicettario } from '@/features/ricettario/PaginaRicettario'
 import { NonTrovata, PaginaErrore } from './Errore'
 import { Layout } from './Layout'
+
+/** Schermate caricate a richiesta: l'avvio sul telefono resta leggero. */
+function pigra<M>(carica: () => Promise<M>, scegli: (m: M) => ComponentType) {
+  const C = lazy(async () => ({ default: scegli(await carica()) }))
+  return (
+    <Suspense fallback={<Caricamento />}>
+      <C />
+    </Suspense>
+  )
+}
 
 // Rotte di SPEC §5 (hash routing).
 export const router = createHashRouter([
@@ -22,26 +26,26 @@ export const router = createHashRouter([
     children: [
       { path: '/', element: <PaginaEventi /> },
       { path: '/eventi/archivio', element: <PaginaArchivio /> },
-      { path: '/eventi/nuovo', element: <PaginaNuovoEvento /> },
+      { path: '/eventi/nuovo', element: pigra(() => import('@/features/eventi/PaginaNuovoEvento'), (m) => m.PaginaNuovoEvento) },
       {
         path: '/eventi/:id',
         element: <LayoutEvento />,
         children: [
           { index: true, element: <PaginaPanoramica /> },
           { path: 'menu', element: <PaginaMenu /> },
-          { path: 'spesa', element: <Segnaposto titolo="Spesa" /> },
-          { path: 'piano', element: <Segnaposto titolo="Piano" /> },
+          { path: 'spesa', element: pigra(() => import('@/features/spesa/PaginaSpesa'), (m) => m.PaginaSpesa) },
+          { path: 'piano', element: pigra(() => import('@/features/piano/PaginaPiano'), (m) => m.PaginaPiano) },
         ],
       },
-      { path: '/eventi/:id/stampa', element: <Segnaposto titolo="Stampa menù" indietro="/" /> },
-      { path: '/eventi/:id/voci/:voceId/cucina', element: <PaginaCucinaVoce /> },
-      { path: '/ricettario', element: <PaginaRicettario /> },
-      { path: '/ricettario/nuovo', element: <PaginaNuovoPiatto /> },
-      { path: '/ricettario/:id', element: <PaginaPiatto /> },
-      { path: '/ricettario/:id/cucina', element: <PaginaCucinaPiatto /> },
-      { path: '/ingredienti', element: <PaginaIngredienti /> },
-      { path: '/impostazioni', element: <PaginaImpostazioni /> },
-      { path: '/impostazioni/dati', element: <PaginaDati /> },
+      { path: '/eventi/:id/stampa', element: pigra(() => import('@/features/stampa/PaginaStampa'), (m) => m.PaginaStampa) },
+      { path: '/eventi/:id/voci/:voceId/cucina', element: pigra(() => import('@/features/cucina/VistaCucina'), (m) => m.PaginaCucinaVoce) },
+      { path: '/ricettario', element: pigra(() => import('@/features/ricettario/PaginaRicettario'), (m) => m.PaginaRicettario) },
+      { path: '/ricettario/nuovo', element: pigra(() => import('@/features/ricettario/PaginaPiatto'), (m) => m.PaginaNuovoPiatto) },
+      { path: '/ricettario/:id', element: pigra(() => import('@/features/ricettario/PaginaPiatto'), (m) => m.PaginaPiatto) },
+      { path: '/ricettario/:id/cucina', element: pigra(() => import('@/features/cucina/VistaCucina'), (m) => m.PaginaCucinaPiatto) },
+      { path: '/ingredienti', element: pigra(() => import('@/features/ingredienti/PaginaIngredienti'), (m) => m.PaginaIngredienti) },
+      { path: '/impostazioni', element: pigra(() => import('@/features/impostazioni/PaginaImpostazioni'), (m) => m.PaginaImpostazioni) },
+      { path: '/impostazioni/dati', element: pigra(() => import('@/features/impostazioni/PaginaDati'), (m) => m.PaginaDati) },
       { path: '*', element: <NonTrovata /> },
     ],
   },

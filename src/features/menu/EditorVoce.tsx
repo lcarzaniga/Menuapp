@@ -1,5 +1,5 @@
 // Dettagli di una voce di menù: porzioni, incaricato, spesa, note, piatto collegato.
-import { BookOpen, ChefHat, Link2Off } from 'lucide-react'
+import { BookOpen, ChefHat, Link2Off, ListTodo } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { api } from '@/api/client'
@@ -12,6 +12,7 @@ import type { Menu, VoceDelMenu } from '@/contratto/eventi.ts'
 import { formattaCoperti } from '@/domain/porzioni.ts'
 import type { Evento, VoceMenu } from '@/domain/tipi.ts'
 import { CollegaPiatto } from '@/features/ricettario/CollegaPiatto'
+import { ModuloAttivita } from '@/features/piano/PaginaPiano'
 
 interface Dati {
   nome: string
@@ -33,6 +34,7 @@ export function EditorVoce({ evento, menu, voce, onChiudi }: { evento: Evento; m
     inSpesa: voce.inSpesa,
     note: voce.note,
   })
+  const [preparazione, setPreparazione] = useState(false)
   const [porzioniTesto, setPorzioniTesto] = useState(voce.porzioni === null ? '' : String(voce.porzioni).replace('.', ','))
   const incaricati = [...new Set(menu.portate.flatMap((p) => p.voci.map((v) => v.incaricato)).filter(Boolean))]
   const salva = useScrittura((x: Dati & { versione: number }) => api.modifica<VoceMenu>(`/voci/${voce.id}`, x), {
@@ -129,11 +131,25 @@ export function EditorVoce({ evento, menu, voce, onChiudi }: { evento: Evento; m
         </div>
 
         {!solaLettura ? (
+          <Button variante="contorno" disabled={!puoScrivere} onClick={() => setPreparazione(true)}>
+            <ListTodo /> Aggiungi preparazione al piano
+          </Button>
+        ) : null}
+        {!solaLettura ? (
           <Button type="submit" misura="grande" disabled={salva.inCorso || !d.nome.trim() || !porzioniValide || !puoScrivere}>
             {salva.inCorso ? 'Salvataggio…' : 'Salva'}
           </Button>
         ) : null}
       </form>
+      {preparazione ? (
+        <ModuloAttivita
+          evento={evento}
+          attivita={null}
+          voci={menu.portate.flatMap((p) => p.voci)}
+          voceIniziale={voce.id}
+          onChiudi={() => setPreparazione(false)}
+        />
+      ) : null}
     </Finestra>
   )
 }

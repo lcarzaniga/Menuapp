@@ -17,6 +17,8 @@ export interface VoceLista {
   nome: string
   ingredienteId: Id | null
   repartoId: Id
+  /** Reparto scelto a mano dall'utente (override), se c'è. */
+  repartoScelto: Id | null
   sezione: Sezione
   caso: Caso
   stato: StatoSpesa
@@ -127,6 +129,7 @@ export function riconciliaSpesa(
       nome: r.nome,
       ingredienteId: r.ingredienteId,
       repartoId: a?.repartoId ?? r.repartoId,
+      repartoScelto: a?.repartoId ?? null,
       sezione,
       caso,
       stato,
@@ -167,6 +170,7 @@ export function riconciliaSpesa(
       nome: a.nome || 'Articolo',
       ingredienteId: null,
       repartoId: a.repartoId ?? 'rep-altro',
+      repartoScelto: a.repartoId,
       sezione: a.nascosto ? 'nascosti' : 'non_piu_necessari',
       caso: a.nascosto ? 'R8' : 'R5',
       stato: a.stato,

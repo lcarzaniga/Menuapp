@@ -4,7 +4,9 @@ import { SchemaStatoBackup } from '@/contratto/backup.ts'
 import { SchemaSalute } from '@/contratto/comune.ts'
 import type { Menu, RiepilogoEvento } from '@/contratto/eventi.ts'
 import type { DettaglioPiatto, RiepilogoPiatto } from '@/contratto/ricettario.ts'
-import type { Evento, Impostazioni, Ingrediente, Reparto, StatoEvento } from '@/domain/tipi.ts'
+import type { InfoRiapertura, Snapshot } from '@/contratto/archivio.ts'
+import type { RispostaSpesa } from '@/contratto/spesa.ts'
+import type { Attivita, Evento, Impostazioni, Ingrediente, Reparto, StatoEvento } from '@/domain/tipi.ts'
 import { api } from './client'
 
 export const chiavi = {
@@ -43,3 +45,11 @@ export const usePiatto = (id: string) =>
   useQuery({ queryKey: chiaviRicettario.piatto(id), queryFn: () => api.leggi<DettaglioPiatto>(`/piatti/${id}`), enabled: Boolean(id) })
 export const useIngredienti = () =>
   useQuery({ queryKey: chiaviRicettario.ingredienti, queryFn: () => api.leggi<Ingrediente[]>('/ingredienti'), staleTime: 60_000 })
+
+// ── Spesa, piano, archivio ──────────────────────────────────
+export const useSpesa = (id: string) => useQuery({ queryKey: ['spesa', id], queryFn: () => api.leggi<RispostaSpesa>(`/eventi/${id}/spesa`) })
+export const useAttivita = (id: string) => useQuery({ queryKey: ['attivita', id], queryFn: () => api.leggi<Attivita[]>(`/eventi/${id}/attivita`) })
+export const useSnapshot = (id: string, attivo = true) =>
+  useQuery({ queryKey: ['snapshot', id], queryFn: () => api.leggi<Snapshot[]>(`/eventi/${id}/snapshot`), enabled: attivo })
+export const useRiapertura = (id: string, attivo: boolean) =>
+  useQuery({ queryKey: ['riapertura', id], queryFn: () => api.leggi<InfoRiapertura>(`/eventi/${id}/riapertura`), enabled: attivo })
