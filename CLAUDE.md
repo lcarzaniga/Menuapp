@@ -1,34 +1,47 @@
 # Menù & Co. (menuapp)
 
-PWA React + TypeScript + Vite, dati locali nel browser con Dexie (IndexedDB).
-Repo pubblico `github.com/lcarzaniga/Menuapp`, pubblicata su
-https://lcarzaniga.github.io/Menuapp/ da una GitHub Action a ogni push su `main`.
+Web app (PWA) React + TypeScript + Vite con backend Node + Fastify e database SQLite
+centrale (`node:sqlite`) sul server Debian. Un solo database condiviso da tutti i
+dispositivi; nessun login: l'accesso è deciso da Tailscale. Leggi `docs/SPEC.md` (fonte di
+verità) e `docs/AVANZAMENTO.md` (stato del lavoro) prima di cambiare qualcosa.
 
 ## Chi la usa e come
 
-- L'utente è Loris e scrive in **italiano**. Anche interfaccia, commenti, messaggi e
-  documentazione sono in italiano.
-- Si usa soprattutto da smartphone Android, installata come PWA.
+- L'utente è Loris e scrive in **italiano**. Interfaccia, commenti, messaggi, test e
+  documentazione sono in italiano; anche i nomi nel codice di dominio.
+- Si usa soprattutto da Android (PWA installata), anche da PC e tablet.
 
-## Ambiente
+## Architettura (SPEC §12)
 
-- Node 24 via nvm (`.nvmrc`), minimo 22.12. Non usare il Node di sistema in
-  `/usr/bin` (v20, troppo vecchio).
-- `base: '/Menuapp/'` in `vite.config.ts`, anche in sviluppo: l'app sta sempre sotto
-  `/Menuapp/`.
-- Icone PWA generate da `public/logo.svg` con `npm run generate-pwa-assets`.
-- Identità Git solo locale, email noreply di GitHub. Push via SSH.
+- `src/domain/`: logica pura (porzioni, unità, parser, spesa, regole). Niente React,
+  Fastify, SQLite, Node. Condivisa da client e server; import con estensione `.ts`.
+- `src/contratto/`: schemi zod delle API, unico punto che definisce i dati scambiati.
+- `server/`: `api/` (rotte senza regole né SQL) → `servizi/` (transazioni, versioni,
+  regole) → `db/repo/` (unico posto con SQL). Migrazioni in `server/db/migrazioni/`
+  (mai modificare un file già applicato). Node esegue il TypeScript senza build.
+- Frontend: `src/features/`, client in `src/api/` (TanStack Query, `useScrittura`),
+  sola lettura con `usePuoScrivere()`, conflitti con `ConflittoVersione`.
+- `test/architettura.test.ts` verifica le dipendenze fra livelli.
+- Ogni record modificabile ha `versione`: aggiornamenti condizionati, 409 con il record
+  attuale. Ogni scrittura incrementa `meta.revisione` (i client la interrogano ogni 10 s).
 
-## Sviluppo
+## Ambiente e comandi
 
-- Sessione tmux `menuapp`, finestra `dev` con `npm run dev`. Vite ascolta solo su
-  `127.0.0.1:5173`: il server non ha firewall, quindi niente `--host`.
-- Dal PC: `ssh -L 5173:localhost:5173 loris@loris-srv01.dala-tortoise.ts.net`, poi
-  http://localhost:5173/Menuapp/
-- Dal telefono (solo tailnet, mai `funnel`):
-  `tailscale serve --bg --https=8443 http://127.0.0.1:5173` →
-  https://loris-srv01.dala-tortoise.ts.net:8443/Menuapp/
-- Il service worker non è attivo in `dev`. Per provare installazione e offline:
-  `npm run build && npm run preview` (porta 4173), esposta con
-  `tailscale serve --bg --https=8444 http://127.0.0.1:4173`.
-- Prima di un commit: `npm run lint` e `npm run build`.
+- Node 24 via nvm (`.nvmrc`); mai il Node di sistema (`/usr/bin`, v20).
+- tmux `menuapp`: finestra `server` (`npm run dev:server`, 127.0.0.1:9871, `dati-sviluppo/`)
+  e `dev` (`npm run dev`, Vite 127.0.0.1:5173). Da telefono: `…ts.net:8443` (tailscale serve).
+- Prima di ogni commit: `npm run check`; per le interfacce anche `npm run test:e2e`.
+- Mai ascoltare su `0.0.0.0` (il server non ha firewall); mai `tailscale funnel`.
+
+## Produzione (SPEC §14, docs/OPERAZIONI.md)
+
+- Servizio utente `menuapp.service` su 127.0.0.1:9870 + `tailscale serve --https=9870`;
+  timer `menuapp-backup.timer` (03:45). Dati in `dati/` (fuori da Git).
+- Rilasci con `scripts/rilascia.sh` in `rilasci/<id>`, collegamento `rilasci/attuale`.
+
+## Regole operative
+
+- Niente push, merge su `main`, rilasci, modifiche a servizi systemd o a Tailscale,
+  operazioni su dati di produzione senza autorizzazione esplicita di Loris.
+- Non toccare altri progetti o servizi del server (dailyMeals, sharedKidsCalendar, Apache…).
+- Aggiorna `docs/AVANZAMENTO.md` a ogni attività significativa.

@@ -1,60 +1,61 @@
 # Avanzamento — Menù & Co.
 
-Documento operativo per riprendere il lavoro fra sessioni. Sintetico, aggiornato a ogni
-attività significativa.
+Documento operativo per riprendere il lavoro fra sessioni.
 
 ## Stato
 
-- **Milestone corrente**: M3 (spesa). M0 (tranne T11 installazione), M1 e M2 completate.
-- **Branch di lavoro**: `m0-fondamenta` (da `docs-spec`, non ancora su `main`).
-- **Ambiente di sviluppo**: tmux `menuapp`, finestra `server` (`npm run dev:server`,
-  `127.0.0.1:9871`, dati in `dati-sviluppo/`), finestra `dev` (Vite `127.0.0.1:5173`,
-  proxy `/api`). Da telefono: `https://loris-srv01.dala-tortoise.ts.net:8443/`.
+- **Milestone**: M0–M4 implementate e collaudate in locale. Mancano solo le operazioni che
+  richiedono autorizzazione: merge su `main`, push, installazione del servizio, primo
+  rilascio, `tailscale serve :9870`, collaudo manuale sui dispositivi.
+- **Branch di lavoro**: `m0-fondamenta` (contiene anche `docs-spec`); `main` fermo a `300a2d7`.
+- **Sviluppo**: tmux `menuapp` (finestre `server` → 9871 con `dati-sviluppo/`, `dev` → Vite 5173,
+  telefono via `…ts.net:8443`). Nessun servizio di produzione installato.
 
 ## Completato
 
-- M0 T1–T10: toolchain client/server (TS 7, Node esegue `server/*.ts` senza build),
-  schema SQLite completo con vincoli, migrazioni con backup pre-migrazione e codice 78,
-  seed, backend Fastify (contratto zod, errori, Origin/Content-Type, 503 manutenzione,
-  file statici con cache corretta), controllo di versione e revisione globale, backup
-  verificati con rotazione, esportazione con impronta canonica, ripristino in due passi,
-  CLI per il timer, frontend base (layout, router hash, client API, sola lettura,
-  conflitti, *Impostazioni → Dati*), PWA con avviso di aggiornamento, e2e Playwright,
-  CI di soli controlli.
+- M0: schema SQLite completo con vincoli e migrazioni (backup pre-migrazione, codice 78),
+  backend Fastify con contratto zod, Origin/Content-Type, versioni e revisione globale,
+  backup verificati con rotazione e timer, esportazione con impronta canonica, ripristino
+  in due passi, frontend con sola lettura e conflitti, PWA con avviso di aggiornamento,
+  CI di soli controlli, script di servizio/rilascio/ritorno/emergenza (provati in locale).
+- M1: eventi e stati, portate per evento, voci con inserimento rapido e multiriga, modifica,
+  riordino e spostamento, eliminazione con annulla, impostazioni.
+- M2: ricettario, «Crea nel ricettario», catalogo di 248 ingredienti, reparti, parser
+  (112 casi, 100 % previsti), editor ingredienti con anteprima e correzione, vista cucina.
+- M3: spesa calcolata e riconciliata sul server (6 classi di contributo, R1–R10, fabbisogno
+  coperto stabilito dal server), stati, correzioni, facoltativi, manuali, pulizia,
+  trasferimento, condivisione.
+- M4: piano delle attività con scelte rapide e spostamento, preparazioni dalle voci, stampa
+  A4/A5, archiviazione con snapshot autonomo, consultazione e vista cucina da snapshot,
+  copia nel ricettario, riapertura.
 
-- M1: eventi (CRUD, stati concludi/riapri, archiviati in sola lettura), portate per evento,
-  voci con inserimento rapido e multiriga, modifica, sposta su/giù e fra portate,
-  eliminazione con «Annulla», impostazioni (portate predefinite, coefficiente, tema).
-- M2: ricettario (piatti come aggregato con ingredienti), «Crea nel ricettario», collega a
-  piatto esistente, suggerimenti nell'inserimento rapido, catalogo di 248 ingredienti con
-  seed idempotente, reparti gestibili, parser con tabella di 112 casi (100 % previsti),
-  editor ingredienti con anteprima e correzione, vista cucina con porzioni e Wake Lock.
-
-## Test
+## Test (ultima esecuzione)
 
 | Comando | Esito |
 |---|---|
-| `npm test` (dominio, server con SQLite reale, ui) | verde |
-| `npm run test:e2e` (telefono + desktop, server reale) | verde (12) |
-| `npm run lint` / `npm run typecheck` / `npm run build` | verdi (1 avviso lint su button.tsx) |
+| `npm run check` (lint, tipi, 178 test: dominio, server su SQLite reale, architettura, build) | verde |
+| `npm run test:e2e` (13 scenari telefono + desktop, incluso collaudo di Natale da due dispositivi) | verde |
+| Rilascio di prova costruito con `scripts/rilascia.sh` e avviato su 9872 | ok (poi rimosso) |
+
+Non eseguiti (richiedono autorizzazione o dispositivi reali): installazione systemd,
+`tailscale serve :9870`, collaudo manuale (`docs/collaudo/collaudo-v1.md`).
 
 ## Decisioni tecniche
 
-- Nomi dei campi nel codice tutti in italiano (`eventoId`, `piattoId`, `voceMenuId`…):
-  la SPEC §6.2 usa ancora alcuni nomi inglesi, da allineare a fine lavoro.
-- Hook di sola lettura: `usePuoScrivere()` (la regola React richiede il prefisso `use`).
-- Ripristino da JSON: il database temporaneo si costruisce applicando le migrazioni fino
-  alla versione del file e poi le restanti (stesse migrazioni dell'avvio) invece di
-  funzioni di migrazione JSON separate.
+- Nomi del codice in italiano; vedi registro SPEC 2.1 per gli scostamenti dal documento.
 - Componenti UI scritti a mano in stile shadcn (radix-ui + cva), `<select>` nativi.
-- Server non raggiungibile simulato negli e2e intercettando `/api/**`.
+- Schermate caricate a richiesta (bundle iniziale ~410 kB).
+- Test e2e: server reale su 127.0.0.1:4174 con `test-results/dati-e2e`, Chrome di sistema.
 
 ## Problemi aperti
 
-- T11 (servizio di produzione, rilasci): script da scrivere; installazione e primo
-  deploy **richiedono autorizzazione**.
-- Bundle JS unico > 500 kB: dividere per schermata quando le funzioni saranno complete.
+- Nessun test per l'avviso di aggiornamento PWA con due build reali (verificato solo che
+  il service worker metta in cache il guscio e mai `/api`): da provare a mano al secondo rilascio.
+- Copia dei backup su un secondo supporto: decisione aperta (SPEC §11.6).
+- Trascinamento per il riordino non implementato (taglio previsto): Su/Giù/Sposta in.
 
 ## Prossima attività
 
-M1 — eventi e menù (servizi, API, schermate), poi M2–M4. T11 prima del collaudo finale.
+Con autorizzazione: merge di `m0-fondamenta` su `main` e push → `scripts/rilascia.sh
+--senza-riavvio` → `scripts/installa-servizio.sh` (con `tailscale serve :9870`) → collaudo
+manuale → disattivazione di GitHub Pages da parte di Loris.
