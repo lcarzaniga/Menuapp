@@ -4,10 +4,10 @@ Documento operativo per riprendere il lavoro fra sessioni.
 
 ## Stato
 
-- **Milestone**: M0–M4 implementate e collaudate in locale. Mancano solo le operazioni che
-  richiedono autorizzazione: merge su `main`, push, installazione del servizio, primo
-  rilascio, `tailscale serve :9870`, collaudo manuale sui dispositivi.
-- **Branch di lavoro**: `m0-fondamenta` (contiene anche `docs-spec`); `main` fermo a `300a2d7`.
+- **v0.1.0 in produzione dal 12/11/2026**: https://loris-srv01.dala-tortoise.ts.net:9870/
+  (rilascio `20261112-1321-0d8d6fc`, `menuapp.service` e `menuapp-backup.timer` attivi e
+  abilitati, `tailscale serve :9870`, porta non raggiungibile dalla LAN, altri servizi invariati).
+- **Branch**: `main` (pubblicato su GitHub); sviluppo successivo su nuovi branch.
 - **Sviluppo**: tmux `menuapp` (finestre `server` → 9871 con `dati-sviluppo/`, `dev` → Vite 5173,
   telefono via `…ts.net:8443`). Nessun servizio di produzione installato.
 
@@ -37,8 +37,8 @@ Documento operativo per riprendere il lavoro fra sessioni.
 | `npm run test:e2e` (13 scenari telefono + desktop, incluso collaudo di Natale da due dispositivi) | verde |
 | Rilascio di prova costruito con `scripts/rilascia.sh` e avviato su 9872 | ok (poi rimosso) |
 
-Non eseguiti (richiedono autorizzazione o dispositivi reali): installazione systemd,
-`tailscale serve :9870`, collaudo manuale (`docs/collaudo/collaudo-v1.md`).
+Produzione verificata il 12/11: salute via HTTPS, backup manuale verificato, `sw.js` no-cache,
+LAN 9870 chiusa. Da fare: collaudo manuale sui dispositivi (`docs/collaudo/collaudo-v1.md`).
 
 ## Decisioni tecniche
 
@@ -56,6 +56,6 @@ Non eseguiti (richiedono autorizzazione o dispositivi reali): installazione syst
 
 ## Prossima attività
 
-Con autorizzazione: merge di `m0-fondamenta` su `main` e push → `scripts/rilascia.sh
---senza-riavvio` → `scripts/installa-servizio.sh` (con `tailscale serve :9870`) → collaudo
-manuale → disattivazione di GitHub Pages da parte di Loris.
+Collaudo manuale di Loris sui dispositivi e disattivazione di GitHub Pages; poi rifiniture
+concordate. Nota: l'installazione di servizi systemd da Claude è bloccata dal controllo dei
+permessi: Loris la esegue con `! comando`.
