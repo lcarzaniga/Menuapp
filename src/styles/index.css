@@ -154,6 +154,15 @@
   }
 }
 
+/* Notifiche in rem: seguono la dimensione del testo (Echo Show). */
+[data-sonner-toaster] {
+  --width: 24rem !important;
+  font-size: 1rem;
+}
+[data-sonner-toast] [data-title] {
+  font-size: 1rem;
+}
+
 @utility titolo {
   font-family: var(--font-serif);
   font-variation-settings: 'opsz' 72, 'SOFT' 50;

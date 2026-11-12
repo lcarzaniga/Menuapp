@@ -57,7 +57,7 @@ export interface AppDiProva extends DbDiProva {
   inietta: (o: InjectOptions) => Promise<Risposta>
 }
 
-export async function appDiProva(opzioni: { statici?: string } = {}): Promise<AppDiProva> {
+export async function appDiProva(opzioni: { statici?: string; lan?: boolean } = {}): Promise<AppDiProva> {
   const p = await dbDiProva()
   const config = {
     ...leggiConfig({ MENUAPP_DATI: p.cartella, MENUAPP_ORIGINI: ORIGINE_PROVA }),
@@ -70,7 +70,7 @@ export async function appDiProva(opzioni: { statici?: string } = {}): Promise<Ap
     versioneApp: '0.0.0-test',
     ripristini: new RegistroRipristini(join(p.cartella, 'ripristino-temp')),
   }
-  const app = await costruisciApp(ctx)
+  const app = await costruisciApp(ctx, { lan: opzioni.lan })
   const scrivi: AppDiProva['scrivi'] = async (metodo, url, corpo) =>
     app.inject({
       method: metodo,

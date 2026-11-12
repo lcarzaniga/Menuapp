@@ -5,7 +5,8 @@ menù per portate, ricettario, lista della spesa aggregata, piano delle preparaz
 cucina e stampa del menù. Un unico database SQLite sul server di casa, condiviso da PC,
 telefono e tablet; accesso privato tramite Tailscale.
 
-- Produzione: https://loris-srv01.dala-tortoise.ts.net:9870/ (solo dispositivi del tailnet)
+- Produzione: https://loris-srv01.dala-tortoise.ts.net:9870/ (tailnet, PWA installabile)
+- Da casa senza Tailscale (es. Echo Show 15): http://192.168.1.160:9880/
 - Specifica: `docs/SPEC.md` · operazioni: `docs/OPERAZIONI.md` · avanzamento: `docs/AVANZAMENTO.md`
 
 ## Uso

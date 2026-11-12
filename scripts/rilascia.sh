@@ -75,6 +75,9 @@ controlla() {
   grep -q "\"rilascio\":\"$id\"" <<<"$s" || return 1
   curl -fsSI "http://127.0.0.1:$PORTA/sw.js" | grep -qi '^cache-control: no-cache' || return 1
   ! ss -tlnH | awk '{print $4}' | grep -qE "^(0\.0\.0\.0|\*|\[::\]):$PORTA\$" || return 1
+  if systemctl --user cat menuapp 2>/dev/null | grep -q MENUAPP_PORTA_LAN; then
+    curl -fsS "http://$IP_LAN:$PORTA_LAN/api/v1/salute" | grep -q "\"rilascio\":\"$id\"" || return 1
+  fi
   if tailscale serve status 2>/dev/null | grep -q ":$PORTA"; then
     curl -fsS "$URL_PUBBLICO/api/v1/salute" | grep -q "\"rilascio\":\"$id\"" || return 1
   fi

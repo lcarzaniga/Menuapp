@@ -17,6 +17,10 @@ systemctl --user start menuapp-backup      # backup subito
 Accesso HTTPS dal tailnet: `tailscale serve --bg --https=9870 http://127.0.0.1:9870`
 (`tailscale serve status` per verificarlo; mai `funnel`).
 
+Accesso dalla rete di casa senza Tailscale: `http://192.168.1.160:9880/` (Echo Show, ospiti).
+Funziona tutto tranne installazione PWA e schermo sempre acceso. Conviene una prenotazione
+DHCP nel router per l'indirizzo del server. Chiunque sia sul Wi-Fi può usare l'app.
+
 Prima installazione: `scripts/rilascia.sh --senza-riavvio` (crea il primo rilascio), poi
 `scripts/installa-servizio.sh` (crea solo unità `menuapp*`, verifica che gli altri servizi
 restino invariati, chiede conferma prima di `tailscale serve`).

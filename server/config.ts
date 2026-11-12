@@ -11,6 +11,9 @@ const Schema = z.object({
     .string()
     .default('http://localhost:5173,http://127.0.0.1:5173,https://loris-srv01.dala-tortoise.ts.net:8443'),
   MENUAPP_RILASCIO: z.string().optional(),
+  /** Accesso dalla rete di casa in HTTP, senza Tailscale (es. Echo Show). Assente = disattivato. */
+  MENUAPP_PORTA_LAN: z.coerce.number().int().min(1).max(65535).optional(),
+  MENUAPP_HOST_LAN: z.string().default('0.0.0.0'),
 })
 
 export interface Config {
@@ -22,6 +25,8 @@ export interface Config {
   cartellaStatici: string | null
   origini: string[]
   rilascio: string
+  portaLan: number | null
+  hostLan: string
 }
 
 export function leggiConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -40,5 +45,7 @@ export function leggiConfig(env: NodeJS.ProcessEnv = process.env): Config {
     cartellaStatici: e.MENUAPP_STATICI ? resolve(e.MENUAPP_STATICI) : null,
     origini: e.MENUAPP_ORIGINI.split(',').map((s) => s.trim()).filter(Boolean),
     rilascio: e.MENUAPP_RILASCIO ?? 'sviluppo',
+    portaLan: e.MENUAPP_PORTA_LAN ?? null,
+    hostLan: e.MENUAPP_HOST_LAN,
   }
 }

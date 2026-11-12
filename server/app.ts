@@ -26,7 +26,18 @@ function corpoErrore(codice: RispostaErrore['errore']['codice'], messaggio: stri
   return { errore: dettagli === undefined ? { codice, messaggio } : { codice, messaggio, dettagli } }
 }
 
-export async function costruisciApp(ctx: Contesto, opzioni: { log?: boolean } = {}): Promise<FastifyInstance> {
+/** Nomi host ammessi sull'ascolto di rete locale: IP privati e nomi della macchina, mai domini esterni (DNS rebinding). */
+export function hostLocale(host: string | undefined): boolean {
+  if (!host) return false
+  const nome = host.replace(/:\d+$/, '').replace(/^\[|\]$/g, '').toLowerCase()
+  if (nome === 'localhost' || nome === 'loris-srv01' || nome.endsWith('.local') || nome.endsWith('.lan') || nome.endsWith('.home')) return true
+  const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(nome)
+  if (!m) return false
+  const [a, b] = [Number(m[1]), Number(m[2])]
+  return a === 10 || a === 127 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31)
+}
+
+export async function costruisciApp(ctx: Contesto, opzioni: { log?: boolean; lan?: boolean } = {}): Promise<FastifyInstance> {
   const app = Fastify({
     logger: opzioni.log ? { level: 'warn' } : false,
     bodyLimit: LIMITE_CORPO,
@@ -36,13 +47,18 @@ export async function costruisciApp(ctx: Contesto, opzioni: { log?: boolean } = 
   // Protezione dalle richieste di altri siti (SPEC §12.7) e manutenzione.
   app.addHook('onRequest', async (req, reply) => {
     const percorso = req.url.split('?')[0] ?? ''
+    if (opzioni.lan && !hostLocale(req.headers.host)) {
+      return reply.code(403).send(corpoErrore('origine_non_ammessa', 'Indirizzo non ammesso sulla rete locale'))
+    }
     if (!percorso.startsWith('/api/')) return
     if (ctx.stato.manutenzione && percorso !== `${PREFISSO_API}/salute`) {
       return reply.code(503).send(corpoErrore('servizio_non_pronto', 'Operazione di manutenzione in corso, riprova tra poco'))
     }
     if (!METODI_SCRITTURA.has(req.method)) return
     const origine = req.headers.origin
-    if (!origine || !ctx.config.origini.includes(origine)) {
+    // Sulla rete locale l'origine ammessa è quella dell'indirizzo usato (già verificato come locale).
+    const propria = opzioni.lan && origine === `http://${req.headers.host}`
+    if (!origine || (!ctx.config.origini.includes(origine) && !propria)) {
       return reply.code(403).send(corpoErrore('origine_non_ammessa', 'Richiesta da un\'origine non ammessa'))
     }
     if (req.method !== 'DELETE' || req.headers['content-length']) {

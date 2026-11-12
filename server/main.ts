@@ -48,6 +48,12 @@ async function avvia(): Promise<void> {
   process.on('SIGINT', () => void chiudi('SIGINT'))
 
   await app.listen({ host: config.host, port: config.porta })
+  if (config.portaLan) {
+    const lan = await costruisciApp(ctx, { log: true, lan: true })
+    await lan.listen({ host: config.hostLan, port: config.portaLan })
+    process.once('SIGTERM', () => void lan.close())
+    console.log(`Accesso dalla rete di casa: http://<indirizzo del server>:${config.portaLan}`)
+  }
   console.log(
     `Menù & Co. ${pacchetto.version} (${config.rilascio}) su http://${config.host}:${config.porta} — dati in ${config.cartellaDati}`,
   )

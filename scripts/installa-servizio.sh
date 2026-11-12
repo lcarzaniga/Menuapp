@@ -31,6 +31,7 @@ Environment=MENUAPP_PORTA=$PORTA
 Environment=MENUAPP_DATI=$DATI
 Environment=MENUAPP_STATICI=$RILASCI/attuale/dist
 Environment=MENUAPP_ORIGINI=$URL_PUBBLICO
+Environment=MENUAPP_PORTA_LAN=$PORTA_LAN
 ExecStart=$NODE $RILASCI/attuale/server/main.ts
 Restart=on-failure
 RestartSec=3
@@ -70,7 +71,7 @@ systemctl --user daemon-reload
 systemctl --user enable --now menuapp.service menuapp-backup.timer
 sleep 2
 curl -fsS "http://127.0.0.1:$PORTA/api/v1/salute" >/dev/null || errore "Il servizio non risponde: journalctl --user -u menuapp"
-ok "Servizio menuapp attivo su 127.0.0.1:$PORTA; timer di backup programmato"
+ok "Servizio menuapp attivo su 127.0.0.1:$PORTA e in rete locale su http://$IP_LAN:$PORTA_LAN; timer di backup programmato"
 
 if ! tailscale serve status 2>/dev/null | grep -q ":$PORTA"; then
   echo

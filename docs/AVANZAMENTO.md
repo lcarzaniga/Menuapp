@@ -68,7 +68,8 @@ permessi: Loris la esegue con `! comando`.
 - Misure in rem con dimensione del testo automatica sugli schermi grandi (Echo Show 15,
   1920×1080: 143,75 %) e preferenza per dispositivo in Impostazioni.
 - Controllo visivo: `npx playwright test test/e2e/vetrina.spec.ts` → `test-results/vetrina/`.
-- Da fare: notifiche (sonner) in px, troppo piccole sull'Echo Show; e2e completi; rilascio
-  (richiede autorizzazione per merge su main).
-- Aperto: l'Echo Show 15 deve raggiungere l'app (Tailscale su Echo Show non verificato) e
-  proposta di standard di importazione ricette con foto (da definire con Loris).
+- Notifiche in rem (leggibili sull'Echo Show).
+- Accesso dalla rete di casa senza Tailscale su `:9880` (SPEC 2.2), provato in HTTP a 1920×1080.
+- Da fare: rilascio (merge su main con autorizzazione; Loris rilancia `installa-servizio.sh`
+  per aggiungere `MENUAPP_PORTA_LAN` all'unità).
+- Aperto: standard di importazione ricette con foto (proposta da definire con Loris).

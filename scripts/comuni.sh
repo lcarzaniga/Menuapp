@@ -9,6 +9,9 @@ RILASCI="$RADICE/rilasci"
 HOST_TS=loris-srv01.dala-tortoise.ts.net
 PORTA=9870
 URL_PUBBLICO="https://$HOST_TS:$PORTA"
+# Accesso dalla rete di casa in HTTP, senza Tailscale (Echo Show e ospiti del Wi-Fi).
+PORTA_LAN=9880
+IP_LAN=$(ip -4 -br addr show eno1 2>/dev/null | awk '{print $3}' | cut -d/ -f1)
 export PATH="$NPM_DIR:$PATH"
 
 info() { printf '\033[1;34m▸\033[0m %s\n' "$*"; }
