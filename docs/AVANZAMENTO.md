@@ -67,6 +67,10 @@ permessi: Loris la esegue con `! comando`.
 - Formato ricetta v1, importazione con foto, foto dei piatti, esportazioni ZIP (SPEC 2.3).
 - Migrazione 0002 applicata con backup `pre-migrazione-20261112-152102-v1.db`.
 
+- Foto collegate ai passaggi (SPEC 2.4), migrazione 0003 applicata con backup
+  `pre-migrazione-20261112-154031-v2.db`; rilascio `20261112-1540-d284829`, schema v3.
+- Porta 9880 raggiungibile anche via Tailscale (`…ts.net:9880`, `100.114.50.37:9880`).
+
 ## Prossima attività
 
 Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collaudo/collaudo-v1.md`).
