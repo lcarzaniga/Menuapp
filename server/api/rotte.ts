@@ -4,6 +4,7 @@ import type { Contesto } from './aiuti.ts'
 import { rotteBackup } from './backup.ts'
 import { rotteEventi } from './eventi.ts'
 import { rotteRicettario } from './ricettario.ts'
+import { rotteSpesa } from './spesa.ts'
 import { rotteSistema } from './sistema.ts'
 
 export function registraRotte(app: FastifyInstance, ctx: Contesto): void {
@@ -11,4 +12,5 @@ export function registraRotte(app: FastifyInstance, ctx: Contesto): void {
   rotteBackup(app, ctx)
   rotteEventi(app, ctx)
   rotteRicettario(app, ctx)
+  rotteSpesa(app, ctx)
 }

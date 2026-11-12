@@ -15,7 +15,8 @@ export function porzioniEffettive(voce: { porzioni: number | null }, coperti: nu
 /** Fattore porzioni/porzioniBase; null se il piatto non ha porzioni base valide. */
 export function fattoreScalatura(porzioni: number, porzioniBase: number | null): number | null {
   if (porzioniBase === null || !(porzioniBase > 0)) return null
-  return arrotondaPrecisione(porzioni / porzioniBase)
+  // Non arrotondato: si arrotonda solo il prodotto finale (scala), per non accumulare errori.
+  return porzioni / porzioniBase
 }
 
 export function scala(quantita: number, fattore: number, scalatura: 'proporzionale' | 'fissa'): number {

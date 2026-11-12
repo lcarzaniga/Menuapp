@@ -10,6 +10,7 @@ import {
   SchemaRiordinoVoci,
 } from '../../src/contratto/eventi.ts'
 import { STATI_EVENTO } from '../../src/domain/tipi.ts'
+import * as archivio from '../servizi/archivio.ts'
 import * as eventi from '../servizi/eventi.ts'
 import { type Contesto, valida } from './aiuti.ts'
 
@@ -40,11 +41,16 @@ export function rotteEventi(app: FastifyInstance, ctx: Contesto): void {
   app.post<ConId>(`${P}/eventi/:id/concludi`, async (req) =>
     eventi.cambiaStato(db, req.params.id, 'concludi', valida(SchemaVersione, req.body).versione),
   )
-  app.post<ConId>(`${P}/eventi/:id/riapri`, async (req) =>
-    eventi.cambiaStato(db, req.params.id, 'riapri', valida(SchemaVersione, req.body).versione),
-  )
+  app.post<ConId>(`${P}/eventi/:id/riapri`, async (req) => {
+    const { versione } = valida(SchemaVersione, req.body)
+    return eventi.leggiEvento(db, req.params.id).stato === 'archiviato'
+      ? archivio.riapriArchiviato(db, req.params.id, versione)
+      : eventi.cambiaStato(db, req.params.id, 'riapri', versione)
+  })
 
-  app.get<ConId>(`${P}/eventi/:id/menu`, async (req) => eventi.leggiMenu(db, req.params.id))
+  app.get<ConId>(`${P}/eventi/:id/menu`, async (req) =>
+    eventi.leggiEvento(db, req.params.id).stato === 'archiviato' ? archivio.menuDaSnapshot(db, req.params.id) : eventi.leggiMenu(db, req.params.id),
+  )
 
   app.post<ConId>(`${P}/eventi/:id/voci`, async (req, reply) => {
     const voci = eventi.creaVoci(db, req.params.id, valida(SchemaNuoveVoci, req.body).voci)

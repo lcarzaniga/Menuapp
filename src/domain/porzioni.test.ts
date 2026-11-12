@@ -17,6 +17,7 @@ describe('porzioni (SPEC §7.1, §16)', () => {
   })
   it('fattore e scalatura', () => {
     expect(fattoreScalatura(10, 4)).toBe(2.5)
+    expect(scala(60, fattoreScalatura(10, 6)!, 'proporzionale')).toBe(100)
     expect(fattoreScalatura(10, null)).toBeNull()
     expect(fattoreScalatura(10, 0)).toBeNull()
     expect(scala(200, 2.5, 'proporzionale')).toBe(500)
