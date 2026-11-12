@@ -1,0 +1,591 @@
+/*
+ * Menù stampato. Misure solo in mm e pt (mai rem: la dimensione del testo dell'app non deve
+ * cambiare la stampa). --k = scala del formato, --d = densità del carattere, --g = densità
+ * degli spazi, --fk/--ft = correzioni della combinazione tipografica.
+ */
+
+.menu-pagina {
+  --carta-menu: #ffffff;
+  --inchiostro-tenue: color-mix(in srgb, var(--inchiostro) 58%, white);
+  --spazio: calc(7mm * var(--k) * var(--g));
+  --pad-v: calc(24mm * var(--k));
+  --pad-o: calc(22mm * var(--k));
+  position: relative;
+  box-sizing: border-box;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  padding: var(--pad-v) var(--pad-o);
+  overflow: hidden;
+  background: var(--carta-menu);
+  color: var(--inchiostro);
+  font-family: var(--f-testo);
+  font-size: calc(14.5pt * var(--k) * var(--d) * var(--fk));
+  line-height: 1.32;
+  text-align: center;
+  font-feature-settings: normal;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  text-wrap: pretty;
+}
+.menu-pagina *,
+.menu-pagina *::before,
+.menu-pagina *::after {
+  box-sizing: border-box;
+}
+.menu-pagina p,
+.menu-pagina h1,
+.menu-pagina h2,
+.menu-pagina ul {
+  margin: 0;
+  padding: 0;
+}
+.menu-pagina ul {
+  list-style: none;
+}
+.menu-pagina svg {
+  display: block;
+}
+
+.menu-area {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--spazio);
+}
+.menu-pagina[data-seguito] .menu-area {
+  justify-content: flex-start;
+}
+.menu-pagina[data-modo='flusso'] {
+  height: auto !important;
+}
+.menu-pagina[data-modo='flusso'] .menu-area {
+  flex: none;
+  justify-content: flex-start;
+}
+
+/* ── Elementi comuni ──────────────────────────────────────── */
+
+.menu-testata {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(2.4mm * var(--k) * var(--g) + 0.6mm);
+}
+.menu-titolo {
+  font-family: var(--f-titoli);
+  font-size: calc(2.45em * var(--ft) / var(--fk));
+  font-weight: 600;
+  line-height: 1.08;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.menu-pagina[data-titoli-corsivi] .menu-titolo {
+  font-weight: 400;
+  line-height: 1.15;
+  word-spacing: 0.14em;
+}
+.menu-etichetta {
+  font-family: var(--f-etichette);
+  font-size: 0.68em;
+  letter-spacing: 0.38em;
+  text-transform: uppercase;
+  color: var(--secondario);
+  padding-left: 0.38em;
+}
+.menu-sottotitolo {
+  font-style: italic;
+  font-size: 1.02em;
+  color: var(--inchiostro-tenue);
+}
+.menu-data {
+  font-size: 0.82em;
+  font-style: italic;
+  color: var(--inchiostro-tenue);
+}
+.menu-data::first-letter {
+  text-transform: uppercase;
+}
+.menu-filetto {
+  display: block;
+  width: calc(26mm * var(--k));
+  height: 0;
+  border-top: 0.6pt solid var(--secondario);
+}
+.menu-portata {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.menu-nome-portata {
+  font-family: var(--f-etichette);
+  font-weight: 500;
+  font-size: 0.74em;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--accento);
+  margin-bottom: calc(2.6mm * var(--k) * var(--g) + 0.8mm) !important;
+}
+.menu-voci {
+  display: flex;
+  flex-direction: column;
+  gap: calc(1.5mm * var(--k) * var(--g) + 0.4mm);
+}
+.menu-voce {
+  display: flex;
+  flex-direction: column;
+  break-inside: avoid;
+}
+.menu-piatto {
+  font-size: 1.08em;
+  overflow-wrap: anywhere;
+}
+.menu-nota-voce {
+  font-size: 0.74em;
+  font-style: italic;
+  color: var(--inchiostro-tenue);
+  margin-top: 0.2mm;
+  overflow-wrap: anywhere;
+}
+.menu-nota {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(3mm * var(--k) * var(--g));
+}
+.menu-nota p {
+  font-style: italic;
+  font-size: 0.9em;
+  white-space: pre-line;
+  color: var(--inchiostro-tenue);
+  overflow-wrap: anywhere;
+}
+.menu-cornice {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* ── Elegante: simmetrico, cornice doppia, maiuscoletti fra filetti ── */
+
+.menu-pagina[data-modello='elegante'] .menu-cornice {
+  inset: max(6.5mm, calc(9mm * var(--k)));
+  border: 0.9pt solid var(--accento);
+}
+.menu-pagina[data-modello='elegante'] .menu-cornice-interna {
+  position: absolute;
+  inset: calc(1.6mm * var(--k));
+  border: 0.35pt solid var(--secondario);
+}
+.menu-pagina[data-modello='elegante'] .menu-titolo {
+  color: var(--accento);
+}
+.menu-pagina[data-modello='elegante'] .orn-fregio {
+  width: calc(40mm * var(--k));
+  height: auto;
+}
+.menu-pagina[data-modello='elegante'] .menu-nome-portata {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9em;
+}
+.menu-pagina[data-modello='elegante'] .menu-nome-portata::before,
+.menu-pagina[data-modello='elegante'] .menu-nome-portata::after {
+  content: '';
+  width: calc(12mm * var(--k));
+  border-top: 0.5pt solid var(--secondario);
+}
+.menu-pagina[data-modello='elegante'] .menu-nome-portata span {
+  padding-left: 0.28em;
+}
+
+/* ── Minimal: allineato a sinistra, griglia etichetta/piatti, filetti sottili ── */
+
+.menu-pagina[data-modello='minimal'] {
+  --pad-v: calc(26mm * var(--k));
+  --pad-o: calc(24mm * var(--k));
+  text-align: left;
+  line-height: 1.38;
+}
+.menu-pagina[data-modello='minimal'] .menu-area {
+  justify-content: flex-start;
+  gap: calc(7mm * var(--k) * var(--g));
+}
+.menu-pagina[data-modello='minimal'] .menu-testata {
+  align-items: flex-start;
+  gap: calc(3mm * var(--k) * var(--g) + 0.6mm);
+  margin-bottom: calc(6mm * var(--k) * var(--g));
+}
+.menu-pagina[data-modello='minimal'] .menu-etichetta {
+  padding-left: 0;
+  letter-spacing: 0.32em;
+}
+.menu-pagina[data-modello='minimal'] .menu-titolo {
+  font-weight: 300;
+  font-size: calc(2.9em * var(--ft) / var(--fk));
+  line-height: 1.04;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.menu-pagina[data-modello='minimal'][data-titoli-corsivi] .menu-titolo {
+  font-weight: 400;
+}
+.menu-pagina[data-modello='minimal'] .menu-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35em 1.4em;
+  font-size: 0.7em;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--secondario);
+}
+.menu-pagina[data-modello='minimal'] .menu-barra {
+  display: block;
+  width: calc(14mm * var(--k));
+  border-top: 1.4pt solid var(--accento);
+  margin-top: calc(2mm * var(--k));
+}
+.menu-pagina[data-modello='minimal'] .menu-portata {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2.5fr);
+  column-gap: calc(7mm * var(--k));
+  border-top: 0.4pt solid color-mix(in srgb, var(--inchiostro) 22%, white);
+  padding-top: calc(4.2mm * var(--k) * var(--g) + 1mm);
+}
+.menu-pagina[data-modello='minimal'] .menu-nome-portata {
+  font-family: var(--f-etichette);
+  font-size: 0.66em;
+  letter-spacing: 0.2em;
+  color: var(--secondario);
+  padding-top: 0.45em;
+  margin-bottom: 0 !important;
+  font-style: normal;
+  text-transform: uppercase;
+}
+.menu-pagina[data-modello='minimal'] .menu-piatto {
+  font-size: 1.04em;
+}
+.menu-pagina[data-modello='minimal'] .menu-nota {
+  align-items: flex-start;
+  margin-top: auto;
+  padding-top: calc(4mm * var(--k));
+}
+.menu-pagina[data-modello='minimal'] .menu-nota p {
+  font-style: normal;
+  font-size: 0.78em;
+  color: var(--secondario);
+}
+.menu-pagina[data-modello='minimal'] .menu-verticale {
+  position: absolute;
+  right: calc(8mm * var(--k));
+  bottom: calc(22mm * var(--k));
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--f-etichette);
+  font-size: calc(30pt * var(--k));
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--secondario) 30%, white);
+  line-height: 1;
+}
+
+/* ── Rustico: carta calda, cornice tratteggiata, rametti d'ulivo ── */
+
+.menu-pagina[data-modello='rustico'] {
+  --carta-menu: color-mix(in srgb, var(--tenue) 70%, white);
+  --pad-v: calc(21mm * var(--k));
+  --pad-o: calc(22mm * var(--k));
+}
+.menu-pagina[data-modello='rustico'] .menu-cornice {
+  inset: max(6.5mm, calc(8mm * var(--k)));
+  border: 1pt dashed color-mix(in srgb, var(--accento) 70%, white);
+  border-radius: calc(4mm * var(--k));
+}
+.menu-pagina[data-modello='rustico'] .orn-angolo {
+  position: absolute;
+  width: calc(17mm * var(--k));
+  height: auto;
+}
+.menu-pagina[data-modello='rustico'] .orn-angolo.alto-sx {
+  top: calc(13mm * var(--k));
+  left: calc(9.5mm * var(--k));
+  transform: rotate(-38deg);
+}
+.menu-pagina[data-modello='rustico'] .orn-angolo.alto-dx {
+  top: calc(13mm * var(--k));
+  right: calc(9.5mm * var(--k));
+  transform: scaleX(-1) rotate(-38deg);
+}
+.menu-pagina[data-modello='rustico'] .orn-angolo.basso-sx {
+  bottom: calc(13mm * var(--k));
+  left: calc(9.5mm * var(--k));
+  transform: rotate(38deg);
+}
+.menu-pagina[data-modello='rustico'] .orn-angolo.basso-dx {
+  bottom: calc(13mm * var(--k));
+  right: calc(9.5mm * var(--k));
+  transform: scaleX(-1) rotate(38deg);
+}
+.menu-pagina[data-modello='rustico'] .orn-ghirlanda .orn-ramo {
+  width: calc(26mm * var(--k));
+  height: auto;
+}
+.menu-pagina[data-modello='rustico'] .menu-etichetta {
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0.06em;
+  font-size: 1.02em;
+  padding-left: 0;
+  color: var(--accento);
+}
+.menu-pagina[data-modello='rustico'] .menu-etichetta::before,
+.menu-pagina[data-modello='rustico'] .menu-etichetta::after {
+  content: '~';
+  margin: 0 0.45em;
+  color: var(--secondario);
+}
+.menu-pagina[data-modello='rustico'] .menu-titolo {
+  font-weight: 600;
+}
+.menu-pagina[data-modello='rustico'] .menu-nome-portata {
+  align-self: center;
+  font-variant: small-caps;
+  text-transform: lowercase;
+  letter-spacing: 0.12em;
+  font-size: 0.95em;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.06em 1em 0.14em;
+  border: 0.8pt solid var(--accento);
+  border-radius: 99px;
+}
+.menu-pagina[data-modello='rustico'][data-titoli-corsivi] .menu-nome-portata {
+  font-variant: normal;
+  text-transform: none;
+}
+.menu-pagina[data-modello='rustico'] .menu-piatto {
+  font-style: italic;
+}
+.menu-pagina[data-modello='rustico'] .menu-sottotitolo,
+.menu-pagina[data-modello='rustico'] .menu-data,
+.menu-pagina[data-modello='rustico'] .menu-nota p {
+  color: color-mix(in srgb, var(--inchiostro) 78%, white);
+}
+.menu-pagina[data-modello='rustico'] .orn-separatore {
+  width: calc(15mm * var(--k) * (0.6 + 0.4 * var(--g)));
+  height: auto;
+  align-self: center;
+  margin-bottom: calc(2mm * var(--k) * var(--g) + 0.6mm);
+}
+.menu-pagina[data-modello='rustico'] .menu-nota .orn-separatore {
+  margin-bottom: 0;
+}
+
+/* ── Festivo: festone, portate in riquadri, colori vivaci ── */
+
+.menu-pagina[data-modello='festivo'] {
+  --pad-v: calc(30mm * var(--k));
+  --pad-o: calc(20mm * var(--k));
+  --spazio: calc(5.5mm * var(--k) * var(--g) + 1mm);
+}
+.menu-pagina[data-modello='festivo'] .orn-festone {
+  position: absolute;
+  top: max(6.5mm, calc(7mm * var(--k)));
+  left: calc(8mm * var(--k));
+  right: calc(8mm * var(--k));
+  width: calc(100% - 16mm * var(--k));
+  height: calc(17mm * var(--k));
+}
+.menu-pagina[data-modello='festivo'] .orn-coriandoli {
+  position: absolute;
+  bottom: max(6.5mm, calc(8mm * var(--k)));
+  left: calc(10mm * var(--k));
+  width: calc(100% - 20mm * var(--k));
+  height: calc(12mm * var(--k));
+}
+.menu-pagina[data-modello='festivo'] .menu-etichetta {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  color: var(--accento);
+  font-weight: 600;
+  padding-left: 0;
+}
+.menu-pagina[data-modello='festivo'] .orn-stellina {
+  width: 0.95em;
+  height: 0.95em;
+}
+.menu-pagina[data-modello='festivo'] .menu-titolo {
+  color: var(--accento);
+  font-weight: 750;
+  font-size: calc(2.7em * var(--ft) / var(--fk));
+}
+.menu-pagina[data-modello='festivo'][data-titoli-corsivi] .menu-titolo {
+  font-weight: 400;
+}
+.menu-pagina[data-modello='festivo'] .menu-sottotitolo {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--inchiostro);
+}
+.menu-pagina[data-modello='festivo'] .menu-portata {
+  border: 0.9pt solid color-mix(in srgb, var(--accento) 60%, white);
+  border-radius: calc(4mm * var(--k));
+  padding: calc(3.4mm * var(--k) * var(--g) + 1.2mm) calc(6mm * var(--k));
+  margin: 0 calc(4mm * var(--k));
+}
+.menu-pagina[data-modello='festivo'] .menu-nome-portata {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.7em;
+  font-weight: 700;
+  margin-bottom: calc(2mm * var(--k) * var(--g) + 0.6mm) !important;
+}
+.menu-pagina[data-modello='festivo'] .menu-nome-portata .orn-stellina {
+  width: 0.9em;
+  height: 0.9em;
+}
+.menu-pagina[data-modello='festivo'] .menu-nota p {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--accento);
+}
+
+/* ── Natale: agrifoglio, titolo calligrafico, cornice sottile con stelle ── */
+
+.menu-pagina[data-modello='natale'] {
+  --pad-v: calc(22mm * var(--k));
+  --pad-o: calc(22mm * var(--k));
+}
+.menu-pagina[data-modello='natale'] .menu-cornice {
+  inset: calc(10mm * var(--k));
+  border: 0.6pt solid var(--secondario);
+}
+.menu-pagina[data-modello='natale'] .orn-angolo {
+  position: absolute;
+  width: calc(5mm * var(--k));
+  height: calc(5mm * var(--k));
+  transform: none !important;
+}
+.menu-pagina[data-modello='natale'] .orn-angolo.alto-sx,
+.menu-pagina[data-modello='natale'] .orn-angolo.alto-dx {
+  top: calc(7.5mm * var(--k));
+}
+.menu-pagina[data-modello='natale'] .orn-angolo.basso-sx,
+.menu-pagina[data-modello='natale'] .orn-angolo.basso-dx {
+  bottom: calc(7.5mm * var(--k));
+}
+.menu-pagina[data-modello='natale'] .orn-angolo.alto-sx,
+.menu-pagina[data-modello='natale'] .orn-angolo.basso-sx {
+  left: calc(7.5mm * var(--k));
+}
+.menu-pagina[data-modello='natale'] .orn-angolo.alto-dx,
+.menu-pagina[data-modello='natale'] .orn-angolo.basso-dx {
+  right: calc(7.5mm * var(--k));
+}
+.menu-pagina[data-modello='natale'] .orn-agrifoglio {
+  width: calc(20mm * var(--k));
+  height: auto;
+}
+.menu-pagina[data-modello='natale'] .menu-titolo {
+  color: var(--accento);
+  font-size: calc(2.6em * var(--ft) / var(--fk));
+}
+.menu-pagina[data-modello='natale'] .menu-etichetta {
+  color: var(--secondario);
+}
+.menu-pagina[data-modello='natale'] .orn-stelle {
+  display: flex;
+  gap: calc(3mm * var(--k));
+  align-items: center;
+}
+.menu-pagina[data-modello='natale'] .orn-stelle svg {
+  width: calc(2.6mm * var(--k));
+  height: calc(2.6mm * var(--k));
+}
+.menu-pagina[data-modello='natale'] .orn-stelle svg:nth-child(2) {
+  width: calc(3.6mm * var(--k));
+  height: calc(3.6mm * var(--k));
+}
+.menu-pagina[data-modello='natale'] .menu-nome-portata {
+  font-family: var(--f-titoli);
+  font-size: calc(1.12em * var(--ft) / var(--fk));
+  line-height: 1.1;
+  margin-bottom: calc(2mm * var(--k) * var(--g) + 0.6mm) !important;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--secondario);
+}
+.menu-pagina[data-modello='natale']:not([data-titoli-corsivi]) .menu-nome-portata {
+  font-size: 0.74em;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--accento);
+}
+.menu-pagina[data-modello='natale'] .orn-separatore {
+  width: calc(3mm * var(--k));
+  height: calc(3mm * var(--k));
+  align-self: center;
+  margin-bottom: calc(2.4mm * var(--k) * var(--g) + 0.4mm);
+}
+
+/* ── Fogli, anteprima, misure, stampa ─────────────────────── */
+
+.menu-foglio {
+  position: relative;
+  display: flex;
+  background: #fff;
+  overflow: hidden;
+}
+.menu-taglio {
+  position: absolute;
+  left: 50%;
+  height: 6mm;
+  border-left: 0.4pt dashed #8a8a8a;
+}
+.menu-taglio.alto {
+  top: 0;
+}
+.menu-taglio.basso {
+  bottom: 0;
+}
+
+.menu-misuratore {
+  position: fixed;
+  left: -20000px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+  contain: layout style;
+}
+
+.menu-stampa {
+  display: none;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+  .menu-misuratore {
+    display: none;
+  }
+  .menu-stampa {
+    display: block;
+  }
+  .menu-stampa .menu-foglio {
+    /* Mezzo millimetro in meno: evita il foglio bianco in più per arrotondamento. */
+    height: calc(var(--altezza-foglio) - 0.5mm) !important;
+    break-after: page;
+    break-inside: avoid;
+  }
+  .menu-stampa .menu-foglio:last-child {
+    break-after: auto;
+  }
+}

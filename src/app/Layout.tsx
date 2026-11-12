@@ -21,7 +21,7 @@ export function Layout() {
     window.scrollTo(0, 0)
   }, [pathname])
   return (
-    <div className="min-h-dvh md:pl-56">
+    <div className="min-h-dvh md:pl-56 print:pl-0">
       <BannerConnessione onRiprova={() => void controllaRevisione(client)} />
       <nav aria-label="Sezioni" className="non-stampare fixed inset-y-0 left-0 z-30 hidden w-56 flex-col gap-1 border-r border-bordo/70 bg-carta/90 p-3 backdrop-blur md:flex">
         <div className="mb-6 flex flex-col items-center gap-1 px-3 pt-3 text-center">

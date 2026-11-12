@@ -120,13 +120,14 @@ test('Natale 2026: dal menù alla tavola, da due dispositivi', async ({ page, br
 
   // ── Stampa del menù
   await page.goto(`/#/eventi/${eventoId}/stampa`)
-  const menu = page.getByRole('article', { name: 'Anteprima del menù' })
-  await expect(menu.getByRole('heading', { name: 'Natale 2026' })).toBeVisible()
+  const menu = page.getByTestId('anteprima-menu')
+  await expect(menu.locator('.menu-titolo')).toHaveText('Natale 2026')
   await expect(menu.getByText('Lasagne alla bolognese')).toBeVisible()
   await page.emulateMedia({ media: 'print' })
   await foto(page, '05-stampa')
-  await expect(page.getByRole('button', { name: 'Stampa' })).toBeHidden()
-  await page.emulateMedia({ media: 'screen' })
+  await expect(page.getByRole('button', { name: /Stampa/ })).toBeHidden()
+  await expect(page.locator('.menu-stampa').getByText('Lasagne alla bolognese')).toBeVisible()
+  await page.emulateMedia({ media: null })
 
   // ── Backup e ripristino su questo database di prova
   const prima = (await apiLeggi<{ impronta: string }>(request, '/esportazione')).impronta

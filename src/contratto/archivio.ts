@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import type { Menu } from './eventi.ts'
 import type { RispostaSpesa } from './spesa.ts'
+import type { OpzioniStampa } from '../domain/stampa.ts'
 import type { Attivita, Evento, Piatto } from '../domain/tipi.ts'
 import { DataISO, Id, NomeObbligatorio, Ora, TestoLungo, Versione } from './comune.ts'
 import { STATI_ATTIVITA } from '../domain/tipi.ts'
@@ -19,6 +20,8 @@ export interface ContenutoSnapshot {
   spesa: RispostaSpesa
   reparti: { id: string; nome: string }[]
   attivita: Omit<Attivita, 'versione' | 'creatoIl' | 'aggiornatoIl'>[]
+  /** Stile del menù stampato all'archiviazione (assente negli snapshot precedenti). */
+  stampa?: OpzioniStampa | null
 }
 
 export interface Snapshot {

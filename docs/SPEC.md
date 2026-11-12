@@ -142,10 +142,36 @@ GitHub Pages.
 2. Ingredienti e passaggi si spuntano (spunte solo sul dispositivo, non salvate sul
    server); lo schermo resta acceso (Wake Lock) se supportato.
 
-### F8 — Stampa
-1. *Evento → Stampa menù*: anteprima con formato A4/A5, mostra/nascondi portate vuote,
-   nota finale facoltativa.
-2. «Stampa» apre la finestra del browser (su Android: Salva come PDF / stampante).
+### F8 — Stampa (designer del menù)
+1. *Evento → Stampa menù* apre il designer: miniature dei modelli, opzioni in sezioni
+   semplici, anteprima sempre visibile (desktop: affiancata e alta quanto la finestra;
+   telefono: sotto i modelli, larga quanto lo schermo, più «Ingrandisci» a tutto schermo).
+2. Cinque modelli con layout propri: **Elegante** (simmetrico, cornice doppia, maiuscoletti
+   fra filetti), **Minimal** (allineato a sinistra, griglia portata/piatti, filetti),
+   **Rustico** (carta calda, cornice tratteggiata, rametti d'ulivo, portate in etichette),
+   **Festivo** (festone, portate in riquadri, coriandoli), **Natale** (agrifoglio, titolo
+   calligrafico, cornice sottile con stelle). Ornamenti SVG originali, nessun servizio esterno.
+3. Opzioni: modello; titolo (vuoto = nome dell'evento); sottotitolo; data sì/no; nota
+   finale; 7 palette coordinate; 4 combinazioni tipografiche (Classica, Garamond, Moderna,
+   Calligrafica); decorazioni sì/no; nascondi portate vuote; note dei piatti (le note delle
+   voci del menù). Predefiniti: modello dall'occasione (Natale/Vigilia/Santo Stefano/Epifania
+   → Natale; compleanni, anniversari, battesimi… → Festivo; altrimenti Elegante), con la
+   sua palette e i suoi caratteri; A4; data visibile; portate vuote nascoste. Cambiando
+   modello, palette e caratteri passano a quelli del modello. «Ripristina stile
+   predefinito» torna ai predefiniti.
+4. Formati: A4 verticale, A5 verticale, 2 × A5 su A4 orizzontale (due copie, segni di
+   taglio in alto e in basso). Fogli in mm/pt con margini di sicurezza interni (cornici ad
+   almeno 6,5 mm dal bordo), `@page { margin: 0 }`.
+5. Impaginazione misurata sui caratteri reali: si prova a stringere prima gli spazi, poi il
+   carattere fino all'86% (mai sotto ~12 pt in A4, ~10 pt in A5); oltre, più pagine, con
+   le portate intere o divise fra le voci senza voci isolate. L'anteprima mostra gli
+   stessi fogli della stampa.
+6. «Stampa / Salva PDF» apre la finestra del browser: escono solo i fogli. Testi, cornici
+   e ornamenti stampano sempre; i fondi colorati richiedono «Grafica di sfondo».
+7. Lo stile si salva da solo sul server, per evento (tabella `stili_stampa`, versione
+   ottimistica, 409 → si adotta lo stile dell'altro dispositivo). Non modifica menù né
+   ricette. Evento archiviato: sola lettura, stile fotografato nello snapshot
+   (`contenuto.stampa`); la stampa resta disponibile.
 
 ### F9 — Concludere e archiviare
 1. Dopo la data, l'app propone «Segna come concluso».
@@ -198,7 +224,7 @@ Da 768 px: barra laterale con le stesse voci. Il contenuto dell'evento usa sched
 | `#/eventi/:id/menu` | Evento — Menù | Portate e voci, inserimento rapido, riordino |
 | `#/eventi/:id/spesa` | Evento — Spesa | Lista per reparto, filtri, manuali, sezioni *Da verificare* e *Non più necessari* |
 | `#/eventi/:id/piano` | Evento — Piano | Attività per giorno, checklist |
-| `#/eventi/:id/stampa` | Stampa menù | Anteprima e opzioni |
+| `#/eventi/:id/stampa` | Stampa menù | Designer: modelli, opzioni, anteprima, stampa/PDF (F8) |
 | `#/eventi/:id/voci/:voceId/cucina` | Vista cucina | Ricetta alle porzioni della voce |
 | `#/ricettario` | Ricettario | Ricerca, elenco piatti, filtro «senza ingredienti» |
 | `#/ricettario/nuovo`, `#/ricettario/:id` | Piatto | Scheda; modifica |
@@ -1292,6 +1318,7 @@ Prefisso `/api/v1`. JSON UTF-8. Gli schemi di ogni richiesta e risposta sono in
 | `POST /api/v1/eventi/:id/concludi` · `/riapri` · `/archivia` | stati (§7.3–7.4) | M1 / M4 |
 | `POST /api/v1/eventi/:id/portate` · `PUT /api/v1/portate/:id` · `DELETE` · `PUT /api/v1/eventi/:id/portate/ordine` | portate dell'evento | M1 |
 | `GET /api/v1/eventi/:id/menu` | portate con voci ordinate | M1 |
+| `GET /api/v1/eventi/:id/stampa` · `PUT` | stile del menù stampato `{ opzioni, versione }` (0 = mai salvato); archiviato: dallo snapshot, `PUT` → 422 | 2.5 |
 | `POST /api/v1/eventi/:id/voci` (una o più, inserimento multiriga) · `PUT /api/v1/voci/:id` · `DELETE` | voci di menù | M1 |
 | `PUT /api/v1/eventi/:id/voci/ordine` | `{ portataId, voci: [{ id, versione }] }` — riordino e spostamento | M1 |
 | `POST /api/v1/voci/:id/crea-piatto` | crea il piatto e collega la voce in una transazione | M2 |
@@ -1723,3 +1750,4 @@ schermo acceso in vista cucina · stampa/Salva PDF · tema scuro · riavvio del 
 | 12/11/2026 | 2.2 — Accesso anche senza Tailscale dalla rete di casa (decisione di Loris, per l'Echo Show 15): secondo ascolto HTTP su `0.0.0.0:9880` (`MENUAPP_PORTA_LAN`), che accetta solo nomi host locali (IP privati, `*.local`, `loris-srv01`: protezione dal DNS rebinding) e scritture con origine uguale all'indirizzo usato. In HTTP l'app non si installa come PWA e non tiene lo schermo acceso, ma funziona completamente; gli id del client hanno un'alternativa senza `crypto.randomUUID`. Chiunque sia sul Wi-Fi di casa può usare l'app. L'accesso HTTPS via Tailscale (`:9870`) resta per l'installazione PWA e per l'uso fuori casa. Grafica: font inclusi (Fraunces, Inter), illustrazioni SVG, misure in rem con testo automatico più grande sugli schermi ≥ 1400 px e preferenza «Dimensione del testo» |
 | 12/11/2026 | 2.3 — Foto e importazione ricette (richiesta di Loris): formato ricetta v1 definito in `docs/FORMATO-RICETTA.md` (pacchetto `.menuapp-ricetta` ZIP con `ricetta.json` e foto, JSON, scrittura a mano `.txt/.md`); migrazione `0002_foto.sql` con tabella `foto_piatti` (max 10 per piatto, una principale, file in `dati/foto/`, tipo verificato dai primi byte, ridotte a 1600 px nel browser); rotte `POST /piatti/:id/foto`, `GET|PUT|DELETE /foto/:id`, `PUT /foto/:id/file`, `GET /piatti/:id/esporta`, `GET /esportazione?foto=1` (ZIP); le foto vengono copiate in `dati/backup/foto/` a ogni backup e recuperate dopo i ripristini; importazione con anteprima del parser, mai sovrascrittura di piatti esistenti; condivisione della ricetta come testo. Le foto rientrano nel perimetro (prima erano rinviate) |
 | 12/11/2026 | 2.4 — Foto collegate ai passaggi del procedimento: migrazione `0003_foto_passi.sql` (colonna `passo`, indice da 0), campo `passo` (da 1) nel formato ricetta v1 (facoltativo, retrocompatibile), ricollegamento automatico quando il procedimento cambia (stesso testo o testo appena ritoccato; altrimenti solo galleria), foto sotto i passaggi in scheda e vista cucina. Porta 9880 aperta anche ai nomi e agli indirizzi Tailscale (`*.ts.net`, 100.64.0.0/10) |
+| 12/11/2026 | 2.5 — Designer del menù stampato (richiesta di Loris, F8 riscritta): cinque modelli, palette, caratteri, decorazioni, formati A4/A5/2×A5, impaginazione misurata su più pagine; migrazione `0004_stili_stampa.sql` (tabella `stili_stampa`: `evento_id` PK con CASCADE, `opzioni` JSON validato dal contratto `src/contratto/stampa.ts`, `versione`); rotte `GET|PUT /eventi/:id/stampa` (versione 0 = primo salvataggio); stile incluso nello snapshot all'archiviazione e nelle esportazioni/ripristini; nuovi caratteri locali (Cormorant Garamond, Josefin Sans, Great Vibes, solo sottoinsieme latino) caricati solo dalla schermata di stampa |

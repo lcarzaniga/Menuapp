@@ -6,6 +6,7 @@ import type { Menu, RiepilogoEvento } from '@/contratto/eventi.ts'
 import type { DettaglioPiatto, RiepilogoPiatto } from '@/contratto/ricettario.ts'
 import type { InfoRiapertura, Snapshot } from '@/contratto/archivio.ts'
 import type { RispostaSpesa } from '@/contratto/spesa.ts'
+import type { StileStampa } from '@/contratto/stampa.ts'
 import type { Attivita, Evento, Impostazioni, Ingrediente, Reparto, StatoEvento } from '@/domain/tipi.ts'
 import { api } from './client'
 
@@ -27,12 +28,15 @@ export const chiaviEventi = {
   elenco: (stato?: StatoEvento) => ['eventi', stato ?? 'tutti'] as const,
   evento: (id: string) => ['evento', id] as const,
   menu: (id: string) => ['menu', id] as const,
+  stampa: (id: string) => ['stampa', id] as const,
 }
 
 export const useEventi = (stato?: StatoEvento) =>
   useQuery({ queryKey: chiaviEventi.elenco(stato), queryFn: () => api.leggi<RiepilogoEvento[]>(stato ? `/eventi?stato=${stato}` : '/eventi') })
 export const useEvento = (id: string) => useQuery({ queryKey: chiaviEventi.evento(id), queryFn: () => api.leggi<Evento>(`/eventi/${id}`) })
 export const useMenu = (id: string) => useQuery({ queryKey: chiaviEventi.menu(id), queryFn: () => api.leggi<Menu>(`/eventi/${id}/menu`) })
+export const useStileStampa = (id: string) =>
+  useQuery({ queryKey: chiaviEventi.stampa(id), queryFn: () => api.leggi<StileStampa>(`/eventi/${id}/stampa`) })
 
 // ── Ricettario e catalogo ───────────────────────────────────
 export const chiaviRicettario = {

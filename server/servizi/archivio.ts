@@ -10,6 +10,7 @@ import { type Db, esegui, transazione, tutti, uno } from '../db/connessione.ts'
 import { incrementaRevisione } from '../db/repo/meta.ts'
 import * as repoRic from '../db/repo/ricettario.ts'
 import * as repoSpesa from '../db/repo/spesa.ts'
+import * as repoStampa from '../db/repo/stampa.ts'
 import { elencaAttivita } from './attivita.ts'
 import { nonTrovato, regolaViolata } from './errori.ts'
 import { leggiEvento, leggiMenu } from './eventi.ts'
@@ -78,6 +79,7 @@ export function costruisciSnapshot(db: Db, eventoId: string): ContenutoSnapshot 
     }),
   }))
   const { versione: _v, creatoIl: _c, aggiornatoIl: _a, ...datiEvento } = evento
+  const stile = repoStampa.leggiStile(db, eventoId)
   return {
     evento: datiEvento,
     copertiEquivalenti: menu.copertiEquivalenti,
@@ -86,6 +88,7 @@ export function costruisciSnapshot(db: Db, eventoId: string): ContenutoSnapshot 
     spesa: { ...lista, avvisi: c.avvisi, copertiEquivalenti: c.copertiEquivalenti, solaLettura: true },
     reparti: reparti.map((r) => ({ id: r.id, nome: r.nome })),
     attivita: elencaAttivita(db, eventoId).map(({ versione: _x, creatoIl: _y, aggiornatoIl: _z, ...a }) => a),
+    stampa: stile ? (JSON.parse(stile.opzioni) as ContenutoSnapshot['stampa']) : null,
   }
 }
 

@@ -74,3 +74,19 @@ permessi: Loris la esegue con `! comando`.
 ## Prossima attività
 
 Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collaudo/collaudo-v1.md`).
+
+## Designer del menù stampato (12/11/2026, ramo `designer-menu`, da rilasciare)
+
+- SPEC 2.5 / F8: cinque modelli (Elegante, Minimal, Rustico, Festivo, Natale), 7 palette,
+  4 combinazioni tipografiche, decorazioni, titolo/sottotitolo/data/nota, portate vuote e
+  note dei piatti, formati A4, A5 e 2 × A5 su A4.
+- Anteprima fedele (stessi fogli della stampa, scalati), ingrandimento a tutto schermo;
+  impaginazione misurata con densità progressive e più pagine per i menù lunghi.
+- Stile salvato per evento sul server: migrazione `0004_stili_stampa.sql`, `GET|PUT
+  /eventi/:id/stampa`, versione ottimistica, sola lettura e snapshot per gli archiviati.
+- Test: API (`server/api/stampa.test.ts`), impaginazione e modelli
+  (`src/features/stampa/stampa.test.tsx`), e2e con PDF e schermate
+  (`test/e2e/stampa.spec.ts`, schermate in `test-results/stampa/`).
+- Per il rilascio serve la migrazione 0004 sul database di produzione (backup automatico
+  verificato prima della migrazione, come per le precedenti).
+

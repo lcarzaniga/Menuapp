@@ -17,6 +17,7 @@ export const TABELLE_CONTENUTO = [
   'attivita',
   'snapshot_eventi',
   'foto_piatti',
+  'stili_stampa',
   'meta',
 ] as const
 
