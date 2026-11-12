@@ -1,6 +1,6 @@
 // Portate dell'evento: rinomina, riordina, aggiunge, elimina se vuote (SPEC §7.8).
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { api, nuovoId } from '@/api/client'
 import { useScrittura } from '@/api/scrittura'
 import { Button } from '@/components/ui/button'
@@ -16,12 +16,14 @@ interface Riga {
   voci: number
 }
 
-export function GestionePortate({ evento, menu, aperta, onCambia }: { evento: Evento; menu: Menu; aperta: boolean; onCambia: (a: boolean) => void }) {
-  const [righe, setRighe] = useState<Riga[]>([])
+export function GestionePortate(props: { evento: Evento; menu: Menu; aperta: boolean; onCambia: (a: boolean) => void }) {
+  // Rimontato a ogni apertura: le righe partono sempre dal menù attuale.
+  return props.aperta ? <ModuloPortate key={props.evento.versione} {...props} /> : null
+}
+
+function ModuloPortate({ evento, menu, aperta, onCambia }: { evento: Evento; menu: Menu; aperta: boolean; onCambia: (a: boolean) => void }) {
+  const [righe, setRighe] = useState<Riga[]>(() => menu.portate.map((p) => ({ id: p.id, nome: p.nome, voci: p.voci.length })))
   const puoScrivere = usePuoScrivere()
-  useEffect(() => {
-    if (aperta) setRighe(menu.portate.map((p) => ({ id: p.id, nome: p.nome, voci: p.voci.length })))
-  }, [aperta, menu])
   const salva = useScrittura(
     (versione: number) =>
       api.modifica<Evento>(`/eventi/${evento.id}`, {

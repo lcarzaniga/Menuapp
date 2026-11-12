@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { SchemaStatoBackup } from '@/contratto/backup.ts'
 import { SchemaSalute } from '@/contratto/comune.ts'
 import type { Menu, RiepilogoEvento } from '@/contratto/eventi.ts'
-import type { Evento, Impostazioni, Reparto, StatoEvento } from '@/domain/tipi.ts'
+import type { DettaglioPiatto, RiepilogoPiatto } from '@/contratto/ricettario.ts'
+import type { Evento, Impostazioni, Ingrediente, Reparto, StatoEvento } from '@/domain/tipi.ts'
 import { api } from './client'
 
 export const chiavi = {
@@ -30,3 +31,15 @@ export const useEventi = (stato?: StatoEvento) =>
   useQuery({ queryKey: chiaviEventi.elenco(stato), queryFn: () => api.leggi<RiepilogoEvento[]>(stato ? `/eventi?stato=${stato}` : '/eventi') })
 export const useEvento = (id: string) => useQuery({ queryKey: chiaviEventi.evento(id), queryFn: () => api.leggi<Evento>(`/eventi/${id}`) })
 export const useMenu = (id: string) => useQuery({ queryKey: chiaviEventi.menu(id), queryFn: () => api.leggi<Menu>(`/eventi/${id}/menu`) })
+
+// ── Ricettario e catalogo ───────────────────────────────────
+export const chiaviRicettario = {
+  piatti: ['piatti'] as const,
+  piatto: (id: string) => ['piatto', id] as const,
+  ingredienti: ['ingredienti'] as const,
+}
+export const usePiatti = () => useQuery({ queryKey: chiaviRicettario.piatti, queryFn: () => api.leggi<RiepilogoPiatto[]>('/piatti') })
+export const usePiatto = (id: string) =>
+  useQuery({ queryKey: chiaviRicettario.piatto(id), queryFn: () => api.leggi<DettaglioPiatto>(`/piatti/${id}`), enabled: Boolean(id) })
+export const useIngredienti = () =>
+  useQuery({ queryKey: chiaviRicettario.ingredienti, queryFn: () => api.leggi<Ingrediente[]>('/ingredienti'), staleTime: 60_000 })

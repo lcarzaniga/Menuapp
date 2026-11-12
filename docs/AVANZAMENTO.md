@@ -5,7 +5,7 @@ attività significativa.
 
 ## Stato
 
-- **Milestone corrente**: M0 (fondamenta) quasi completa → si passa a M1.
+- **Milestone corrente**: M3 (spesa). M0 (tranne T11 installazione), M1 e M2 completate.
 - **Branch di lavoro**: `m0-fondamenta` (da `docs-spec`, non ancora su `main`).
 - **Ambiente di sviluppo**: tmux `menuapp`, finestra `server` (`npm run dev:server`,
   `127.0.0.1:9871`, dati in `dati-sviluppo/`), finestra `dev` (Vite `127.0.0.1:5173`,
@@ -22,12 +22,20 @@ attività significativa.
   conflitti, *Impostazioni → Dati*), PWA con avviso di aggiornamento, e2e Playwright,
   CI di soli controlli.
 
+- M1: eventi (CRUD, stati concludi/riapri, archiviati in sola lettura), portate per evento,
+  voci con inserimento rapido e multiriga, modifica, sposta su/giù e fra portate,
+  eliminazione con «Annulla», impostazioni (portate predefinite, coefficiente, tema).
+- M2: ricettario (piatti come aggregato con ingredienti), «Crea nel ricettario», collega a
+  piatto esistente, suggerimenti nell'inserimento rapido, catalogo di 248 ingredienti con
+  seed idempotente, reparti gestibili, parser con tabella di 112 casi (100 % previsti),
+  editor ingredienti con anteprima e correzione, vista cucina con porzioni e Wake Lock.
+
 ## Test
 
 | Comando | Esito |
 |---|---|
 | `npm test` (dominio, server con SQLite reale, ui) | verde |
-| `npm run test:e2e` (telefono + desktop, server reale) | verde (10) |
+| `npm run test:e2e` (telefono + desktop, server reale) | verde (12) |
 | `npm run lint` / `npm run typecheck` / `npm run build` | verdi (1 avviso lint su button.tsx) |
 
 ## Decisioni tecniche
