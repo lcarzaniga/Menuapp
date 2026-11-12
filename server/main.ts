@@ -1,7 +1,9 @@
 // Avvio del backend: configurazione → database → migrazioni → seed → ascolto (SPEC §14.2).
 import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
 import pacchetto from '../package.json' with { type: 'json' }
 import { costruisciApp } from './app.ts'
+import { RegistroRipristini } from './backup/ripristino.ts'
 import { leggiConfig } from './config.ts'
 import { apriDatabase, chiudiDatabase } from './db/connessione.ts'
 import { applicaMigrazioni, CODICE_USCITA_CONFIGURAZIONE, ErroreMigrazione } from './db/migrazioni/esegui.ts'
@@ -17,7 +19,9 @@ async function avvia(): Promise<void> {
   }
   eseguiSeed(db)
 
-  const ctx = { db, config, stato: { manutenzione: false }, versioneApp: pacchetto.version }
+  const ripristini = new RegistroRipristini(join(config.cartellaDati, 'ripristino-temp'))
+  await ripristini.pulisciTutto()
+  const ctx = { db, config, stato: { manutenzione: false }, versioneApp: pacchetto.version, ripristini }
   const app = await costruisciApp(ctx, { log: true })
 
   let inChiusura = false

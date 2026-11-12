@@ -94,11 +94,12 @@ export async function costruisciApp(ctx: Contesto, opzioni: { log?: boolean } = 
       wildcard: true,
       dotfiles: 'deny',
       cacheControl: false,
-      setHeaders(res, percorsoFile) {
+      setHeaders(reply, percorsoFile) {
         const relativo = percorsoFile.slice(ctx.config.cartellaStatici!.length).replaceAll('\\', '/')
-        if (relativo.startsWith('/assets/')) res.setHeader('cache-control', 'public, max-age=31536000, immutable')
-        else if (NO_CACHE.test(relativo)) res.setHeader('cache-control', 'no-cache')
-        else res.setHeader('cache-control', 'no-cache')
+        // File con hash nel nome: immutabili. Tutto il resto (index.html, sw.js, manifest,
+        // icone) va riconvalidato a ogni richiesta, così gli aggiornamenti arrivano subito.
+        const immutabile = relativo.startsWith('/assets/') && !NO_CACHE.test(relativo)
+        reply.header('cache-control', immutabile ? 'public, max-age=31536000, immutable' : 'no-cache')
       },
     })
   }

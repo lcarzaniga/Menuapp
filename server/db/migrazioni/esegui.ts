@@ -51,9 +51,9 @@ export interface EsitoMigrazioni {
  */
 export async function applicaMigrazioni(
   db: Db,
-  opzioni: { cartellaBackup: string; cartellaMigrazioni?: string },
+  opzioni: { cartellaBackup: string | null; cartellaMigrazioni?: string; fino?: number },
 ): Promise<EsitoMigrazioni> {
-  const migrazioni = elencaMigrazioni(opzioni.cartellaMigrazioni)
+  const migrazioni = elencaMigrazioni(opzioni.cartellaMigrazioni).slice(0, opzioni.fino)
   const versionePrima = versioneSchema(db)
   const ultima = migrazioni.length
 
@@ -85,7 +85,7 @@ export async function applicaMigrazioni(
   if (daApplicare.length === 0) return { versionePrima, versioneDopo: versionePrima, applicate: [], backup: null }
 
   let backup: string | null = null
-  if (versionePrima > 0) {
+  if (versionePrima > 0 && opzioni.cartellaBackup !== null) {
     try {
       backup = (await creaBackup(db, opzioni.cartellaBackup, 'pre-migrazione')).nome
     } catch (e) {

@@ -42,6 +42,9 @@ import type { FastifyInstance, InjectOptions } from 'fastify'
 import { costruisciApp } from './app.ts'
 import type { Contesto } from './api/aiuti.ts'
 import { leggiConfig } from './config.ts'
+import { RegistroRipristini } from './backup/ripristino.ts'
+
+type Risposta = Awaited<ReturnType<FastifyInstance['inject']>>
 
 export const ORIGINE_PROVA = 'http://localhost:5173'
 
@@ -49,9 +52,9 @@ export interface AppDiProva extends DbDiProva {
   app: FastifyInstance
   ctx: Contesto
   /** Richiesta di scrittura come la farebbe il browser (Origin + JSON). */
-  scrivi: (metodo: 'POST' | 'PUT' | 'DELETE', url: string, corpo?: unknown) => ReturnType<FastifyInstance['inject']>
-  leggi: (url: string) => ReturnType<FastifyInstance['inject']>
-  inietta: (o: InjectOptions) => ReturnType<FastifyInstance['inject']>
+  scrivi: (metodo: 'POST' | 'PUT' | 'DELETE', url: string, corpo?: unknown) => Promise<Risposta>
+  leggi: (url: string) => Promise<Risposta>
+  inietta: (o: InjectOptions) => Promise<Risposta>
 }
 
 export async function appDiProva(opzioni: { statici?: string } = {}): Promise<AppDiProva> {
@@ -60,9 +63,15 @@ export async function appDiProva(opzioni: { statici?: string } = {}): Promise<Ap
     ...leggiConfig({ MENUAPP_DATI: p.cartella, MENUAPP_ORIGINI: ORIGINE_PROVA }),
     cartellaStatici: opzioni.statici ?? null,
   }
-  const ctx: Contesto = { db: p.db, config, stato: { manutenzione: false }, versioneApp: '0.0.0-test' }
+  const ctx: Contesto = {
+    db: p.db,
+    config,
+    stato: { manutenzione: false },
+    versioneApp: '0.0.0-test',
+    ripristini: new RegistroRipristini(join(p.cartella, 'ripristino-temp')),
+  }
   const app = await costruisciApp(ctx)
-  const scrivi: AppDiProva['scrivi'] = (metodo, url, corpo) =>
+  const scrivi: AppDiProva['scrivi'] = async (metodo, url, corpo) =>
     app.inject({
       method: metodo,
       url,
@@ -74,8 +83,8 @@ export async function appDiProva(opzioni: { statici?: string } = {}): Promise<Ap
     app,
     ctx,
     scrivi,
-    leggi: (url) => app.inject({ method: 'GET', url }),
-    inietta: (o) => app.inject(o),
+    leggi: async (url) => app.inject({ method: 'GET', url }),
+    inietta: async (o) => app.inject(o),
     chiudi: () => {
       void app.close()
       p.chiudi()
