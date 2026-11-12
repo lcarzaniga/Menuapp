@@ -97,7 +97,8 @@
     background: white;
     color: black;
   }
-  .non-stampare {
+  .non-stampare,
+  [data-sonner-toaster] {
     display: none !important;
   }
 }

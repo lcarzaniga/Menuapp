@@ -45,7 +45,9 @@ test('evento, menù veloce, ricetta e vista cucina', async ({ page, request }, i
   await page.getByLabel('Aggiungi a Secondi').fill('Cappone ripieno')
   await page.getByLabel('Aggiungi a Secondi').press('Enter')
   await expect(page.getByRole('button', { name: 'Cappone ripieno: apri dettagli' })).toBeVisible()
-  expect((await apiLeggi<unknown[]>(request, '/piatti')).length).toBe(info.project.name === 'telefono' ? 0 : 1)
+  // aggiungere nomi al menù non crea piatti nel ricettario
+  const piatti = await apiLeggi<{ nome: string }[]>(request, '/piatti')
+  expect(piatti.filter((p) => ['Crostini toscani', 'Tortellini in brodo', 'Cappone ripieno'].includes(p.nome))).toEqual([])
   await screenshot(page, '02-menu')
 
   // Modifica di una voce: porzioni e incaricato

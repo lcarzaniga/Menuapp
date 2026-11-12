@@ -5,7 +5,7 @@ export const ORIGINE = 'http://127.0.0.1:4174'
 /** Chiamata API come la farebbe un altro dispositivo. */
 export async function apiScrivi(request: APIRequestContext, metodo: 'post' | 'put' | 'delete', url: string, corpo?: unknown) {
   const r = await request[metodo](`/api/v1${url}`, {
-    headers: { origin: ORIGINE, 'content-type': 'application/json' },
+    headers: corpo === undefined ? { origin: ORIGINE } : { origin: ORIGINE, 'content-type': 'application/json' },
     ...(corpo === undefined ? {} : { data: corpo }),
   })
   return { stato: r.status(), corpo: await r.json().catch(() => null) }
