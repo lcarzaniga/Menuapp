@@ -1,6 +1,7 @@
 // Avvio del backend: configurazione → database → migrazioni → seed → ascolto (SPEC §14.2).
-import { mkdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import pacchetto from '../package.json' with { type: 'json' }
 import { costruisciApp } from './app.ts'
 import { RegistroRipristini } from './backup/ripristino.ts'
@@ -11,6 +12,11 @@ import { eseguiSeed } from './db/seed/seed.ts'
 
 async function avvia(): Promise<void> {
   const config = leggiConfig()
+  // In produzione l'identificativo del rilascio è scritto da scripts/rilascia.sh accanto al codice.
+  const fileRilascio = join(dirname(fileURLToPath(import.meta.url)), '..', 'rilascio.json')
+  if (!process.env.MENUAPP_RILASCIO && existsSync(fileRilascio)) {
+    config.rilascio = (JSON.parse(readFileSync(fileRilascio, 'utf8')) as { id: string }).id
+  }
   mkdirSync(config.cartellaBackup, { recursive: true })
   const db = apriDatabase(config.percorsoDb)
   const esito = await applicaMigrazioni(db, { cartellaBackup: config.cartellaBackup })

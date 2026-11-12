@@ -8,6 +8,7 @@ import pacchetto from './package.json' with { type: 'json' }
 
 // Hash corto del commit, mostrato in Impostazioni → Dati.
 function hashCommit(): string {
+  if (process.env.MENUAPP_COMMIT) return process.env.MENUAPP_COMMIT
   try {
     return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
   } catch {
