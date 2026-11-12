@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| Versione documento | 1.1 — 12 novembre 2026 (revisione 1) |
+| Versione documento | 1.2 — 12 novembre 2026 (revisione 2: hosting sul server) |
 | Stato | Approvata in principio, da rivedere a fine M0 |
 | Repository | `github.com/lcarzaniga/Menuapp` |
-| Pubblicazione | https://lcarzaniga.github.io/Menuapp/ |
+| Produzione | https://loris-srv01.dala-tortoise.ts.net:9870/ — server Debian `loris-srv01`, solo tailnet (§14) |
 | Obiettivo | v1.0 completa entro il **15 dicembre 2026** (pranzo di Natale) |
 
 Questo documento è la fonte di verità per tutte le milestone. Le modifiche sostanziali si
@@ -53,7 +53,7 @@ Incluso:
 | Cucina | Vista ricetta a caratteri grandi, porzioni scalate, spunta ingredienti e passaggi, schermo sempre acceso |
 | Stampa | Menù stampabile elegante (A4 e A5) |
 | Dati | Backup JSON, ripristino validato, archiviazione persistente, copia di sicurezza prima delle migrazioni, promemoria backup |
-| PWA | Installabile, offline completo, avviso di nuova versione con aggiornamento su richiesta |
+| PWA | Installabile dal server via Tailscale (HTTPS), offline completo anche senza Tailscale, avviso di nuova versione con aggiornamento su richiesta |
 
 ## 3. Funzionalità rinviate (dopo il 15 dicembre)
 
@@ -149,7 +149,7 @@ servizi cloud, AI, Redux o altri store globali.
 
 ## 5. Schermate
 
-Navigazione con **hash routing** (`https://lcarzaniga.github.io/Menuapp/#/…`).
+Navigazione con **hash routing** (`https://loris-srv01.dala-tortoise.ts.net:9870/#/…`).
 Su telefono: barra inferiore con *Eventi · Ricettario · Ingredienti · Impostazioni*.
 Da 768 px: barra laterale con le stesse voci. Il contenuto dell'evento usa schede.
 
@@ -995,7 +995,7 @@ evolvono insieme.
 |---|---|---|
 | Node | 24.18 (nvm, `.nvmrc`) | engines `>=22.12` |
 | TypeScript | **7.0.2** | Installato e funzionante con `tsc -b` e `vite build`. **Strict è attivo per impostazione predefinita** (verificato: TS7006 e TS2322 su un file di prova); lo dichiariamo comunque esplicitamente. Il pacchetto **non espone l'API JavaScript** (`require('typescript').createProgram` è assente): gli strumenti che la richiedono non funzionano. Non la usano: Vite/oxc, Vitest, oxlint, Tailwind. `shadcn` usa `ts-morph`, che porta con sé TypeScript 6.0.2: compatibile. Ripiego documentato: `typescript@~5.9` |
-| Vite | 8.3 | |
+| Vite | 8.3 | solo per sviluppo e build; in produzione i file sono serviti da `scripts/serve.mjs` (Node 24, nessuna dipendenza) |
 | React / React DOM | 19.3 | |
 | @vitejs/plugin-react | 6.1 | peer `vite ^8` |
 | Tailwind CSS + @tailwindcss/vite | 4.3.5 | peer `vite ^5–^8` |
@@ -1045,6 +1045,8 @@ src/
   pwa/            avviso aggiornamento, installazione, persistenza
   styles/         index.css (Tailwind, token del tema, stampa)
 test/e2e/         Playwright
+scripts/          serve.mjs, installa-servizio.sh, rilascia.sh, ripristina-rilascio.sh
+rilasci/          build di produzione (fuori da Git), collegamento `attuale`
 ```
 
 ### 12.3 Regole architetturali
@@ -1066,50 +1068,214 @@ test/e2e/         Playwright
   versione si installa in background e l'app mostra «Nuova versione disponibile —
   Aggiorna». L'aggiornamento non avviene mai da solo (si potrebbe essere a metà di una
   ricetta). Se ci sono modifiche non salvate in un modulo, l'aggiornamento chiede conferma.
-- Controllo aggiornamenti all'avvio, al ritorno in primo piano e ogni ora.
+- Controllo aggiornamenti all'avvio, al ritorno in primo piano e ogni ora, solo se il
+  server è raggiungibile (Tailscale attivo); in caso contrario nessun errore visibile.
 - Precache di tutti gli asset (JS, CSS, HTML, icone, font). `navigateFallback:
-  'index.html'` limitato allo scope `/Menuapp/`. L'hash routing evita problemi di
-  rotte profonde.
+  'index.html'`. L'hash routing evita problemi di rotte profonde.
 - Avviso «Pronta per l'uso offline» alla prima installazione del service worker.
-- Manifest: `name` e `short_name` «Menù & Co.», `id: '/Menuapp/'`, `scope` e
-  `start_url` `/Menuapp/`, `lang: 'it'`, `display: 'standalone'`, colori tema
-  chiaro, icone 64/192/512 + maskable 512, `shortcuts` verso *Nuovo evento* e
-  *Ricettario*.
+- Manifest: `name` e `short_name` «Menù & Co.», `id: '/'`, `scope: '/'`,
+  `start_url: '/'`, `lang: 'it'`, `display: 'standalone'`, colori tema chiaro, icone
+  64/192/512 + maskable 512, `shortcuts` verso *Nuovo evento* e *Ricettario* (M4).
+- `base: '/'` in tutte le modalità: l'app è servita alla radice della propria origine.
 - Versione visibile in *Impostazioni → Dati*: `versione package + hash del commit`
-  iniettati in build (`define`).
-- **Origini e dati**: IndexedDB è legato all'origine. Produzione
-  (`lcarzaniga.github.io`), sviluppo (`localhost:5173`, `…ts.net:8443`) e anteprima
-  (`…ts.net:8444`) hanno archivi **separati**: i dati reali non si toccano in sviluppo.
-  Per portare dati da un'origine all'altra si usa backup/ripristino.
+  iniettati in build (`define`), più l'identificativo del rilascio servito.
+- **Installazione**: da Chrome (Android o PC) con Tailscale attivo, aprire
+  `https://loris-srv01.dala-tortoise.ts.net:9870/` → menu → *Installa app*. Dopo
+  l'installazione l'app si apre e funziona **anche con Tailscale spento o senza rete**:
+  tutto è in cache e i dati sono nel browser. Tailscale serve solo per installare e per
+  ricevere aggiornamenti.
+- **Dove stanno i dati**: in IndexedDB del browser di ciascun dispositivo, mai sul
+  server. Il server distribuisce solo file statici; perdere il server non fa perdere dati,
+  e il backup resta la protezione dei dati (§11).
+- **Origini e dati**: IndexedDB è legato all'origine (schema + host + porta).
 
-## 14. Hosting e deploy
+  | Uso | Origine | Dati |
+  |---|---|---|
+  | Produzione | `https://loris-srv01.dala-tortoise.ts.net:9870` | reali |
+  | Sviluppo da Android | `https://loris-srv01.dala-tortoise.ts.net:8443` | di prova |
+  | Sviluppo da PC (tunnel) | `http://localhost:5173` | di prova |
+  | Anteprima di collaudo | `https://loris-srv01.dala-tortoise.ts.net:8444` | di prova |
+  | Test e2e | `http://127.0.0.1:4174` | temporanei |
 
-- **Sviluppo** sul server Debian (`/srv/apps/menuapp`), sessione tmux `menuapp`.
-  - Vite su `127.0.0.1:5173`, mai su `0.0.0.0` (il server non ha firewall).
-  - PC: `ssh -L 5173:localhost:5173 loris@loris-srv01.dala-tortoise.ts.net` →
-    `http://localhost:5173/Menuapp/` (localhost è contesto sicuro).
-  - Android: `tailscale serve --bg --https=8443 http://127.0.0.1:5173` →
-    `https://loris-srv01.dala-tortoise.ts.net:8443/Menuapp/` (solo tailnet; mai
-    `funnel`).
-  - Prove PWA reali (service worker, offline, installazione, aggiornamento):
-    `npm run build && npm run preview` su `127.0.0.1:4173`, esposto con
-    `tailscale serve --bg --https=8444 http://127.0.0.1:4173` solo quando serve, poi
-    `tailscale serve --https=8444 off`.
-- **Git**: `main` sempre pubblicabile; un branch per milestone (`m0-fondamenta`,
+  L'origine di produzione è **definitiva**: cambiarne host o porta dopo l'uso reale
+  richiede di spostare i dati con backup e ripristino su ogni dispositivo.
+
+## 14. Hosting e rilascio
+
+Tutto sul server Debian `loris-srv01`, nella directory `/srv/apps/menuapp`, come le altre
+applicazioni (dailyMeals, sharedKidsCalendar). Nessun servizio cloud; GitHub è solo il
+repository del codice.
+
+### 14.1 Architettura di produzione
+
+```
+ Telefono / PC (tailnet)                         loris-srv01
+ ───────────────────────     HTTPS (cert. Let's Encrypt di Tailscale)
+ Chrome ──── tailnet ────▶ tailscaled  100.114.50.37:9870  (tailscale serve)
+                                    │  HTTP in chiaro, solo loopback
+                                    ▼
+                           node scripts/serve.mjs  127.0.0.1:9870
+                                    │  file statici
+                                    ▼
+                           /srv/apps/menuapp/rilasci/attuale → rilasci/<id>/
+```
+
+- **Server statico**: `scripts/serve.mjs`, script Node senza dipendenze (solo
+  `node:http`, `node:fs`, `node:path`), sullo stesso modello di `serve.mjs` di dailyMeals
+  e sharedKidsCalendar. Ascolta **solo su `127.0.0.1:9870`**: non raggiungibile da LAN
+  né da Internet.
+- **HTTPS**: `tailscale serve --bg --https=9870 http://127.0.0.1:9870`. tailscaled
+  ascolta sulla stessa porta ma sull'indirizzo del tailnet (100.114.50.37 e IPv6
+  Tailscale), quindi non c'è conflitto con il loopback (verificato: due socket sulla
+  stessa porta con indirizzi diversi coesistono). Il certificato è emesso e rinnovato
+  da Tailscale. La configurazione `--bg` persiste ai riavvii. **Mai `tailscale funnel`.**
+- **Perché non Apache**: è già attivo sulla porta 80 per altri usi e il suo
+  `ports.conf` contiene `Listen 443` (inattivo finché `mod_ssl` è spento). Aggiungere un
+  sito o un proxy richiederebbe di modificarne la configurazione e ricaricarlo, cioè di
+  toccare un servizio condiviso. Il server Node dedicato è isolato: un errore di Menù &
+  Co. non tocca nulla d'altro.
+- **Perché non `vite preview`**: è pensato per anteprime, non per un servizio
+  permanente; il server dedicato controlla con precisione intestazioni di cache e
+  sicurezza.
+
+### 14.2 Server statico (`scripts/serve.mjs`)
+
+| Aspetto | Comportamento |
+|---|---|
+| Configurazione | Variabili `HOST` (default `127.0.0.1`), `PORT` (default `9870`), `RADICE` (default `rilasci/attuale`) |
+| Metodi | Solo `GET` e `HEAD`; altri → 405 |
+| Percorsi | Decodifica, normalizzazione e `realpath` dentro la radice risolta; ogni uscita (`..`, link simbolici esterni) → 404. Nessun elenco di cartelle |
+| Radice | La radice (`rilasci/attuale`) viene risolta a ogni richiesta, così il cambio di rilascio non richiede riavvio |
+| `/` | `index.html`. Nessun altro fallback (hash routing): file inesistente → 404 |
+| Tipi MIME | Tabella interna: html, js, mjs, css, json, webmanifest (`application/manifest+json`), svg, png, ico, woff2, txt |
+| Cache | `index.html`, `sw.js`, `registerSW.js`, `manifest.webmanifest`, `workbox-*.js` → `Cache-Control: no-cache`; `assets/*` (nomi con hash) → `public, max-age=31536000, immutable`; altro → `no-cache` |
+| Sicurezza | `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, `Permissions-Policy` minima, `Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'` (lo script inline del tema, se presente, va spostato in un file) |
+| Salute | `GET /__salute` → `200` con `{ rilascio, versione }` letti da `rilasci/attuale/rilascio.json`; usato dai controlli dopo il rilascio |
+| Log | Una riga per richiesta con errore (≥ 400) e all'avvio, su stdout → journald |
+| Arresto | Chiusura ordinata su `SIGTERM` |
+
+### 14.3 Servizio systemd
+
+Servizio **utente** `menuapp.service` (come `dailymeals.service` e
+`kidscalendar.service`; *linger* già attivo per `loris`, quindi parte all'avvio del
+server senza login), file `~/.config/systemd/user/menuapp.service` installato da
+`scripts/installa-servizio.sh`:
+
+```ini
+[Unit]
+Description=Menù & Co. (file statici di produzione)
+Documentation=file:///srv/apps/menuapp/docs/SPEC.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/apps/menuapp
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=9870
+ExecStart=/home/loris/.nvm/versions/node/v24.18.0/bin/node /srv/apps/menuapp/scripts/serve.mjs
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target
+```
+
+Il percorso di Node è fissato come negli altri servizi: un cambio di versione di Node
+via nvm richiede di aggiornare il servizio (`installa-servizio.sh` lo rigenera).
+
+### 14.4 Rilasci
+
+- Struttura: `rilasci/<AAAAMMGG-HHmm>-<hash>/` (contenuto di `dist/` + `rilascio.json`)
+  e il collegamento simbolico `rilasci/attuale`. La cartella `rilasci/` è in
+  `.gitignore`.
+- `scripts/rilascia.sh`:
+  1. verifica: albero Git pulito, ramo `main`, `npm run check` verde;
+  2. `vite build` in una cartella temporanea, poi copia in `rilasci/<id>/`;
+  3. cambio **atomico** del collegamento (`ln -sfn` su un nome temporaneo + `mv -T`);
+  4. controllo: `curl` su `http://127.0.0.1:9870/__salute` e su
+     `https://loris-srv01.dala-tortoise.ts.net:9870/` (rilascio atteso, intestazioni
+     `no-cache` su `sw.js`);
+  5. tiene gli ultimi 5 rilasci.
+- `scripts/ripristina-rilascio.sh <id>`: riporta `attuale` a un rilascio precedente.
+  I dati dei dispositivi non sono toccati; attenzione però alle migrazioni dello schema:
+  un rilascio più vecchio dello schema già installato sui dispositivi mostra «Ricarica per
+  aggiornare l'app» (§11.4, passo 3). Si torna indietro solo fra rilasci con lo stesso
+  schema.
+- Il rilascio **non** riavvia il servizio. I dispositivi ricevono l'avviso di
+  aggiornamento al successivo controllo (§13).
+- Ogni rilascio richiede l'autorizzazione di Loris; il tag Git (`v0.N.0`) si crea
+  localmente e si pubblica su GitHub solo se autorizzato.
+
+### 14.5 Accesso e autorizzazioni (Tailscale)
+
+- La porta 9870 è raggiungibile solo dai dispositivi del tailnet tramite
+  `tailscale serve`. Il server non ha firewall, ma `serve.mjs` ascolta solo su loopback
+  e la porta del tailnet esiste solo dentro Tailscale.
+- **Chi accede** si decide nella policy del tailnet (console di amministrazione
+  Tailscale, *Access controls*), che filtra il traffico **prima** che arrivi a
+  `tailscale serve`. Oggi il tailnet ha un solo utente (`loris.carzaniga@gmail.com`) e
+  la policy predefinita consente tutto fra i suoi dispositivi.
+- Regola proposta, da aggiungere quando serve limitare per dispositivo o aprire ad altre
+  persone (una *grant* per porta):
+
+  ```jsonc
+  {
+    "groups": { "group:menuapp": ["loris.carzaniga@gmail.com"] },
+    "hosts":  { "loris-srv01": "100.114.50.37" },
+    "grants": [
+      { "src": ["group:menuapp"], "dst": ["loris-srv01"], "ip": ["tcp:9870"] }
+    ]
+  }
+  ```
+
+  Per limitare a dispositivi specifici: `src` con gli IP Tailscale dei dispositivi (o
+  tag come `tag:telefono`), oppure condizioni di postura. Per un familiare: invito nel
+  tailnet o condivisione del solo nodo `loris-srv01`, più la sua email in
+  `group:menuapp`.
+- **Attenzione**: quando la policy predefinita «consenti tutto» viene sostituita, ogni
+  accesso non elencato viene bloccato, anche per gli altri servizi del server (SSH 22,
+  RDP 3389/3390, dailyMeals 9876, sharedKidsCalendar 9878, Samba, open-webui 3000,
+  lobe-chat 3210, sviluppo 8443). La modifica va fatta da Loris nella console, con le
+  regole esistenti riportate esplicitamente; Claude prepara la proposta ma non può né
+  deve applicarla.
+
+### 14.6 Sviluppo e collaudo
+
+- Sessione tmux `menuapp`.
+- Vite su `127.0.0.1:5173`, mai su `0.0.0.0` (il server non ha firewall).
+  - PC: `https://loris-srv01.dala-tortoise.ts.net:8443/` (il PC è nel tailnet), oppure
+    `ssh -L 5173:localhost:5173 loris@loris-srv01.dala-tortoise.ts.net` →
+    `http://localhost:5173/`.
+  - Android: `tailscale serve --bg --https=8443 http://127.0.0.1:5173` (già attivo).
+- Collaudo della build prima del rilascio (service worker, offline, installazione,
+  aggiornamento): `npm run build && npm run preview` su `127.0.0.1:4173`, esposto con
+  `tailscale serve --bg --https=8444 http://127.0.0.1:4173` solo durante il collaudo,
+  poi `tailscale serve --https=8444 off`.
+- Test e2e: anteprima isolata su `127.0.0.1:4174` (§17.3), più un controllo finale sul
+  servizio di produzione dopo ogni rilascio.
+
+### 14.7 Git e GitHub
+
+- GitHub (`lcarzaniga/Menuapp`) resta il repository del codice. Nessun push, merge o tag
+  pubblicato senza autorizzazione esplicita.
+- `main` è sempre rilasciabile; un branch per milestone (`m0-fondamenta`,
   `m1-eventi-menu`, `m2-ricettario`, `m3-spesa`, `m4-piano-stampa`); commit piccoli in
-  italiano; merge su `main` solo con `npm run check` verde e approvazione di Loris; push
-  solo autorizzati. Tag `v0.N.0` a fine milestone, `v1.0.0` al rilascio.
-- **Produzione**: GitHub Pages tramite GitHub Actions a ogni push su `main`: `npm ci` →
-  lint → typecheck → test unitari → build → pubblicazione. Su pull request e push di
-  altri branch: solo i controlli, senza pubblicazione. I test e2e girano sul server (con
-  Chrome di sistema), non in CI.
-- `base: '/Menuapp/'` in tutte le modalità.
+  italiano; merge su `main` solo con `npm run check` verde e approvazione di Loris.
+- **GitHub Pages dismesso**: si eliminano il workflow `deploy.yml` e `base: '/Menuapp/'`.
+  Al loro posto un workflow `ci.yml` di soli controlli (lint, typecheck, test unitari,
+  build) su push e pull request, senza pubblicazione. La disattivazione di Pages nelle
+  impostazioni del repository è un'azione di Loris.
 
 ## 15. Roadmap
 
 | Milestone | Date | Contenuto | Uscita |
 |---|---|---|---|
-| **M0 — Fondamenta** | 13–17 nov | Toolchain, Tailwind/shadcn, navigazione, schema Dexie v1 completo, seed impostazioni e reparti, backup/ripristino, persistenza, PWA con avviso aggiornamento, test unitari ed e2e, CI | `v0.1.0` |
+| **M0 — Fondamenta** | 13–17 nov | Toolchain, Tailwind/shadcn, navigazione, schema Dexie v1 completo, seed impostazioni e reparti, backup/ripristino, persistenza, PWA con avviso aggiornamento, test unitari ed e2e, CI di soli controlli, servizio di produzione sul server (porta 9870, systemd, `tailscale serve`), rilasci | `v0.1.0` |
 | **M1 — Eventi e menù** | 18–23 nov | Eventi (CRUD, stati senza archiviazione), coperti, portate per evento, voci di menù, inserimento rapido multiriga, riordino e spostamento; impostazioni modificabili: portate predefinite, coefficiente bambini, tema | `v0.2.0` |
 | **M2 — Ricettario** | 24 nov – 1 dic | Unità, catalogo di 200–250 ingredienti con seed idempotente, parser, piatti, ingredienti con anteprima e conferma, porzioni e scalatura, «Crea nel ricettario», vista cucina; gestione dei reparti (coerente con il catalogo) | `v0.3.0` |
 | **M3 — Spesa** | 2–7 dic | Calcolo con classificazione dei contributi, chiavi, riconciliazione, stati e fabbisogno coperto, correzioni, facoltativi, manuali, reparti, condivisione | `v0.4.0` |
@@ -1129,7 +1295,8 @@ del manifest.
   funzione è utilizzabile.
 - G3 Nessuna perdita di dati in: chiusura forzata durante un salvataggio, aggiornamento
   dell'app, migrazione, ripristino fallito.
-- G4 Backup → ripristino su un'altra origine riproduce dati identici (stessa impronta).
+- G4 Backup → ripristino su un'altra origine (es. dal telefono al PC) riproduce dati identici (stessa impronta).
+- G8 L'app è raggiungibile solo dal tailnet: `127.0.0.1:9870` non è visibile dalla LAN, nessun `funnel` attivo; il servizio riparte da solo dopo un errore e dopo il riavvio del server; gli altri servizi del server non sono stati modificati.
 - G5 `npm run check` (lint, typecheck, unit, build) verde; e2e verdi.
 - G6 Lighthouse PWA/Best Practices senza errori bloccanti; nessuna richiesta di rete a
   runtime oltre agli asset dell'app.
@@ -1179,6 +1346,12 @@ del manifest.
   backup ida e ritorno, ripristino che fallisce senza toccare i dati, ripristino
   annullato se la copia di sicurezza non viene scritta.
 
+- `scripts/serve.mjs` (Node, server avviato su porta casuale con una radice di prova):
+  tipi MIME, intestazioni di cache per `sw.js`/`index.html`/`assets/*`, intestazioni di
+  sicurezza, 404 per file assenti, tentativi di uscita dalla radice (`..`, codifiche,
+  collegamenti simbolici esterni) respinti, 405 per metodi diversi da GET/HEAD, cambio del
+  collegamento `attuale` visto senza riavvio, `/__salute`.
+
 ### 17.2 Componenti (Vitest + happy-dom + Testing Library)
 Moduli evento, inserimento rapido, anteprima parser, riga della spesa (cambio stato).
 
@@ -1191,9 +1364,14 @@ con dati intatti); offline dopo l'installazione del service
 worker (`context.setOffline(true)` + ricarica); avviso di aggiornamento (due build
 consecutive); stampa (`emulateMedia({ media: 'print' })` + screenshot).
 
+Dopo ogni rilascio, controllo automatico in `rilascia.sh` sul servizio vero: `/__salute`
+su loopback e via `https://loris-srv01.dala-tortoise.ts.net:9870/`, certificato valido,
+`Cache-Control: no-cache` su `sw.js`, porta 9870 assente sugli indirizzi LAN
+(`ss -tln`).
+
 ### 17.4 Manuali (su Android, a fine milestone)
-Installazione da `:8444` e da produzione · modalità aereo · avviso aggiornamento dopo un
-deploy · stato persistenza · condivisione spesa su WhatsApp/Keep · schermo acceso in
+Installazione da `:8444` e da produzione (`:9870`) · modalità aereo e Tailscale spento ·
+avviso aggiornamento dopo un rilascio · ritorno a un rilascio precedente · stato persistenza · condivisione spesa su WhatsApp/Keep · schermo acceso in
 vista cucina · stampa/Salva PDF · tastiera e tocco su moduli · tema scuro · ripristino
 di un backup da file scaricato.
 
@@ -1205,7 +1383,12 @@ Una lista di controllo per milestone sta in `docs/collaudo/Mn.md`.
 |---|---|---|---|
 | Ecosistema non pronto per TypeScript 7 (assenza dell'API JS) | Media | Medio | Verificato in M0 (T1); ripiego `typescript@~5.9` con una sola modifica a `package.json` |
 | Cancellazione dei dati da parte del browser (spazio, pulizia) | Bassa | Alto | Persistenza richiesta, PWA installata, promemoria backup, condivisione del file su Drive |
-| Origine `lcarzaniga.github.io` condivisa da tutte le Pages dell'utente | Media | Medio | Nome DB specifico (`menuapp`), scope SW `/Menuapp/`; un futuro dominio personalizzato cambia origine → migrazione via backup/ripristino |
+| Cambio dell'origine di produzione (host o porta) dopo l'uso reale | Bassa | Alto | Origine `…ts.net:9870` decisa prima di M0 e considerata definitiva; in caso di cambio, backup/ripristino su ogni dispositivo |
+| Server o Tailscale non disponibili | Bassa | Basso | L'app installata funziona offline; mancano solo installazione e aggiornamenti |
+| Policy Tailscale troppo restrittiva che blocca altri servizi | Media | Medio | Modifica fatta da Loris con le regole esistenti elencate (§14.5); proposta preparata e rivista prima |
+| `tailscale serve` rimosso o reimpostato per errore | Bassa | Medio | Comando documentato in `scripts/installa-servizio.sh`; controllo HTTPS in `rilascia.sh` |
+| Aggiornamento di Node con nvm che rompe il servizio | Bassa | Medio | Percorso fissato nell'unità, rigenerato da `installa-servizio.sh`; servizio con `Restart=on-failure` e log in journald |
+| Ritorno a un rilascio con schema più vecchio di quello sui dispositivi | Bassa | Medio | `ripristina-rilascio.sh` solo fra rilasci con lo stesso schema; l'app rileva il caso (§11.4) |
 | Service worker che serve una versione vecchia o resta bloccato | Media | Medio | `registerType: 'prompt'`, controllo periodico, pulsante «Verifica aggiornamenti», test e2e di aggiornamento |
 | Migrazione Dexie errata in produzione | Bassa | Alto | Copia di sicurezza pre-migrazione, test di migrazione obbligatori, upgrade atomici |
 | Parser troppo ottimista | Media | Medio | Regola «nel dubbio da verificare», tabella di casi reali, conferma manuale |
@@ -1226,3 +1409,4 @@ Una lista di controllo per milestone sta in `docs/collaudo/Mn.md`.
 |---|---|
 | 12/11/2026 | Prima versione consolidata |
 | 12/11/2026 | Revisione 1: impronta canonica verificata prima della migrazione e chiavi `meta` del dispositivo escluse dal backup; copia di sicurezza nel DB `menuapp-sicurezza` obbligatoria prima del ripristino, download solo offerto; `quantitaAlloStato` → `fabbisognoCoperto` con semantica di fabbisogno dichiarato coperto, acquisti parziali in nota; classificazione dei contributi della spesa (incompleti visibili e mai sommati, facoltativi separati con `inclusa`); snapshot autonomo con menù completo, piano e spesa; riapertura semplificata e «Copia nel ricettario»; catalogo 200–250 ingredienti; procedura di apertura sicura verificata con Dexie 4.4.7; ripristino che conserva le chiavi `meta` del dispositivo; impostazioni modificabili assegnate a M1 (portate, coefficiente, tema) e M2 (reparti) |
+| 12/11/2026 | Revisione 2: GitHub Pages dismesso; produzione sul server Debian in `/srv/apps/menuapp`, server statico Node `scripts/serve.mjs` su `127.0.0.1:9870` come servizio systemd utente, HTTPS e accesso solo tailnet con `tailscale serve --https=9870`, regole di accesso nella policy Tailscale, rilasci in `rilasci/` con cambio atomico, `base: '/'`, CI di soli controlli |

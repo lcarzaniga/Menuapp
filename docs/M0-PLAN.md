@@ -2,22 +2,24 @@
 
 | | |
 |---|---|
-| Riferimento | `docs/SPEC.md` §12–§17 |
+| Riferimento | `docs/SPEC.md` §12–§17 (versione 1.2) |
 | Branch | `m0-fondamenta` (da `main`, dopo il merge di `docs-spec`) |
 | Periodo | 13–17 novembre 2026 |
-| Uscita | `v0.1.0` pubblicata su https://lcarzaniga.github.io/Menuapp/ |
+| Uscita | `v0.1.0` in produzione sul server: https://loris-srv01.dala-tortoise.ts.net:9870/ (solo tailnet) |
 
 ## Obiettivo
 
 Un'app vuota ma completa nelle fondamenta: si installa, funziona offline, naviga fra
 tutte le schermate (segnaposto), ha il database con lo schema definitivo v1, salva e
-ripristina i dati, avvisa degli aggiornamenti, ed è coperta da test e CI. Dopo M0 ogni
+ripristina i dati, avvisa degli aggiornamenti, è servita in produzione dal server Debian
+(servizio systemd sulla porta 9870, HTTPS via Tailscale) ed è coperta da test. Dopo M0 ogni
 milestone aggiunge funzioni senza toccare l'infrastruttura.
 
 **Priorità assolute**, in quest'ordine: (1) schema e apertura sicura del database,
 (2) persistenza, (3) backup e ripristino, (4) offline e aggiornamenti, (5) navigazione.
+Il servizio di produzione (T13) è necessario per installare la PWA sui dispositivi.
 Tailwind/shadcn, CI e documentazione sono di supporto: si fanno nella misura minima che
-serve a queste cinque.
+serve a queste priorità.
 
 **Nessuna anticipazione**: in M0 non si scrive codice di eventi, menù, ricettario,
 catalogo, parser, spesa, piano, stampa, né interfacce di impostazioni diverse da
@@ -28,9 +30,13 @@ tema di sistema), banner «Installa l'app» e `shortcuts` del manifest (M4).
 ## Punto di partenza (già presente su `main`)
 
 Vite 8.3, React 19.3, TypeScript 7.0.2, Dexie 4.4.7, vite-plugin-pwa 2.0
-(`registerType: 'autoUpdate'`, da cambiare), icone PWA segnaposto, `base: '/Menuapp/'`,
-server di sviluppo su `127.0.0.1:5173`, `tailscale serve :8443`, workflow Pages
-funzionante, `CLAUDE.md`, oxlint.
+(`registerType: 'autoUpdate'`, da cambiare), icone PWA segnaposto, server di sviluppo su
+`127.0.0.1:5173`, `tailscale serve :8443`, `CLAUDE.md`, oxlint.
+
+Da **eliminare** in M0 (decisione del 12/11: niente GitHub Pages): `base: '/Menuapp/'`
+in `vite.config.ts`, workflow `.github/workflows/deploy.yml`, riferimenti a Pages in
+`README.md` e `CLAUDE.md`. Il sito Pages già pubblicato resta online finché Loris non
+disattiva Pages nelle impostazioni del repository.
 
 ## Attività
 
@@ -77,7 +83,7 @@ dove già disponibile.
   `document.title`.
 - **Dipende da**: T3. **Test**: componente — navigazione fra le quattro sezioni;
   e2e in T9. **Accettazione**: tutte le rotte raggiungibili, back del telefono coerente,
-  ricarica su una rotta profonda funziona anche sotto `/Menuapp/`.
+  ricarica su una rotta profonda funziona.
 
 ### T5 — Database: schema v1, seed, apertura sicura (priorità 1)
 - `src/db/db.ts`: classe Dexie tipizzata con tutte le tabelle di SPEC §6.3. La classe
@@ -150,17 +156,18 @@ dove già disponibile.
   offline»; controllo all'avvio, al ritorno in primo piano e ogni ora; pulsante
   «Verifica aggiornamenti» in *Impostazioni → Dati*.
 - Manifest di SPEC §13 senza `shortcuts` (rinviate a M4, quando le rotte avranno
-  contenuto), `navigateFallback` con allowlist `/Menuapp/`.
+  contenuto); `id`, `scope` e `start_url` uguali a `/`; `base: '/'`; `navigateFallback:
+  'index.html'`.
 - Versione app: `define` con `versione package` + hash corto del commit; mostrata in
   *Impostazioni → Dati* insieme alla versione dello schema.
 - **Dipende da**: T4. **Test**: e2e in T9 (offline, aggiornamento).
-- **Accettazione**: con build A installata, la pubblicazione della build B mostra
-  l'avviso; accettandolo l'app ricarica alla B senza perdere dati.
+- **Accettazione**: con il rilascio A installato, il rilascio B mostra l'avviso;
+  accettandolo l'app ricarica alla B senza perdere dati.
 
 ### T9 — Test end-to-end (Playwright)
 - `@playwright/test`; `playwright.config.ts` con `channel: 'chrome'` (Chrome 157 di
   sistema), `webServer` = `vite preview --host 127.0.0.1 --port 4174 --strictPort`,
-  progetti *Pixel 7* e *Desktop Chrome*, base URL `http://127.0.0.1:4174/Menuapp/`.
+  progetti *Pixel 7* e *Desktop Chrome*, base URL `http://127.0.0.1:4174/`.
 - Scenari M0:
   - avvio e navigazione su tutte le rotte; ricarica su rotta profonda;
   - backup: ripristino di un **file di prova** (`test/fixture/backup-v1.json`, dati in
@@ -175,31 +182,57 @@ dove già disponibile.
 - **Dipende da**: T4, T6, T8. **Accettazione**: `npm run test:e2e` verde sul server
   senza scaricare browser.
 
-### T10 — CI e pubblicazione
-- Workflow `ci.yml` su push (tutti i branch) e pull request: `npm ci`, lint,
-  typecheck, test unitari, build.
-- `deploy.yml` su `main`: stessi controlli prima della pubblicazione (fallisce → niente
-  deploy).
-- **Dipende da**: T1, T2. **Accettazione**: un push sul branch mostra i controlli verdi
-  su GitHub; nessun deploy da branch diversi da `main`.
+### T10 — Dismissione di Pages e CI di soli controlli
+- Eliminazione di `.github/workflows/deploy.yml` e di `base: '/Menuapp/'`.
+- Workflow `ci.yml` su push e pull request: `npm ci`, lint, typecheck, test unitari,
+  build. Nessuna pubblicazione.
+- **Dipende da**: T1, T2. **Accettazione**: nessun workflow con permessi `pages` o
+  `id-token`; al primo push autorizzato i controlli risultano verdi su GitHub.
+  Azione di Loris: disattivare Pages in *Settings → Pages* del repository.
 
 ### T11 — Documentazione
-- `README.md`: comandi, sviluppo da PC e Android, test, backup.
+- `README.md`: comandi, sviluppo da PC e Android, test, backup, rilascio e ritorno a un
+  rilascio precedente, URL di produzione, installazione della PWA.
 - `CLAUDE.md`: comandi aggiornati (`check`, `test:e2e`), regole architetturali (SPEC
   §12.3), regola «niente push/merge senza autorizzazione».
 - `docs/collaudo/M0.md`: lista di controllo manuale.
 - **Dipende da**: tutte. **Accettazione**: un nuovo avvio di sessione può lavorare
   leggendo solo `CLAUDE.md` e `docs/`.
 
+### T13 — Servizio di produzione sul server (SPEC §14)
+- `scripts/serve.mjs`: server statico senza dipendenze, `127.0.0.1:9870`, radice
+  `rilasci/attuale` risolta a ogni richiesta, intestazioni di cache e sicurezza,
+  protezione dei percorsi, `/__salute` (SPEC §14.2).
+- `scripts/installa-servizio.sh`: scrive `~/.config/systemd/user/menuapp.service`
+  (SPEC §14.3), `daemon-reload`, `enable --now menuapp`; stampa il comando
+  `tailscale serve --bg --https=9870 http://127.0.0.1:9870` e lo esegue **solo** con
+  conferma esplicita. Non tocca altre unità né altre configurazioni di `tailscale serve`
+  (si aggiunge accanto a `:8443`).
+- `scripts/rilascia.sh` e `scripts/ripristina-rilascio.sh` (SPEC §14.4); `rilasci/` in
+  `.gitignore`; `rilascio.json` scritto nella build.
+- Prima installazione: richiede l'autorizzazione di Loris (crea un servizio e una
+  configurazione Tailscale nuovi); nessun riavvio di altri servizi.
+- **Dipende da**: T1 (script), T8 (build PWA definitiva per il primo rilascio).
+- **Test**: unitari di `serve.mjs` (SPEC §17.1) eseguiti da Vitest in Node; controlli
+  automatici di `rilascia.sh` (SPEC §17.3); prova di `systemctl --user kill menuapp` →
+  riavvio automatico entro pochi secondi; `ss -tln` mostra 9870 solo su `127.0.0.1` e
+  sull'indirizzo Tailscale.
+- **Accettazione**: `https://loris-srv01.dala-tortoise.ts.net:9870/` raggiungibile da
+  telefono e PC nel tailnet con certificato valido; `http://192.168.1.160:9870/` non
+  risponde; dailyMeals, sharedKidsCalendar, Apache e la configurazione `:8443`
+  invariati.
+
 ### T12 — Collaudo su Android e rilascio
-- Build di anteprima su `127.0.0.1:4173` + `tailscale serve --https=8444` (temporaneo).
-- Lista di controllo `docs/collaudo/M0.md` sul Galaxy S23: installazione, avvio offline
-  in modalità aereo, persistenza, backup scaricato e ripristinato, avviso aggiornamento,
-  tema scuro, navigazione con il tasto indietro.
-- Chiusura di `tailscale serve :8444`.
-- Con approvazione: merge su `main`, push, tag `v0.1.0`, verifica di produzione
-  (installazione dalla URL pubblica).
-- **Dipende da**: T1–T11.
+- Build di anteprima su `127.0.0.1:4173` + `tailscale serve --https=8444` (temporaneo)
+  per le prove distruttive; chiusura di `:8444` a fine collaudo.
+- Con approvazione: merge su `main`, primo rilascio con `rilascia.sh` (tag locale
+  `v0.1.0`; push solo se autorizzato).
+- Lista di controllo `docs/collaudo/M0.md` sul Galaxy S23 e sul PC, **sull'URL di
+  produzione**: installazione da `:9870`, avvio in modalità aereo e con Tailscale spento,
+  persistenza, backup scaricato e ripristinato, secondo rilascio con avviso di
+  aggiornamento, ritorno al rilascio precedente, tema scuro, tasto indietro, riavvio del
+  server con servizio ripartito da solo.
+- **Dipende da**: T1–T11, T13.
 
 ## Ordine di esecuzione e dipendenze
 
@@ -207,7 +240,7 @@ dove già disponibile.
 T1 ─▶ T2 ─▶ T5 (logica) ─▶ T6 (logica) ─▶ T7 (logica) ─┐
  │                                                     ├─▶ interfacce T5–T7 ─┐
  └─▶ T3 ─▶ T4 ─────────────────────────────────────────┘                     │
-                └─▶ T8 ───────────────────────────────────────────────────────┼─▶ T9 ─▶ T11 ─▶ T12
+                └─▶ T8 ───────────────────────────────────────────────────────┼─▶ T9 ─▶ T13 ─▶ T11 ─▶ T12
  T10 (dopo T2) ────────────────────────────────────────────────────────────────┘
 ```
 
@@ -221,8 +254,8 @@ Dati* e le rotte segnaposto.
 | 13 nov | T1, T2, T5 (logica e test) |
 | 14 nov | T6, T7 (logica e test) |
 | 15 nov | T3, T4, interfacce di T5–T7 in *Impostazioni → Dati* |
-| 16 nov | T8, T9, T10 |
-| 17 nov | T11, T12 (collaudo e rilascio) |
+| 16 nov | T8, T9, T10, T13 (script e test; installazione solo dopo autorizzazione) |
+| 17 nov | T11, T12 (primo rilascio, collaudo) |
 
 ## Dipendenze da installare (tutte locali al progetto)
 
@@ -233,12 +266,15 @@ Dati* e le rotte segnaposto.
 | Test | `vitest`, `happy-dom`, `@testing-library/react`, `@testing-library/jest-dom`, `fake-indexeddb`, `@playwright/test` |
 
 Nessuna installazione globale; nessun download di browser (si usa Chrome di sistema).
+Il server di produzione non aggiunge dipendenze: usa solo moduli di Node.
 `shadcn` si esegue con `npx` senza diventare dipendenza.
 
 ## Criteri di accettazione di M0
 
-1. `npm run check` e `npm run test:e2e` verdi sul server; CI verde su GitHub.
-2. L'app pubblicata su Pages si installa su Android e si apre in modalità aereo.
+1. `npm run check` e `npm run test:e2e` verdi sul server; CI di soli controlli verde su
+   GitHub (al primo push autorizzato); nessun riferimento a Pages né a `/Menuapp/`.
+2. L'app servita da `https://loris-srv01.dala-tortoise.ts.net:9870/` si installa su
+   Android e PC e si apre in modalità aereo e con Tailscale spento.
 3. Tutte le rotte di SPEC §5 esistono (segnaposto) e la navigazione funziona da telefono
    e da PC, in tema chiaro e scuro, a 360 px senza scroll orizzontale.
 4. Il database `menuapp` v1 contiene tutte le tabelle definitive; impostazioni e
@@ -249,10 +285,13 @@ Nessuna installazione globale; nessun download di browser (si usa Chrome di sist
    `menuapp-sicurezza` scritta prima di ogni ripristino e migrazione, senza dipendere da
    un download; scenari di migrazione verdi anche in Chrome reale.
 6. Persistenza richiesta e mostrata; promemoria backup funzionante.
-7. Una nuova pubblicazione mostra l'avviso di aggiornamento, che non ricarica mai da solo.
+7. Un nuovo rilascio mostra l'avviso di aggiornamento, che non ricarica mai da solo;
+   il ritorno al rilascio precedente funziona.
 8. Versione app e schema visibili in *Impostazioni → Dati*.
-9. Nessun servizio esposto oltre a `127.0.0.1` e al tailnet; `:8444` chiuso a fine
-   collaudo.
+9. `menuapp.service` attivo, abilitato all'avvio, ripartito da solo dopo un errore;
+   porta 9870 solo su `127.0.0.1` e via `tailscale serve` (mai `funnel`), non
+   raggiungibile dalla LAN; `:8444` chiuso a fine collaudo; altri servizi del server
+   invariati.
 10. Decisione su TypeScript 7 registrata in SPEC.
 
 ## Fuori da M0
