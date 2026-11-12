@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Versione documento | 1.0 — 12 novembre 2026 |
+| Versione documento | 1.1 — 12 novembre 2026 (revisione 1) |
 | Stato | Approvata in principio, da rivedere a fine M0 |
 | Repository | `github.com/lcarzaniga/Menuapp` |
 | Pubblicazione | https://lcarzaniga.github.io/Menuapp/ |
@@ -131,15 +131,20 @@ servizi cloud, AI, Redux o altri store globali.
 
 ### F9 — Concludere e archiviare
 1. Dopo la data, l'app propone «Segna come concluso».
-2. «Archivia» crea lo snapshot delle ricette usate e rende l'evento in sola lettura.
-3. «Riapri» su un evento archiviato segue la procedura di §7.4.
+2. «Archivia» crea lo snapshot completo dell'evento (menù, ricette, spesa, piano) e lo
+   rende in sola lettura: da qui in poi l'evento si consulta solo dallo snapshot.
+3. «Copia nel ricettario» recupera una ricetta archiviata come nuovo piatto.
+4. «Riapri» su un evento archiviato segue la procedura di §7.4.
 
 ### F10 — Backup e ripristino
 1. *Impostazioni → Dati → Esporta backup*: scarica `menuapp-backup-AAAA-MM-GG-HHmm.json`
    (o lo condivide con Web Share, se disponibile).
 2. *Ripristina*: scelta del file → validazione → riepilogo (data, versione, conteggi) →
-   avviso che i dati attuali saranno sostituiti → l'app scarica prima una copia dei dati
-   attuali → ripristino in un'unica transazione → ricarica.
+   avviso che i dati attuali saranno sostituiti → l'app salva una copia di sicurezza dei
+   dati attuali nel database `menuapp-sicurezza` (passo obbligatorio; il download della
+   stessa copia è solo offerto) → ripristino in un'unica transazione → ricarica.
+3. *Copie di sicurezza*: elenco delle ultime 3 copie automatiche con data e motivo;
+   ciascuna si può scaricare o ripristinare con la stessa procedura.
 3. Se l'ultimo backup ha più di 7 giorni e i dati sono cambiati, banner di promemoria.
 
 ## 5. Schermate
@@ -153,7 +158,7 @@ Da 768 px: barra laterale con le stesse voci. Il contenuto dell'evento usa sched
 | `#/` | Eventi | Prossimi eventi (attivi), conclusi, link all'archivio; pulsante Nuovo |
 | `#/eventi/archivio` | Archivio | Eventi archiviati |
 | `#/eventi/nuovo` | Nuovo evento | Modulo evento |
-| `#/eventi/:id` | Evento — Panoramica | Dati, coperti equivalenti, stato, avvisi, azioni (concludi, archivia, riapri, elimina, stampa) |
+| `#/eventi/:id` | Evento — Panoramica | Dati, coperti equivalenti, stato, avvisi, azioni (concludi, archivia, riapri, elimina, stampa), «Versioni archiviate». Se archiviato, tutte le schede dell'evento leggono dallo snapshot |
 | `#/eventi/:id/menu` | Evento — Menù | Portate e voci, inserimento rapido, riordino |
 | `#/eventi/:id/spesa` | Evento — Spesa | Lista per reparto, filtri, manuali, sezioni *Da verificare* e *Non più necessari* |
 | `#/eventi/:id/piano` | Evento — Piano | Attività per giorno, checklist |
@@ -164,7 +169,7 @@ Da 768 px: barra laterale con le stesse voci. Il contenuto dell'evento usa sched
 | `#/ricettario/:id/cucina` | Vista cucina | Ricetta con porzioni scelte |
 | `#/ingredienti` | Catalogo | Ricerca, reparto, sinonimi, unità preferita |
 | `#/impostazioni` | Impostazioni | Portate predefinite, coefficiente bambini, reparti, tema |
-| `#/impostazioni/dati` | Dati | Backup, ripristino, persistenza, spazio usato, versione app e schema |
+| `#/impostazioni/dati` | Dati | Backup, ripristino, copie di sicurezza, persistenza, spazio usato, versione app e schema |
 | `*` | Non trovata | Link a Eventi |
 
 Requisiti trasversali dell'interfaccia: tema chiaro/scuro/sistema; bersagli di tocco
@@ -280,6 +285,7 @@ interface Ingredient extends Base {
   sinonimiNorm: string[]            // indice multi-valore
   repartoId: Id
   unitaPreferita: CodiceUnita | null
+  scalaturaAbituale: Scalatura      // 'fissa' per alloro, chiodi di garofano… (§8.3)
 }
 
 // ── Spesa: solo stato e interventi dell'utente ───────────
@@ -288,16 +294,19 @@ type StatoSpesa = 'da_comprare' | 'ce_lho' | 'comprato'
 interface ShoppingItem extends Base {
   eventId: Id
   tipo: 'calcolato' | 'manuale'
-  chiave: string | null             // solo 'calcolato': chiave di aggregazione (§10.2)
+  chiave: string | null             // solo 'calcolato': chiave della riga (§10.2)
   stato: StatoSpesa
-  // stato della riga calcolata quando l'utente l'ha toccata
-  quantitaAlloStato: number | null  // quantità calcolata (unità base) al cambio di stato
+  // Fabbisogno che l'utente ha dichiarato coperto segnando 'comprato' o 'ce_lho':
+  // è la quantità che la lista MOSTRAVA in quel momento (unità base), NON una quantità
+  // acquistata misurata. null per 'da_comprare', per righe senza quantità e per i manuali.
+  fabbisognoCoperto: number | null
   // interventi dell'utente
   quantitaUtente: number | null     // correzione manuale (unità base della chiave)
   quantitaCalcolataAllaCorrezione: number | null
   repartoId: Id | null              // override del reparto
   nascosto: boolean                 // riga calcolata tolta dalla vista dall'utente
-  nota: string
+  inclusa: boolean                  // solo righe facoltative: aggiunta alla spesa (§10.1)
+  nota: string                      // anche per annotare acquisti parziali (§10.3)
   // solo 'manuale'
   nome: string
   quantitaTesto: string             // libero: "2 sacchetti"
@@ -329,19 +338,29 @@ interface Settings {
 }
 
 // ── Snapshot di evento archiviato ────────────────────────
+// Storico AUTONOMO: contiene tutto ciò che serve a mostrare, stampare e consultare
+// l'evento archiviato senza leggere altre tabelle. Copie con id originali, nomi già
+// risolti (portate, reparti, ingredienti), nessun riferimento da seguire.
 interface EventSnapshot extends Base {
   eventId: Id
-  stato: 'valido' | 'superato'      // 'superato' dopo una riapertura
+  stato: 'valido' | 'superato'      // 'superato' dopo una riapertura (resta come storico)
   superatoAt: Epoch | null
   versioneFormato: 1
-  coperti: { adulti: number; bambini: number; coefficiente: number; equivalenti: number }
-  piatti: SnapshotPiatto[]
-  spesa: SnapshotRigaSpesa[]        // lista calcolata e stati al momento dell'archiviazione
+  evento: Omit<Event, 'createdAt' | 'updatedAt' | 'snapshotCorrenteId'>  // con portate
+  copertiEquivalenti: number
+  voci: (Omit<MenuItem, 'createdAt' | 'updatedAt'> & {
+    portataNome: string
+    porzioniEffettive: number
+  })[]                              // tutte, con ordine e nomi liberi, anche senza piatto
+  piatti: SnapshotPiatto[]          // solo i piatti collegati dalle voci
+  spesa: SnapshotRigaSpesa[]        // lista riconciliata come appariva all'archiviazione
+  articoliManuali: Omit<ShoppingItem, 'createdAt' | 'updatedAt'>[]
+  attivita: Omit<Task, 'createdAt' | 'updatedAt'>[]
 }
 
 interface SnapshotPiatto {
   dishId: Id                        // id originale (può non esistere più)
-  dati: Omit<Dish, 'createdAt' | 'updatedAt'> & { updatedAtOriginale: Epoch }
+  dati: Omit<Dish, 'createdAt' | 'updatedAt'>
   ingredienti: (Omit<DishIngredient, 'createdAt' | 'updatedAt'> & {
     ingredienteNome: string | null
     repartoNome: string | null
@@ -349,13 +368,16 @@ interface SnapshotPiatto {
 }
 
 interface SnapshotRigaSpesa {
-  chiave: string; nome: string; reparto: string
+  chiave: string; sezione: string; nome: string; reparto: string
   quantita: number | null; unita: CodiceUnita | null; stato: StatoSpesa
+  provenienze: string[]             // nomi delle voci di menù
 }
 
 // ── Meta (chiave/valore) ─────────────────────────────────
-// 'seedVersione' (number), 'ultimoBackupAt' (Epoch), 'ultimaModificaAt' (Epoch),
-// 'persistenzaRichiesta' (boolean)
+// Due gruppi:
+//  - di contenuto, inclusi nel backup: 'seedImpostazioni', 'seedCatalogo' (number: versione del seed applicata)
+//  - del dispositivo, ESCLUSI dal backup: 'ultimoBackupAt', 'ultimaModificaAt' (Epoch),
+//    'persistenzaRichiesta' (boolean), 'avvisoInstallazioneChiuso' (boolean)
 interface Meta { chiave: string; valore: unknown }
 ```
 
@@ -379,8 +401,11 @@ db.version(1).stores({
 })
 ```
 
-Database separato `menuapp-sicurezza` (tabella `copie: '++id, creataAt'`): copie JSON
-automatiche prima di migrazioni e ripristini (§11.4). Tiene le ultime 3.
+Database separato `menuapp-sicurezza`, schema proprio e stabile
+(`copie: '++id, creataAt'`; record `{ creataAt, motivo: 'migrazione' | 'ripristino',
+versioneSchema, contenuto }` dove `contenuto` è un file di backup completo nel formato di
+§11.1, come stringa). Copie automatiche prima di migrazioni e ripristini (§11.4); tiene le
+ultime 3. Essendo un database diverso, non è mai coinvolto nelle migrazioni di `menuapp`.
 
 ### 6.4 Integrità referenziale
 
@@ -437,40 +462,42 @@ Il ripristino da backup verifica le stesse regole (§11.3).
 |---|---|---|
 | `attivo` | Tutto | Stato iniziale |
 | `concluso` | Tutto | Evento passato ma ancora aperto (es. per finire il piano o rivedere la spesa). Proposto, mai automatico, quando la data è passata |
-| `archiviato` | Nulla, tranne riapertura ed eliminazione | Ricette mostrate dallo snapshot; stampa e vista cucina disponibili |
+| `archiviato` | Nulla, tranne riapertura ed eliminazione | Tutto (panoramica, menù, ricette, spesa, piano, stampa, vista cucina) è letto **solo dallo snapshot** |
 
 **Archiviazione** (in un'unica transazione):
-1. calcolo della lista della spesa corrente con i suoi stati;
-2. creazione di un `EventSnapshot` con stato `valido`, copia profonda di tutti i piatti
-   collegati dalle voci dell'evento (con ingredienti, nomi di catalogo e reparti
-   risolti), coperti e spesa;
+1. calcolo e riconciliazione della spesa corrente (§10);
+2. creazione di un `EventSnapshot` `valido` con la copia completa di: dati dell'evento e
+   portate, tutte le voci di menù (ordine, nomi liberi, porzioni effettive, incaricati,
+   note), i piatti collegati con ingredienti e nomi di catalogo/reparto risolti, la
+   spesa riconciliata, gli articoli manuali, le attività;
 3. evento → `archiviato`, `archiviatoAt`, `snapshotCorrenteId`.
 
-Da quel momento le modifiche o eliminazioni dei piatti nel ricettario non alterano ciò che
-l'evento archiviato mostra.
+I record vivi (voci, stati della spesa, attività) restano nel database ma l'interfaccia
+non li usa finché l'evento è archiviato. Le modifiche o eliminazioni di piatti nel
+ricettario non alterano mai ciò che l'evento archiviato mostra.
+
+Dall'evento archiviato è disponibile, per ogni piatto, l'azione **«Copia nel
+ricettario»**: crea un **nuovo** piatto dai dati dello snapshot (nome «Nome (Natale
+2026)», modificabile). È l'unico modo di recuperare una ricetta archiviata e non tocca
+i piatti esistenti.
 
 ### 7.4 Riapertura di un evento archiviato
 
-La riapertura riporta l'evento allo stato **`attivo`** e lo ricollega al ricettario vivo:
-un piatto resta una sola entità condivisa fra eventi, non esistono versioni.
+Scelta di semplicità: lo storico è affidabile perché autonomo; la riapertura non tenta
+di fondere snapshot e ricettario.
 
-1. L'app confronta ogni piatto dello snapshot con il ricettario attuale e mostra un
-   riepilogo:
-   - **Invariato** (`updatedAt` uguale): nessuna scelta.
-   - **Modificato dopo l'archiviazione**: differenze riassunte (porzioni base, ingredienti
-     aggiunti/tolti/cambiati). Scelte: *Usa la ricetta attuale* (predefinita) oppure
-     *Recupera la versione archiviata come nuovo piatto* («Nome (Natale 2026)»), che
-     viene creato e collegato **solo** alle voci di questo evento. La ricetta attuale non
-     viene mai sovrascritta, perché potrebbe servire ad altri eventi.
-   - **Eliminato dal ricettario**: *Ricrea dallo snapshot* (predefinita: nuovo piatto
-     collegato alle voci) oppure *Lascia la voce senza ricetta*.
-2. Confermando, in un'unica transazione: le scelte vengono applicate, lo snapshot passa
-   a `superato` (non viene cancellato: resta come storico consultabile dalla
-   panoramica), l'evento passa ad `attivo` con `snapshotCorrenteId = null`.
-3. Gli stati della spesa e le attività restano come erano; la riconciliazione (§10.4)
-   segnala le differenze dovute a ricette cambiate.
-4. Una nuova archiviazione crea un nuovo snapshot `valido`; i precedenti restano
-   `superato`. Gli snapshot si eliminano solo insieme all'evento.
+1. «Riapri» mostra una conferma: «L'evento tornerà modificabile e userà le ricette
+   **attuali** del ricettario. La versione archiviata resta consultabile nello storico.»
+   Se alcuni piatti sono cambiati o eliminati dopo l'archiviazione, la conferma li elenca
+   (solo informazione) e ricorda l'azione «Copia nel ricettario».
+2. In un'unica transazione: lo snapshot passa a `superato`, l'evento torna `attivo` con
+   `snapshotCorrenteId = null`.
+3. L'evento riprende i propri record vivi: voci (quelle di piatti eliminati sono già senza
+   piatto, §6.4), stati della spesa, articoli manuali, attività. La riconciliazione
+   (§10.4) segnala le differenze dovute a ricette cambiate.
+4. Gli snapshot `superato` sono consultabili in sola lettura dalla panoramica
+   («Versioni archiviate»). Una nuova archiviazione crea un nuovo snapshot `valido`. Gli
+   snapshot si eliminano solo insieme all'evento.
 
 ### 7.5 Ricettario e catalogo
 
@@ -479,9 +506,15 @@ un piatto resta una sola entità condivisa fra eventi, non esistono versioni.
 - `porzioniBase` vuoto: il piatto è usabile, ma la spesa non può scalarlo (§10.3).
 - Un ingrediente di catalogo ha nome canonico unico (su `nomeNorm`) e sinonimi unici
   nell'intero catalogo; un conflitto blocca il salvataggio con messaggio.
-- Il catalogo iniziale (~180 ingredienti, ognuno con reparto e unità preferita) è
-  caricato da un seed idempotente con id stabili; aggiornamenti futuri del seed non
-  toccano voci modificate dall'utente (`updatedAt > createdAt`).
+- Il catalogo iniziale conta **200–250 ingredienti italiani**, ognuno con reparto, unità
+  preferita, sinonimi principali e, dove serve, `scalaturaAbituale: 'fissa'` (§8.3).
+  Copre tutti i 14 reparti di §7.6 (almeno 5 ingredienti ciascuno, *Altro* escluso).
+- Seed **idempotente**: id stabili (`ing-…`), `meta.seedCatalogo` per sapere quale
+  versione del seed è stata applicata. Un'esecuzione ripetuta non crea duplicati;
+  una versione nuova del seed aggiunge solo gli id mancanti e aggiorna solo le voci mai
+  modificate dall'utente (`updatedAt === createdAt`); non elimina nulla. Un ingrediente
+  dell'utente con lo stesso `nomeNorm` di una nuova voce del seed vince: la voce del
+  seed non viene inserita.
 
 ### 7.6 Reparti
 
@@ -614,7 +647,7 @@ Regole:
 7. La conferma o correzione manuale imposta `statoParsing = 'confermato'`;
    `testoOriginale` non cambia mai.
 8. `scalatura` proposta: `fissa` per foglia, rametto, pizzico, `qb` e per ingredienti
-   del catalogo marcati «di solito fisso» (alloro, chiodi di garofano…); `proporzionale`
+   del catalogo con `scalaturaAbituale = 'fissa'` (alloro, chiodi di garofano…); `proporzionale`
    per il resto. Sempre modificabile.
 
 ### 8.4 Collaudo del parser
@@ -638,8 +671,9 @@ quantitaScalata = scalatura === 'fissa' ? quantita : quantita × fattore
 
 | Situazione | Comportamento |
 |---|---|
-| `porzioniBase` nullo o 0 | Nessuna scalatura; nella spesa le righe del piatto finiscono in *Da verificare* con «porzioni base mancanti» e le quantità della ricetta come riferimento |
-| `quantita` nulla (non `qb`) | Riga *quantità da definire*: compare nella spesa senza somma |
+| `porzioniBase` nullo o 0 | Nessuna scalatura; nella spesa ogni ingrediente del piatto compare come contributo **non sommato** in *Da verificare* («porzioni base mancanti»), con la quantità della ricetta indicata come «riferimento per N porzioni sconosciute» (§10.1) |
+| `quantita` nulla (non `qb`) | Contributo *quantità da definire*, non sommato, visibile in *Da verificare* |
+| `statoParsing = 'da_verificare'` | Contributo non sommato in *Da verificare*, con il testo originale |
 | `qb` | Mai scalata né sommata; nella spesa un'unica riga per ingrediente «q.b.» |
 | Intervallo `quantita`–`quantitaMax` | Entrambi scalati; la spesa usa il massimo |
 | Scalatura `fissa` | Conta una volta per voce di menù che usa il piatto |
@@ -667,43 +701,77 @@ Formattazione italiana (virgola decimale) con `Intl.NumberFormat('it-IT')`.
 
 Tutto in `src/domain/spesa/`, funzioni pure senza Dexie né React, con test esaustivi.
 
+Principio: **si somma solo ciò che è certo**. Ogni contributo incompleto o dubbio resta
+visibile come riga a sé, con la sua provenienza, e non entra in alcun totale.
+
 ### 10.1 Calcolo (`calcolaSpesa`)
 
 Input: evento, voci di menù, piatti, ingredienti dei piatti, catalogo, impostazioni.
 Output: `RigaCalcolata[]` + `Avviso[]`.
 
 ```ts
+type Natura = 'sommata' | 'qb' | 'da_verificare' | 'facoltativa'
+
 interface RigaCalcolata {
   chiave: string                 // §10.2
+  natura: Natura
   nome: string                   // nome canonico del catalogo o nome libero
   repartoId: Id                  // dal catalogo, altrimenti 'rep-altro'
-  famiglia: 'massa' | 'volume' | CodiceUnita | 'qb' | 'senza_unita'
-  quantita: number | null        // in unità base; null per qb / da definire
+  quantita: number | null        // in unità base; null se non sommabile
   unita: CodiceUnita | null      // unità base della famiglia
-  provenienze: { menuItemId: Id; dishId: Id; nomeVoce: string; quantita: number | null }[]
-  daVerificare: string[]         // motivi (riga incerta, porzioni base mancanti…)
+  provenienze: {
+    menuItemId: Id; dishId: Id; dishIngredientId: Id; nomeVoce: string
+    testoOriginale: string
+    quantitaScalata: number | null
+  }[]
+  motivi: string[]               // solo 'da_verificare': perché non è sommata
 }
 ```
 
+**Classificazione di ogni contributo** (un ingrediente di un piatto collegato a una voce
+inclusa nella spesa), nell'ordine:
+
+| # | Condizione | Natura | Sommato? |
+|---|---|---|---|
+| 1 | `facoltativo` | `facoltativa` | Sommato solo con altri contributi facoltativi della stessa chiave; mai nella spesa obbligatoria |
+| 2 | `unita = 'qb'` | `qb` | No: una riga per ingrediente «q.b.» con l'elenco delle voci |
+| 3 | `statoParsing = 'da_verificare'` | `da_verificare` | No |
+| 4 | `porzioniBase` del piatto nullo o 0 | `da_verificare` | No (quantità mostrata come «da ricetta, non scalata») |
+| 5 | `quantita` nulla | `da_verificare` | No («quantità da definire») |
+| 6 | altrimenti (certo o confermato, scalabile, con quantità) | `sommata` | Sì, per chiave |
+
+Un contributo `da_verificare` produce **una riga per contributo** (chiave in §10.2), mai
+fusa con altre. Quando esiste anche una riga `sommata` per lo stesso ingrediente, questa
+mostra un rimando: «+ 1 contributo da verificare» con collegamento, così il totale non
+viene letto come completo.
+
+Voci con `inSpesa` ma senza piatto, o con piatto senza ingredienti: non generano righe
+ma un **avviso** visibile in cima alla sezione *Da verificare* («Lasagne: nessun
+ingrediente — aggiungili o crea un articolo manuale»).
+
 Passi:
-1. Voci con `inSpesa` e `dishId` valido; le altre generano solo avvisi (§7.2).
-2. Per ogni ingrediente del piatto (esclusi i `facoltativo`, che compaiono comunque come
-   righe a parte, non sommate, marcate «facoltativo»): scalatura (§9), conversione
-   nell'unità base della famiglia.
-3. Raggruppamento per `chiave` e somma delle quantità (gli intervalli usano il massimo).
+1. Selezione delle voci con `inSpesa` e `dishId` valido.
+2. Classificazione dei contributi; scalatura (§9) e conversione nell'unità base della
+   famiglia solo per `sommata` e `facoltativa` (per `da_verificare` la quantità scalata
+   è calcolata solo se possibile ed è mostrata come indicazione).
+3. Raggruppamento per chiave: somma per `sommata` e `facoltativa`, unione delle voci per
+   `qb`, nessun raggruppamento per `da_verificare`.
 4. Ordinamento: ordine del reparto, poi nome.
 
-### 10.2 Chiave di aggregazione
+### 10.2 Chiave della riga
 
 ```
-chiave = <identità> "|" <famiglia>
+sommata / facoltativa:  <identità> "|" <famiglia> [ "|fac" ]
+qb:                     <identità> "|qb"
+da_verificare:          "dv:" + menuItemId + ":" + dishIngredientId
+
 identità = "ing:" + ingredientId          se collegato al catalogo
          = "txt:" + norm(nome)            altrimenti
-famiglia = "massa" | "volume" | "u:" + codiceUnita | "qb" | "senza_unita"
+famiglia = "massa" | "volume" | "u:" + codiceUnita | "senza_unita"
 ```
 
-Esempi: `ing:ing-burro|massa`, `ing:ing-olio-evo|volume`,
-`ing:ing-olio-evo|u:cucchiaio`, `txt:sale grosso|qb`.
+Esempi: `ing:ing-burro|massa`, `ing:ing-olio-evo|volume`, `ing:ing-olio-evo|u:cucchiaio`,
+`ing:ing-pinoli|massa|fac`, `txt:sale grosso|qb`, `dv:3f2a…:9c1d…`.
 
 Lo stesso ingrediente in famiglie diverse produce righe distinte, mostrate una sotto
 l'altra con un solo titolo («Olio extravergine: 300 ml + 4 cucchiai»).
@@ -711,49 +779,74 @@ l'altra con un solo titolo («Olio extravergine: 300 ml + 4 cucchiai»).
 La chiave è **stabile** rispetto a: cambi di quantità, porzioni, coperti, aggiunta o
 rimozione di voci, conversioni interne alla famiglia (200 g → 0,2 kg). Cambia, e quindi
 genera una riga nuova, se: si collega/scollega un ingrediente dal catalogo, si cambia
-famiglia di unità, si rinomina un ingrediente non collegato.
+famiglia di unità, si rinomina un ingrediente non collegato, un contributo passa da
+*da verificare* a *sommato* (conferma del parser, porzioni base inserite).
 
-### 10.3 Stati e interventi salvati
+### 10.3 Significato degli stati e acquisti parziali
 
 Gli `ShoppingItem` di tipo `calcolato` nascono **solo** quando l'utente interviene su una
-riga (cambia stato, corregge la quantità, cambia reparto, nasconde, scrive una nota). Una
-riga mai toccata non ha record: è `da_comprare` per definizione.
+riga (stato, quantità, reparto, nascosto, inclusa, nota). Una riga mai toccata non ha
+record: è `da_comprare`.
 
-Al cambio di stato verso `ce_lho` o `comprato` si salva `quantitaAlloStato` = quantità
-calcolata in quel momento. Al ritorno a `da_comprare` si azzera.
+| Stato | Significato per l'app |
+|---|---|
+| `da_comprare` | Il fabbisogno mostrato non è coperto |
+| `comprato` | L'utente dichiara **coperto** il fabbisogno mostrato in quel momento, comprandolo |
+| `ce_lho` | L'utente dichiara **coperto** il fabbisogno mostrato in quel momento, con ciò che ha già |
+
+`fabbisognoCoperto` registra la quantità mostrata (unità base: `quantitaUtente` se
+presente, altrimenti calcolata) nel momento in cui la riga passa a `comprato` o `ce_lho`;
+torna `null` con `da_comprare`. **Non è una quantità acquistata**: l'app non sa quanto
+è stato comprato, sa solo quale fabbisogno è stato dichiarato coperto. Per questo i testi
+dell'interfaccia parlano sempre di *fabbisogno* e mai di quantità possedute («segnato
+come comprato quando ne servivano 500 g», non «hai 500 g»).
+
+**Acquisti parziali (MVP)**: non sono modellati. Una riga resta `da_comprare` finché il
+fabbisogno non è coperto per intero; un acquisto parziale si annota nella `nota` della
+riga («presi 2 pacchi su 3»), che è visibile in lista e nella condivisione. Nessun
+inventario della dispensa. Un'eventuale gestione delle quantità parziali è rinviata e
+richiederà un campo distinto, senza cambiare il significato di `fabbisognoCoperto`.
+
+Righe `da_verificare` e `qb`: possono essere segnate `comprato`/`ce_lho`, ma
+`fabbisognoCoperto` resta `null` (nessun confronto quantitativo possibile).
+
+Righe `facoltativa`: compaiono nella sezione *Facoltativi* e non contano nella spesa
+obbligatoria finché l'utente non le **aggiunge** (`inclusa = true`); da quel momento si
+comportano come righe sommate (stati, confronti, condivisione).
 
 ### 10.4 Riconciliazione (`riconciliaSpesa`)
 
 Input: righe calcolate, `ShoppingItem` dell'evento. Output: `VoceListaSpesa[]` raggruppate
 in sezioni. Nessuna scrittura: la funzione è pura; eventuali pulizie sono azioni
-esplicite.
+esplicite. «Fabbisogno attuale» = `quantitaUtente` se presente, altrimenti quantità
+calcolata.
 
 | Caso | Condizione | Risultato mostrato |
 |---|---|---|
-| R1 Nuova | Riga calcolata senza record | *Da comprare*, quantità calcolata |
-| R2 Invariata | Record presente, quantità calcolata = `quantitaAlloStato` (tolleranza) | Stato salvato |
-| R3 Aumentata | Stato `comprato`/`ce_lho`, calcolata > `quantitaAlloStato` | Riga **Da integrare**: «Hai già 500 g, ora ne servono 800 g: mancano 300 g». Azioni: *Comprato anche il resto* (aggiorna `quantitaAlloStato`), *Va bene così* (idem, senza comprare) |
-| R4 Diminuita | Stato `comprato`/`ce_lho`, calcolata < `quantitaAlloStato` | Stato salvato con nota informativa «ne servono meno di quanti presi» |
-| R5 Non più necessaria | Record `comprato`/`ce_lho` senza riga calcolata (piatto tolto, voce esclusa, chiave cambiata) | Sezione **Non più necessari**, con quantità presa e provenienza nota. Azione *Rimuovi* (elimina il record). Mai eliminata in automatico |
-| R6 Orfana senza valore | Record `da_comprare` senza riga calcolata, senza nota, quantità utente, reparto o nascosto | Non mostrata; eliminabile dalla pulizia silenziosa (nessuna informazione persa) |
+| R1 Nuova | Riga calcolata senza record | *Da comprare*, fabbisogno calcolato |
+| R2 Invariata | Record presente; fabbisogno attuale = `fabbisognoCoperto` (tolleranza) | Stato salvato |
+| R3 Fabbisogno aumentato | Stato `comprato`/`ce_lho`; fabbisogno attuale > `fabbisognoCoperto` | Riga **Da integrare** nella lista da comprare: «Segnato come comprato per 500 g; ora il fabbisogno è 800 g (+300 g)». Azioni: *Coperto anche l'aumento* (aggiorna `fabbisognoCoperto`), *Torna a da comprare* |
+| R4 Fabbisogno diminuito | Stato `comprato`/`ce_lho`; fabbisogno attuale < `fabbisognoCoperto` | Stato salvato con nota informativa «il fabbisogno è sceso a 300 g (era 500 g quando l'hai segnato)» |
+| R5 Non più necessaria | Record `comprato`/`ce_lho` senza riga calcolata (piatto tolto, voce esclusa, chiave cambiata) | Sezione **Non più necessari**: nome, stato, fabbisogno che era stato dichiarato coperto, ultima provenienza nota. Azione *Rimuovi* (elimina il record). Mai eliminata in automatico |
+| R6 Orfana senza valore | Record `da_comprare` senza riga calcolata, senza nota, quantità utente, reparto, nascosto o inclusa | Non mostrata; eliminata solo dalla pulizia esplicita «Ripulisci» (nessuna informazione persa) |
 | R7 Correzione utente | `quantitaUtente` presente | Si mostra `quantitaUtente`; se la calcolata è cambiata rispetto a `quantitaCalcolataAllaCorrezione`, badge «la ricetta è cambiata: calcolati ora 800 g» con *Usa il calcolo* / *Mantieni la mia* |
-| R8 Nascosta | `nascosto = true` | In fondo, sezione «Nascosti», ripristinabile |
-| R9 Q.b. / da definire | Famiglia `qb` o quantità nulla | Stato senza confronto quantitativo |
-| R10 Possibile cambio di chiave | R5 e R1 con stessa identità ma famiglia diversa, o stesso nome normalizzato | R5 mostra il suggerimento «forse corrisponde a: Burro 250 g» con azione *Trasferisci lo stato* |
+| R8 Nascosta | `nascosto = true` | In fondo, sezione *Nascosti*, ripristinabile |
+| R9 Senza confronto | Natura `qb` o `da_verificare` | Stato salvato, nessun confronto quantitativo |
+| R10 Possibile cambio di chiave | Una riga R5 e una R1 con la stessa identità (o lo stesso `norm(nome)`) | Su R5 il suggerimento «forse corrisponde a: Burro 250 g» con azione *Trasferisci lo stato* (sposta stato e nota sulla nuova chiave; `fabbisognoCoperto` resta quello registrato, quindi un aumento appare come R3) |
 
-Le righe con `daVerificare` non vuoto compaiono nella sezione **Da verificare** (anche se
-hanno quantità) finché la causa non è risolta.
-
-Gli articoli **manuali** non partecipano a calcolo né riconciliazione: hanno solo nome,
-quantità testuale, reparto, stato, nota.
+Per il cambio di natura *da verificare → sommata* (stesso ingrediente), R10 propone il
+trasferimento dello stato della riga `dv:` alla riga sommata.
 
 ### 10.5 Vista e condivisione
 
-- Sezioni nell'ordine: Da verificare · Da comprare / Da integrare per reparto · Ce l'ho ·
-  Comprato · Non più necessari · Nascosti.
-- Contatori: «12 da comprare · 5 comprati · 3 ce l'ho».
+- Sezioni nell'ordine: **Da verificare** (avvisi e contributi non sommati) · **Da
+  comprare** (incluse *Da integrare*), per reparto · **Facoltativi** · **Ce l'ho** ·
+  **Comprato** · **Non più necessari** · **Nascosti**.
+- Contatori: «12 da comprare · 2 da verificare · 5 comprati · 3 ce l'ho».
 - Condivisione (`navigator.share({ title, text })`, fallback `navigator.clipboard`):
-  solo righe *da comprare* e *da integrare* (mancante), per reparto:
+  righe *da comprare*, *da integrare* (solo la differenza, indicata come tale) e *da
+  verificare* (in un blocco separato, con il testo originale), per reparto. Note
+  incluse. Facoltativi non aggiunti esclusi.
 
 ```
 Spesa — Natale 2026 (25/12)
@@ -762,13 +855,18 @@ ORTOFRUTTA
 ☐ Patate 1,5 kg
 ☐ Prezzemolo 1 mazzetto
 LATTE, UOVA E FRIGO
-☐ Burro 300 g (mancano)
-☐ Uova 8
+☐ Burro +300 g (aumento rispetto a quanto già segnato)
+☐ Uova 8 (nota: presi 6)
+
+DA VERIFICARE
+☐ Lasagne: "besciamella" (quantità da definire)
+☐ Arrosto: "carne 1 kg" (porzioni base mancanti)
 ```
 
 ### 10.6 Evento archiviato
 
-La spesa di un evento archiviato è letta dallo snapshot (`spesa`) in sola lettura.
+La spesa di un evento archiviato è letta dallo snapshot (`spesa`, `articoliManuali`) in
+sola lettura.
 
 ## 11. Backup e ripristino
 
@@ -782,7 +880,7 @@ La spesa di un evento archiviato è letta dallo snapshot (`spesa`) in sola lettu
   "versioneApp": "1.0.0+abc1234",
   "esportatoAt": "2026-12-01T18:30:00.000Z",
   "conteggi": { "events": 3, "menuItems": 41, "...": 0 },
-  "impronta": "sha256 esadecimale di JSON.stringify(dati)",
+  "impronta": "sha256:…",
   "dati": {
     "events": [], "menuItems": [], "dishes": [], "dishIngredients": [],
     "ingredients": [], "shoppingItems": [], "tasks": [], "eventSnapshots": [],
@@ -791,29 +889,62 @@ La spesa di un evento archiviato è letta dallo snapshot (`spesa`) in sola lettu
 }
 ```
 
+**Impronta**: `SHA-256` della serializzazione **canonica** di
+`{ versioneFormato, versioneSchema, dati }`:
+- tabelle nell'ordine fisso sopra; record di ogni tabella ordinati per chiave primaria;
+- chiavi degli oggetti ordinate alfabeticamente a ogni livello, ordine degli array
+  conservato;
+- `JSON.stringify` senza spazi; codifica UTF-8.
+
+La serializzazione canonica rende l'impronta indipendente dall'ordine di lettura e dalla
+formattazione del file (un file reindentato a mano resta valido).
+
+**Coerenza con `ultimoBackupAt`**: le chiavi `meta` del dispositivo (`ultimoBackupAt`,
+`ultimaModificaAt`, `persistenzaRichiesta`, …, §6.2) **non** fanno parte del backup.
+L'esportazione calcola l'impronta su `dati` già privi di quelle chiavi e **dopo** aggiorna
+`ultimoBackupAt` nel database: il file e la sua impronta non cambiano per effetto
+dell'esportazione stessa, e due esportazioni consecutive senza modifiche producono
+`dati` e impronta identici.
+
 ### 11.2 Esportazione
 
-- Lettura di tutte le tabelle in una transazione in sola lettura (dati coerenti).
+- Lettura di tutte le tabelle in **una** transazione in sola lettura (dati coerenti),
+  esclusione delle chiavi `meta` del dispositivo, calcolo dell'impronta.
 - File `menuapp-backup-AAAA-MM-GG-HHmm.json`; su Android si offre anche la condivisione
   del file (`navigator.share({ files })`) per salvarlo su Drive o inviarlo.
-- Aggiorna `meta.ultimoBackupAt`.
+- `ultimoBackupAt` viene aggiornato quando il file è stato consegnato al browser
+  (download avviato o condivisione completata). L'app non può sapere se il file è stato
+  davvero salvato: il promemoria resta l'ultima difesa.
 
 ### 11.3 Ripristino validato
 
 1. Lettura file (max 50 MB) e `JSON.parse` con messaggio chiaro in caso di errore.
-2. Controlli: `formato`, `versioneFormato` supportata, `versioneSchema` ≤ versione
-   dell'app (se maggiore: «Backup creato da una versione più recente: aggiorna l'app»).
-3. Migrazione del contenuto del backup alla versione corrente con funzioni pure
-   (`migraBackup[v]`), le stesse logiche delle migrazioni Dexie.
-4. Validazione di ogni record con schemi **zod** (tipi, enum, formati data/ora, UUID).
-5. Impronta: se non corrisponde, avviso «file modificato o danneggiato» con possibilità
-   di proseguire solo dopo conferma esplicita (utile per backup corretti a mano).
-6. Integrità referenziale (§6.4): riferimenti mancanti elencati; i riferimenti
-   facoltativi rotti vengono annullati (`dishId → null`), quelli obbligatori bloccano.
-7. Riepilogo e conferma.
-8. Copia di sicurezza dei dati attuali nel database `menuapp-sicurezza` **e** download.
-9. Unica transazione `rw` su tutte le tabelle: `clear()` + `bulkAdd()`. Se fallisce,
-   nulla cambia.
+2. Controlli dell'intestazione: `formato`, `versioneFormato` supportata,
+   `versioneSchema` ≤ versione dell'app (se maggiore: «Backup creato da una versione più
+   recente: aggiorna l'app»).
+3. **Verifica dell'impronta sui dati originali del file**, prima di qualsiasi
+   trasformazione. Se non corrisponde: avviso «file modificato o danneggiato», si
+   prosegue solo con conferma esplicita (utile per backup corretti a mano), e il
+   riepilogo lo segnala.
+4. Migrazione del contenuto alla versione corrente con funzioni pure
+   (`migraBackup[v]`), le stesse regole delle migrazioni Dexie. L'impronta non viene
+   ricalcolata: si riferisce al file così com'era.
+5. Validazione di ogni record con schemi **zod** (tipi, enum, formati data/ora, UUID).
+6. Integrità referenziale (§6.4): i riferimenti facoltativi rotti vengono annullati
+   (`dishId → null`) e elencati; quelli obbligatori bloccano il ripristino.
+7. Riepilogo e conferma (data, versione, conteggi, avvisi).
+8. **Copia di sicurezza obbligatoria** dei dati attuali nel database
+   `menuapp-sicurezza`, nello stesso formato di §11.1. Se la scrittura fallisce (spazio
+   esaurito, errore), il ripristino si interrompe e nulla cambia. Il download della
+   stessa copia è **offerto** con un pulsante, ma il ripristino non dipende da esso (il
+   browser potrebbe bloccare o ritardare i download automatici).
+9. Unica transazione `rw` su tutte le tabelle di `menuapp`: `clear()` + `bulkAdd()`
+   per le tabelle di contenuto; per `meta` si eliminano e sostituiscono **solo** le
+   chiavi di contenuto, mentre quelle del dispositivo restano. Nella stessa transazione
+   `ultimoBackupAt` e `ultimaModificaAt` diventano `esportatoAt` del file (i dati
+   coincidono con quel backup, quindi nessun promemoria immediato);
+   `persistenzaRichiesta` e le altre chiavi del dispositivo restano invariate. Se la
+   transazione fallisce, nulla cambia.
 10. Ricarica dell'app.
 
 L'MVP prevede solo «sostituisci tutto». L'unione è rinviata.
@@ -824,15 +955,37 @@ L'MVP prevede solo «sostituisci tutto». L'unione è rinviata.
   all'installazione; stato e spazio (`storage.estimate()`) in *Impostazioni → Dati*.
 - Promemoria backup: banner se `ultimaModificaAt > ultimoBackupAt` e sono passati più di
   `promemoriaGiorni` dall'ultimo backup.
-- **Migrazioni sicure**: all'avvio l'app apre il database senza versione per leggerne la
-  versione installata; se è inferiore a quella del codice, esporta tutte le tabelle in
-  `menuapp-sicurezza` prima di aprirlo con la nuova versione. Le migrazioni Dexie
-  (`version(n).upgrade()`) sono atomiche: un errore annulla l'aggiornamento e l'app
-  mostra una schermata d'errore con «Scarica copia di sicurezza».
-- Regole per le migrazioni: mai modificare una `version(n)` già pubblicata; ogni nuova
-  versione ha un test che parte da dati fittizi della versione precedente.
-- Più schede aperte: all'evento `versionchange` la scheda vecchia chiude il database e
-  chiede di ricaricare.
+- Copie di sicurezza: database `menuapp-sicurezza` (§6.3), ultime 3, consultabili,
+  scaricabili e ripristinabili da *Impostazioni → Dati*.
+
+**Apertura sicura e copia pre-migrazione** (procedura verificata il 12/11/2026 con Dexie
+4.4.7 e Chrome 157, vedi §12.1):
+
+1. `Dexie.exists('menuapp')`: se il database non esiste, apertura normale (creazione e
+   seed), fine. `exists` non crea il database.
+2. Lettura della versione installata **senza aprire** il database:
+   `indexedDB.databases()` → `version` nativa; per Dexie `versione = nativa / 10`.
+3. Se la versione installata è uguale a quella del codice: apertura normale.
+   Se è maggiore: l'app è più vecchia dei dati (es. scheda rimasta aperta) → schermata
+   «Ricarica per aggiornare l'app», nessuna apertura.
+4. Se è minore: apertura **in modalità dinamica** (`new Dexie('menuapp')` senza
+   `version()`): Dexie apre alla versione esistente, senza `upgradeneeded` e senza
+   modificare nulla; lettura di tutte le tabelle e chiusura esplicita (`close()`), che
+   evita il blocco dell'apertura successiva.
+5. Scrittura della copia (formato §11.1, con la `versioneSchema` installata) in
+   `menuapp-sicurezza`. Se fallisce: nessuna migrazione, schermata d'errore con
+   «Scarica i dati» (esportazione dalla modalità dinamica) e «Riprova».
+6. Apertura dell'istanza tipizzata con tutte le `version(n)`: Dexie esegue gli `upgrade`
+   in un'unica transazione di versione; se un `upgrade` lancia un errore, IndexedDB
+   annulla tutto e il database resta alla versione precedente con i dati intatti
+   (verificato). L'app mostra la schermata d'errore con le stesse azioni.
+7. Più schede: l'istanza registra `on('versionchange')` → `close()` e avviso «Ricarica»;
+   `on('blocked')` → avviso «Chiudi le altre schede di Menù & Co.».
+
+Regole per le migrazioni: mai modificare una `version(n)` già pubblicata; ogni nuova
+versione ha un test che parte da dati fittizi della versione precedente, sia con
+fake-indexeddb sia in Chrome (e2e); il formato di backup e le migrazioni del backup
+evolvono insieme.
 
 ## 12. Architettura tecnica
 
@@ -847,7 +1000,7 @@ L'MVP prevede solo «sostituisci tutto». L'unione è rinviata.
 | @vitejs/plugin-react | 6.1 | peer `vite ^8` |
 | Tailwind CSS + @tailwindcss/vite | 4.3.5 | peer `vite ^5–^8` |
 | shadcn (CLI, via `npx`) | 4.23 | componenti copiati nel progetto; dipendenze: `radix-ui` 1.8, `lucide-react`, `class-variance-authority`, `clsx`, `tailwind-merge`, `tw-animate-css` |
-| Dexie / dexie-react-hooks | 4.4.7 / 4.4.0 | `useLiveQuery` |
+| Dexie / dexie-react-hooks | 4.4.7 / 4.4.0 | `useLiveQuery`. Procedura di §11.4 provata in Chrome 157 headless: `Dexie.exists` non crea il DB; `indexedDB.databases()` restituisce versione nativa 10 per la v1 Dexie; l'apertura dinamica legge i dati senza upgrade; un `upgrade` che lancia un errore lascia DB e dati alla versione precedente |
 | react-router | 8.5 | solo `createHashRouter` (peer React ≥ 19.2.7) |
 | zod | 4.6 | validazione backup e moduli |
 | vite-plugin-pwa / @vite-pwa/assets-generator | 2.0 / 1.x | |
@@ -878,7 +1031,7 @@ src/
     porzioni.ts     coperti equivalenti, fattore, scalatura
     parser/         analizzaRiga, numeri in parola, casi di test
     spesa/          calcolaSpesa, chiavi, riconciliaSpesa, testoCondivisione
-    snapshot.ts     creazione e confronto snapshot
+    snapshot.ts     creazione dello snapshot completo, piatti cambiati dopo l'archiviazione
     schemi.ts       schemi zod delle entità
   db/
     db.ts           istanza Dexie, versioni, apertura sicura
@@ -957,10 +1110,10 @@ test/e2e/         Playwright
 | Milestone | Date | Contenuto | Uscita |
 |---|---|---|---|
 | **M0 — Fondamenta** | 13–17 nov | Toolchain, Tailwind/shadcn, navigazione, schema Dexie v1 completo, seed impostazioni e reparti, backup/ripristino, persistenza, PWA con avviso aggiornamento, test unitari ed e2e, CI | `v0.1.0` |
-| **M1 — Eventi e menù** | 18–23 nov | Eventi (CRUD, stati senza archiviazione), coperti, portate per evento, voci di menù, inserimento rapido multiriga, riordino e spostamento | `v0.2.0` |
-| **M2 — Ricettario** | 24 nov – 1 dic | Unità, catalogo ingredienti con seed, parser, piatti, ingredienti con anteprima e conferma, porzioni e scalatura, «Crea nel ricettario», vista cucina | `v0.3.0` |
-| **M3 — Spesa** | 2–7 dic | Calcolo, chiavi, riconciliazione, stati, correzioni, manuali, reparti, condivisione | `v0.4.0` |
-| **M4 — Piano e stampa** | 8–12 dic | Attività e checklist, archiviazione con snapshot e riapertura, stampa del menù, collaudo completo | `v0.5.0` |
+| **M1 — Eventi e menù** | 18–23 nov | Eventi (CRUD, stati senza archiviazione), coperti, portate per evento, voci di menù, inserimento rapido multiriga, riordino e spostamento; impostazioni modificabili: portate predefinite, coefficiente bambini, tema | `v0.2.0` |
+| **M2 — Ricettario** | 24 nov – 1 dic | Unità, catalogo di 200–250 ingredienti con seed idempotente, parser, piatti, ingredienti con anteprima e conferma, porzioni e scalatura, «Crea nel ricettario», vista cucina; gestione dei reparti (coerente con il catalogo) | `v0.3.0` |
+| **M3 — Spesa** | 2–7 dic | Calcolo con classificazione dei contributi, chiavi, riconciliazione, stati e fabbisogno coperto, correzioni, facoltativi, manuali, reparti, condivisione | `v0.4.0` |
+| **M4 — Piano e stampa** | 8–12 dic | Attività e checklist, archiviazione con snapshot completo, consultazione da snapshot, «Copia nel ricettario», riapertura semplice, stampa del menù, collaudo completo | `v0.5.0` |
 | **Collaudo reale** | 13–15 dic | Menù di Natale vero inserito sul telefono, backup, correzioni | `v1.0.0` (15 dic) |
 
 Tagli previsti in caso di ritardo, in quest'ordine: trascinamento (restano Su/Giù) →
@@ -988,14 +1141,20 @@ del manifest.
 - **Porzioni**: con 8 adulti, 4 bambini e coefficiente 0,5 una voce senza porzioni ha 10
   porzioni; cambiando i bambini a 6 diventa 11; una voce con 6 porzioni resta 6.
 - **Parser**: criteri di §8.4; il testo originale è sempre visibile e conservato.
-- **Spesa**: tutti i casi R1–R10 coperti da test unitari; scenario e2e «compro il burro,
-  aumento i coperti, vedo *Da integrare*; tolgo il piatto, il burro compare in *Non più
-  necessari*».
-- **Snapshot**: dopo l'archiviazione, modificare o eliminare un piatto non cambia la
-  vista dell'evento archiviato; la riapertura segue §7.4 senza alterare piatti usati da
-  altri eventi.
+- **Spesa**: tutti i casi R1–R10 e le sei classi di contributo di §10.1 coperti da test
+  unitari; nessun contributo incerto, senza quantità o di un piatto senza porzioni base
+  entra in un totale, e ognuno resta visibile con la sua provenienza; nessun testo
+  dell'interfaccia attribuisce all'utente quantità possedute o acquistate; scenario e2e
+  «segno comprato il burro, aumento i coperti, vedo *Da integrare* con il fabbisogno in
+  più; tolgo il piatto, il burro compare in *Non più necessari*».
+- **Snapshot**: dopo l'archiviazione, modificare o eliminare un piatto, una voce o
+  un'attività viva non cambia nulla di ciò che l'evento archiviato mostra (menù completo
+  con portate, ordine e nomi liberi, ricette, spesa, piano); la riapertura non modifica
+  alcun piatto del ricettario.
 - **Backup**: un file manomesso (enum non valido, riferimento rotto, schema futuro) viene
-  rifiutato con un messaggio comprensibile e i dati attuali restano intatti.
+  rifiutato con un messaggio comprensibile e i dati attuali restano intatti; impronta
+  verificata sul file originale; due esportazioni consecutive senza modifiche hanno la
+  stessa impronta; il ripristino non parte se la copia di sicurezza non è stata scritta.
 - **Stampa**: menù di Natale su una pagina A4 senza tagli, leggibile in bianco e nero.
 
 ## 17. Test automatici e manuali
@@ -1005,12 +1164,20 @@ del manifest.
 - `domain/unita`: riconoscimento forme, famiglie, conversioni consentite e **vietate**
   (test che verificano che cucchiaio→ml e confezione→g non esistano), formattazione.
 - `domain/parser`: tabella ≥ 100 casi (§8.4), numeri in parola, frazioni, nomi con cifre.
-- `domain/spesa`: calcolo, chiavi, ogni caso R1–R10, idempotenza (riconciliare due volte
-  dà lo stesso risultato), test a proprietà semplici (somma delle provenienze = totale).
-- `domain/snapshot`: creazione, confronto invariato/modificato/eliminato.
-- `db` con fake-indexeddb: seed idempotente, repository (cascata eliminazioni),
-  migrazioni (dati vN → vN+1), backup ida e ritorno, ripristino che fallisce senza
-  toccare i dati.
+- `domain/spesa`: classificazione dei contributi (§10.1, una prova per riga della
+  tabella), chiavi, ogni caso R1–R10, facoltativi inclusi/non inclusi, idempotenza
+  (riconciliare due volte dà lo stesso risultato), proprietà semplici (somma delle
+  provenienze `sommata` = totale; nessun contributo `da_verificare` nei totali).
+- `domain/snapshot`: lo snapshot contiene evento, portate, tutte le voci (anche senza
+  piatto), piatti, spesa, manuali, attività; è serializzabile e autonomo (nessun id da
+  risolvere per mostrarlo).
+- `db/backup`: serializzazione canonica (ordine di tabelle, record e chiavi), impronta
+  stabile su esportazioni ripetute, chiavi `meta` del dispositivo escluse, impronta
+  verificata prima della migrazione del formato.
+- `db` con fake-indexeddb: seed idempotente (impostazioni in M0, catalogo in M2),
+  repository (cascata eliminazioni), migrazioni (dati vN → vN+1), copia pre-migrazione,
+  backup ida e ritorno, ripristino che fallisce senza toccare i dati, ripristino
+  annullato se la copia di sicurezza non viene scritta.
 
 ### 17.2 Componenti (Vitest + happy-dom + Testing Library)
 Moduli evento, inserimento rapido, anteprima parser, riga della spesa (cambio stato).
@@ -1018,7 +1185,9 @@ Moduli evento, inserimento rapido, anteprima parser, riga della spesa (cambio st
 ### 17.3 End-to-end (Playwright, Chrome di sistema)
 Server di anteprima isolato su `127.0.0.1:4174`; progetti *Pixel 7* (mobile) e *Desktop*.
 Scenari: avvio e navigazione; evento → menù → piatto → ingredienti → spesa; riconciliazione
-dopo modifica del menù; backup e ripristino; offline dopo l'installazione del service
+dopo modifica del menù; backup e ripristino; apertura sicura in Chrome reale (DB v1 di
+prova → app con v2 di prova: copia in `menuapp-sicurezza`, upgrade, e upgrade che fallisce
+con dati intatti); offline dopo l'installazione del service
 worker (`context.setOffline(true)` + ricarica); avviso di aggiornamento (due build
 consecutive); stampa (`emulateMedia({ media: 'print' })` + screenshot).
 
@@ -1046,6 +1215,8 @@ Una lista di controllo per milestone sta in `docs/collaudo/Mn.md`.
 | Browser di Playwright non allineati | Bassa | Basso | Uso del Chrome di sistema (`channel: 'chrome'`) |
 | Più schede aperte con versioni diverse | Bassa | Medio | Gestione `versionchange`, `useLiveQuery` per aggiornamenti reattivi |
 | Floating point nelle somme | Bassa | Basso | Somme in unità base, tolleranza nei confronti, arrotondamento solo in vista |
+| `indexedDB.databases()` non disponibile (browser vecchi) | Bassa | Medio | Supportato da Chrome (obiettivo); ripiego: apertura dinamica per leggere `verno` prima di aprire con lo schema tipizzato |
+| «Comprato» letto come quantità posseduta | Media | Medio | Semantica di fabbisogno coperto (§10.3), testi che non parlano mai di quantità possedute, acquisti parziali solo in nota |
 
 ---
 
@@ -1054,3 +1225,4 @@ Una lista di controllo per milestone sta in `docs/collaudo/Mn.md`.
 | Data | Modifica |
 |---|---|
 | 12/11/2026 | Prima versione consolidata |
+| 12/11/2026 | Revisione 1: impronta canonica verificata prima della migrazione e chiavi `meta` del dispositivo escluse dal backup; copia di sicurezza nel DB `menuapp-sicurezza` obbligatoria prima del ripristino, download solo offerto; `quantitaAlloStato` → `fabbisognoCoperto` con semantica di fabbisogno dichiarato coperto, acquisti parziali in nota; classificazione dei contributi della spesa (incompleti visibili e mai sommati, facoltativi separati con `inclusa`); snapshot autonomo con menù completo, piano e spesa; riapertura semplificata e «Copia nel ricettario»; catalogo 200–250 ingredienti; procedura di apertura sicura verificata con Dexie 4.4.7; ripristino che conserva le chiavi `meta` del dispositivo; impostazioni modificabili assegnate a M1 (portate, coefficiente, tema) e M2 (reparti) |
