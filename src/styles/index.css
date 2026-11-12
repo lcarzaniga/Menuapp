@@ -1,0 +1,103 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --sfondo: #fbf7f2;
+  --testo: #2a211c;
+  --carta: #ffffff;
+  --tenue: #f2ebe3;
+  --testo-tenue: #6f625a;
+  --bordo: #e4d9ce;
+  --primario: #b5482c;
+  --primario-testo: #ffffff;
+  --primario-tenue: #f6e1d9;
+  --successo: #2f7d4f;
+  --successo-tenue: #dff1e5;
+  --avviso: #9a6400;
+  --avviso-tenue: #fbedcf;
+  --pericolo: #b42318;
+  --pericolo-tenue: #fde4e1;
+  --info: #2958a8;
+  --info-tenue: #e3ecfb;
+  --anello: #b5482c66;
+  color-scheme: light;
+}
+
+.dark {
+  --sfondo: #181412;
+  --testo: #f1e9e1;
+  --carta: #221c19;
+  --tenue: #2c2521;
+  --testo-tenue: #b3a69c;
+  --bordo: #3d332d;
+  --primario: #e07a5c;
+  --primario-testo: #1b1210;
+  --primario-tenue: #47271d;
+  --successo: #6cc391;
+  --successo-tenue: #1d3a29;
+  --avviso: #f0b54a;
+  --avviso-tenue: #3f3015;
+  --pericolo: #f2786b;
+  --pericolo-tenue: #4a201c;
+  --info: #86aef0;
+  --info-tenue: #1d2c47;
+  --anello: #e07a5c80;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-sfondo: var(--sfondo);
+  --color-testo: var(--testo);
+  --color-carta: var(--carta);
+  --color-tenue: var(--tenue);
+  --color-testo-tenue: var(--testo-tenue);
+  --color-bordo: var(--bordo);
+  --color-primario: var(--primario);
+  --color-primario-testo: var(--primario-testo);
+  --color-primario-tenue: var(--primario-tenue);
+  --color-successo: var(--successo);
+  --color-successo-tenue: var(--successo-tenue);
+  --color-avviso: var(--avviso);
+  --color-avviso-tenue: var(--avviso-tenue);
+  --color-pericolo: var(--pericolo);
+  --color-pericolo-tenue: var(--pericolo-tenue);
+  --color-info: var(--info);
+  --color-info-tenue: var(--info-tenue);
+  --color-anello: var(--anello);
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-sfondo text-testo font-sans antialiased;
+    min-height: 100dvh;
+  }
+  * {
+    @apply border-bordo;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-anello;
+  }
+  input,
+  textarea,
+  select {
+    font-size: 16px; /* niente zoom automatico su Android/iOS */
+  }
+}
+
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  .non-stampare {
+    display: none !important;
+  }
+}

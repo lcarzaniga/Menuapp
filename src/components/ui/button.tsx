@@ -1,0 +1,40 @@
+import { cva, type VariantProps } from 'class-variance-authority'
+import { Slot } from 'radix-ui'
+import type { ComponentProps } from 'react'
+import { cn } from '@/lib/utils'
+
+export const varianteBottone = cva(
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-45 [&_svg]:size-4 [&_svg]:shrink-0 select-none',
+  {
+    variants: {
+      variante: {
+        primario: 'bg-primario text-primario-testo hover:brightness-110 active:brightness-95',
+        secondario: 'bg-tenue text-testo hover:bg-bordo/70',
+        contorno: 'border border-bordo bg-carta hover:bg-tenue',
+        fantasma: 'hover:bg-tenue',
+        pericolo: 'bg-pericolo text-white hover:brightness-110',
+        collegamento: 'text-primario underline-offset-4 hover:underline px-0',
+      },
+      misura: {
+        normale: 'h-11 px-4',
+        piccolo: 'h-9 px-3 text-[13px]',
+        grande: 'h-12 px-5 text-base',
+        icona: 'size-11',
+        iconaPiccola: 'size-9',
+      },
+    },
+    defaultVariants: { variante: 'primario', misura: 'normale' },
+  },
+)
+
+export function Button({
+  className,
+  variante,
+  misura,
+  asChild = false,
+  type,
+  ...props
+}: ComponentProps<'button'> & VariantProps<typeof varianteBottone> & { asChild?: boolean }) {
+  const Comp = asChild ? Slot.Root : 'button'
+  return <Comp type={asChild ? undefined : (type ?? 'button')} className={cn(varianteBottone({ variante, misura }), className)} {...props} />
+}
