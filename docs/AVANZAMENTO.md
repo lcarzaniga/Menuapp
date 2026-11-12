@@ -60,25 +60,13 @@ Collaudo manuale di Loris sui dispositivi e disattivazione di GitHub Pages; poi 
 concordate. Nota: l'installazione di servizi systemd da Claude è bloccata dal controllo dei
 permessi: Loris la esegue con `! comando`.
 
-## In corso (branch `grafica`, non ancora su `main` né in produzione)
+## In produzione dal 12/11/2026 (rilascio `20261112-1520-fd1a901`, schema v2)
 
-- Grafica più elegante: font inclusi (Fraunces per i titoli, Inter per il testo), nuova
-  palette calda con salvia e filetti oro, ombre morbide, illustrazioni SVG proprie
-  (`src/components/Illustrazioni.tsx`) scelte per occasione, riquadro del prossimo evento.
-- Misure in rem con dimensione del testo automatica sugli schermi grandi (Echo Show 15,
-  1920×1080: 143,75 %) e preferenza per dispositivo in Impostazioni.
-- Controllo visivo: `npx playwright test test/e2e/vetrina.spec.ts` → `test-results/vetrina/`.
-- Notifiche in rem (leggibili sull'Echo Show).
-- Accesso dalla rete di casa senza Tailscale su `:9880` (SPEC 2.2), provato in HTTP a 1920×1080.
-- Da fare: rilascio (merge su main con autorizzazione; Loris rilancia `installa-servizio.sh`
-  per aggiungere `MENUAPP_PORTA_LAN` all'unità).
-- Aperto: standard di importazione ricette con foto (proposta da definire con Loris).
+- Grafica nuova (font, illustrazioni, testo scalabile per l'Echo Show 15).
+- Accesso dalla rete di casa senza Tailscale: http://192.168.1.160:9880/ (SPEC 2.2).
+- Formato ricetta v1, importazione con foto, foto dei piatti, esportazioni ZIP (SPEC 2.3).
+- Migrazione 0002 applicata con backup `pre-migrazione-20261112-152102-v1.db`.
 
-## In corso (branch `import-ricette`, non ancora su `main` né in produzione)
+## Prossima attività
 
-- Formato ricetta v1 (`docs/FORMATO-RICETTA.md`): pacchetto con foto, JSON, scrittura a mano.
-- Foto dei piatti (max 10, ridotte a 1600 px), galleria e principale, esportazione della
-  ricetta, condivisione come testo, importazione con anteprima, esportazione dati ZIP con
-  foto e ripristino che rimette le foto.
-- Migrazione `0002_foto.sql`: in produzione parte all'avvio del nuovo rilascio, con backup
-  pre-migrazione automatico (serve autorizzazione: database con dati reali).
+Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collaudo/collaudo-v1.md`).
