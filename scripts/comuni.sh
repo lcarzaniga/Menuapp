@@ -21,7 +21,7 @@ fotografia_esterni() {
     systemctl --user is-active dailymeals kidscalendar dailymeals-backup.timer 2>&1 || true
     systemctl is-active apache2 2>&1 || true
     ls ~/.config/systemd/user | grep -v '^menuapp' || true
-    tailscale serve status 2>&1 | grep -v ":$PORTA" || true
+    tailscale serve status 2>&1 | grep -v -e ":$PORTA" -e "^\s*$" || true
   } | sha256sum | cut -c1-16
 }
 
