@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Menù & Co.
+dati/
+dati-sviluppo/
+rilasci/
+test-results/
+playwright-report/
