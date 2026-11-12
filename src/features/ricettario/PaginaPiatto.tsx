@@ -125,7 +125,7 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
             <h2 className="mb-2 font-serif text-lg font-semibold text-primario">Procedimento</h2>
             <ol className="flex flex-col gap-3">
               {p.procedimento.map((passo, k) => (
-                <li key={k} className="flex gap-3 text-[15px] leading-relaxed">
+                <li key={k} className="flex gap-3 text-[0.9375rem] leading-relaxed">
                   <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primario-tenue text-sm font-semibold text-primario">{k + 1}</span>
                   <span className="whitespace-pre-line pt-0.5">{passo}</span>
                 </li>

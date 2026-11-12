@@ -7,6 +7,7 @@ import { ErroreRichiesta } from '@/api/client'
 import type { Evento } from '@/domain/tipi.ts'
 import { dataLunga } from '@/domain/tempo.ts'
 import { cn } from '@/lib/utils'
+import { IllustrazioneEvento } from '@/components/Illustrazioni'
 
 const SCHEDE = [
   { a: '', etichetta: 'Panoramica', fine: true },
@@ -34,7 +35,7 @@ export function LayoutEvento() {
   const e = q.data
   return (
     <div>
-      <div className="non-stampare sticky top-0 z-20 border-b border-bordo bg-sfondo/95 backdrop-blur">
+      <div className="non-stampare sticky top-0 z-20 border-b border-bordo/70 bg-sfondo/90 backdrop-blur">
         <div className="mx-auto max-w-3xl px-4 pt-3">
           <div className="flex items-center gap-2">
             <NavLink to={e.stato === 'archiviato' ? '/eventi/archivio' : '/'} className="text-sm text-testo-tenue hover:text-testo">
@@ -42,11 +43,16 @@ export function LayoutEvento() {
             </NavLink>
             {e.stato === 'archiviato' ? <Badge variante="info">Archiviato · sola lettura</Badge> : e.stato === 'concluso' ? <Badge>Concluso</Badge> : null}
           </div>
-          <h1 className="mt-1 truncate text-xl font-semibold leading-tight">{e.nome}</h1>
-          <p className="text-sm text-testo-tenue first-letter:uppercase">
-            {dataLunga(e.data)}
-            {e.oraServizio ? ` · ore ${e.oraServizio}` : ''}
-          </p>
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <h1 className="titolo mt-1 truncate text-[1.75rem] font-semibold leading-tight">{e.nome}</h1>
+              <p className="text-sm text-testo-tenue first-letter:uppercase">
+                {dataLunga(e.data)}
+                {e.oraServizio ? ` · ore ${e.oraServizio}` : ''}
+              </p>
+            </div>
+            <IllustrazioneEvento evento={e} className="h-16 w-auto shrink-0 sm:h-20" />
+          </div>
           <nav aria-label="Schede dell'evento" className="-mx-1 mt-2 flex gap-1 overflow-x-auto">
             {SCHEDE.map((s) => (
               <NavLink

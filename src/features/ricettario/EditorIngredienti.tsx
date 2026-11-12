@@ -187,7 +187,7 @@ function IncollaIngredienti({
     >
       <Textarea
         aria-label="Ingredienti da analizzare"
-        className="min-h-36 font-mono text-[15px]"
+        className="min-h-36 font-mono text-[0.9375rem]"
         placeholder={'500 g di farina 00\n3 uova\nsale q.b.\nburro 50 g (morbido)'}
         value={testo}
         onChange={(e) => setTesto(e.target.value)}

@@ -1,5 +1,5 @@
 // Ricettario: ricerca ed elenco dei piatti (SPEC §5).
-import { BookOpen, ChevronRight, Plus, Search } from 'lucide-react'
+import { ChevronRight, Plus, Search } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { usePiatti } from '@/api/query'
@@ -46,7 +46,7 @@ export function PaginaRicettario() {
         <Caricamento />
       ) : !piatti.data?.length ? (
         <Vuoto
-          icona={<BookOpen />}
+          illustrazione="ricettario"
           titolo="Il ricettario è vuoto"
           testo="Aggiungi un piatto da qui, oppure da una voce del menù con «Crea nel ricettario»."
         />

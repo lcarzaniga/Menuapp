@@ -1,5 +1,5 @@
 // Evento — Piano: attività per giorno e checklist (SPEC F6, §7.7).
-import { Check, ChefHat, ListTodo, Plus, Trash2 } from 'lucide-react'
+import { Check, ChefHat, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { api, nuovoId } from '@/api/client'
@@ -61,7 +61,7 @@ export function PaginaPiano() {
         ) : null}
       </div>
       {attivita.length === 0 ? (
-        <Vuoto icona={<ListTodo />} titolo="Nessuna attività" testo="Es. «Preparare il ragù» il giorno prima, «Apparecchiare» la mattina." />
+        <Vuoto illustrazione="taccuino" titolo="Nessuna attività" testo="Es. «Preparare il ragù» il giorno prima, «Apparecchiare» la mattina." />
       ) : (
         <div className="flex flex-col gap-5">
           {giorni.map((g) => (

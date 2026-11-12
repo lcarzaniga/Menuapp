@@ -2,7 +2,7 @@ import type { ComponentProps, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 const baseCampo =
-  'w-full rounded-xl border border-bordo bg-carta px-3 text-[16px] text-testo placeholder:text-testo-tenue/70 focus:outline-2 focus:outline-anello disabled:opacity-60 aria-invalid:border-pericolo'
+  'w-full rounded-xl border border-bordo bg-carta px-3 text-base text-testo placeholder:text-testo-tenue/70 focus:outline-2 focus:outline-anello disabled:opacity-60 aria-invalid:border-pericolo'
 
 export function Input({ className, ...props }: ComponentProps<'input'>) {
   return <input className={cn(baseCampo, 'h-11', className)} {...props} />
@@ -39,7 +39,7 @@ export function Campo({
     <div className={cn('flex flex-col gap-1.5', className)}>
       <Label htmlFor={htmlFor}>{etichetta}</Label>
       {children}
-      {errore ? <p className="text-sm text-pericolo">{errore}</p> : aiuto ? <p className="text-[13px] text-testo-tenue">{aiuto}</p> : null}
+      {errore ? <p className="text-sm text-pericolo">{errore}</p> : aiuto ? <p className="text-[0.8125rem] text-testo-tenue">{aiuto}</p> : null}
     </div>
   )
 }

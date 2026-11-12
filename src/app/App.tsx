@@ -28,7 +28,7 @@ export function App() {
       <RouterProvider router={router} />
       <ConflittoVersione />
       <Aggiornamento />
-      <Toaster position="top-center" richColors closeButton offset={12} toastOptions={{ className: 'text-[15px]' }} />
+      <Toaster position="top-center" richColors closeButton offset={12} toastOptions={{ className: 'text-[0.9375rem]' }} />
     </QueryClientProvider>
   )
 }

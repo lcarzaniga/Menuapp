@@ -1,5 +1,5 @@
 // Evento — Spesa: sezioni, stati, correzioni, manuali, condivisione (SPEC F5, §10.5).
-import { AlertTriangle, ArrowRightLeft, Check, CircleDot, Eye, EyeOff, Info, ListPlus, Package, Pencil, Plus, Share2, Sparkles, Trash2, Undo2 } from 'lucide-react'
+import { AlertTriangle, ArrowRightLeft, Check, CircleDot, Eye, EyeOff, Info, ListPlus, Pencil, Plus, Share2, Sparkles, Trash2, Undo2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { api, nuovoId } from '@/api/client'
@@ -131,7 +131,7 @@ export function PaginaSpesa() {
       ) : null}
 
       {vuota ? (
-        <Vuoto icona={<Package />} titolo="La lista è vuota" testo="Collega i piatti del menù a ricette con ingredienti, oppure aggiungi articoli a mano." />
+        <Vuoto illustrazione="cesto" titolo="La lista è vuota" testo="Collega i piatti del menù a ricette con ingredienti, oppure aggiungi articoli a mano." />
       ) : (
         <div className="flex flex-col gap-5">
           {sezioni.map((sez) => {

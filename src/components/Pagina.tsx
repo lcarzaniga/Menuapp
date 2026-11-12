@@ -2,6 +2,7 @@ import { ArrowLeft } from 'lucide-react'
 import { type ReactNode, useEffect } from 'react'
 import { Link } from 'react-router'
 import { cn } from '@/lib/utils'
+import { ILLUSTRAZIONI, type NomeIllustrazione } from './Illustrazioni'
 
 /** Intestazione e contenuto di una schermata. */
 export function Pagina({
@@ -33,7 +34,7 @@ export function Pagina({
           </Link>
         ) : null}
         <div className="min-w-0 flex-1">
-          <h1 className="text-[22px] font-semibold leading-tight tracking-tight">{titolo}</h1>
+          <h1 className="titolo text-[1.75rem] font-semibold leading-tight">{titolo}</h1>
           {sottotitolo ? <div className="mt-0.5 text-sm text-testo-tenue">{sottotitolo}</div> : null}
         </div>
         {azioni ? <div className="flex shrink-0 items-center gap-1">{azioni}</div> : null}
@@ -43,11 +44,24 @@ export function Pagina({
   )
 }
 
-export function Vuoto({ icona, titolo, testo, azione }: { icona?: ReactNode; titolo: string; testo?: ReactNode; azione?: ReactNode }) {
+export function Vuoto({
+  icona,
+  illustrazione,
+  titolo,
+  testo,
+  azione,
+}: {
+  icona?: ReactNode
+  illustrazione?: NomeIllustrazione
+  titolo: string
+  testo?: ReactNode
+  azione?: ReactNode
+}) {
+  const Disegno = illustrazione ? ILLUSTRAZIONI[illustrazione] : null
   return (
-    <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-bordo px-6 py-10 text-center">
-      {icona ? <div className="text-testo-tenue [&_svg]:size-8">{icona}</div> : null}
-      <p className="font-medium">{titolo}</p>
+    <div className="flex flex-col items-center gap-2 rounded-3xl border border-bordo/70 bg-carta/70 px-6 py-10 text-center shadow-carta">
+      {Disegno ? <Disegno className="mb-1 h-32 w-auto" /> : icona ? <div className="text-testo-tenue [&_svg]:size-8">{icona}</div> : null}
+      <p className="titolo text-xl font-semibold">{titolo}</p>
       {testo ? <p className="max-w-sm text-sm text-testo-tenue">{testo}</p> : null}
       {azione ? <div className="mt-2">{azione}</div> : null}
     </div>

@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { controllaRevisione } from '@/connessione/sorveglianza'
 import { BannerConnessione } from '@/connessione/BannerConnessione'
 import { cn } from '@/lib/utils'
+import { Tavola } from '@/components/Illustrazioni'
 
 const SEZIONI = [
   { a: '/', etichetta: 'Eventi', icona: CalendarDays, attiva: (p: string) => p === '/' || p.startsWith('/eventi') },
@@ -22,8 +23,12 @@ export function Layout() {
   return (
     <div className="min-h-dvh md:pl-56">
       <BannerConnessione onRiprova={() => void controllaRevisione(client)} />
-      <nav aria-label="Sezioni" className="non-stampare fixed inset-y-0 left-0 z-30 hidden w-56 flex-col gap-1 border-r border-bordo bg-carta p-3 md:flex">
-        <div className="mb-4 px-3 pt-2 font-serif text-xl font-semibold text-primario">Menù &amp; Co.</div>
+      <nav aria-label="Sezioni" className="non-stampare fixed inset-y-0 left-0 z-30 hidden w-56 flex-col gap-1 border-r border-bordo/70 bg-carta/90 p-3 backdrop-blur md:flex">
+        <div className="mb-6 flex flex-col items-center gap-1 px-3 pt-3 text-center">
+          <Tavola className="h-16 w-auto" />
+          <span className="titolo text-2xl font-semibold text-primario">Menù &amp; Co.</span>
+          <span className="filetto mt-1 w-24" />
+        </div>
         {SEZIONI.map((s) => (
           <NavLink
             key={s.a}
@@ -45,7 +50,7 @@ export function Layout() {
           <NavLink
             key={s.a}
             to={s.a}
-            className={cn('flex h-16 flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-testo-tenue', s.attiva(pathname) && 'text-primario')}
+            className={cn('flex h-16 flex-col items-center justify-center gap-0.5 text-[0.6875rem] font-medium text-testo-tenue', s.attiva(pathname) && 'text-primario')}
           >
             <s.icona className="size-6" />
             {s.etichetta}

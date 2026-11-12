@@ -26,7 +26,7 @@ export function Contatore({
         id={id}
         inputMode="numeric"
         aria-label={etichetta}
-        className="h-11 w-16 rounded-xl border border-bordo bg-carta text-center text-[17px] font-semibold tabular-nums"
+        className="h-11 w-16 rounded-xl border border-bordo bg-carta text-center text-[1.0625rem] font-semibold tabular-nums"
         value={valore}
         onChange={(e) => {
           const n = Number(e.target.value.replace(/\D/g, ''))

@@ -63,7 +63,7 @@ export function PaginaStampa() {
         <div className={cn('flex flex-col', formato === 'A4' ? 'gap-8' : 'gap-6')}>
           {visibili.map((p) => (
             <section key={p.id} className="break-inside-avoid">
-              <h2 className="text-[13px] uppercase tracking-[0.28em] text-[#b5482c]">{p.nome}</h2>
+              <h2 className="text-[0.8125rem] uppercase tracking-[0.28em] text-[#b5482c]">{p.nome}</h2>
               <ul className="mt-3 flex flex-col gap-1.5">
                 {p.voci.map((v) => (
                   <li key={v.id} className={cn(formato === 'A4' ? 'text-xl' : 'text-lg')}>

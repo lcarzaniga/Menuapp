@@ -14,6 +14,24 @@ import { usePuoScrivere } from '@/connessione/stato'
 import type { Impostazioni, Reparto } from '@/domain/tipi.ts'
 
 type Tema = 'sistema' | 'chiaro' | 'scuro'
+type Testo = 'auto' | 'normale' | 'grande' | 'molto-grande' | 'enorme'
+
+function leggiTesto(): Testo {
+  try {
+    return (localStorage.getItem('menuapp.testo') as Testo | null) ?? 'auto'
+  } catch {
+    return 'auto'
+  }
+}
+
+function applicaTesto(t: Testo) {
+  try {
+    localStorage.setItem('menuapp.testo', t)
+  } catch {
+    // preferenza non salvabile: vale solo per questa sessione
+  }
+  document.documentElement.setAttribute('data-testo', t)
+}
 
 function leggiTema(): Tema {
   try {
@@ -37,6 +55,7 @@ const COEFFICIENTI = Array.from({ length: 21 }, (_, i) => Math.round(i * 5) / 10
 
 export function PaginaImpostazioni() {
   const [tema, setTema] = useState<Tema>(leggiTema)
+  const [testo, setTesto] = useState<Testo>(leggiTesto)
   return (
     <Pagina titolo="Impostazioni">
       <div className="flex flex-col gap-4">
@@ -68,6 +87,23 @@ export function PaginaImpostazioni() {
                 <option value="sistema">Come il sistema</option>
                 <option value="chiaro">Chiaro</option>
                 <option value="scuro">Scuro</option>
+              </Select>
+            </Campo>
+            <Campo etichetta="Dimensione del testo (solo su questo dispositivo)" htmlFor="testo" aiuto="«Automatica» ingrandisce tutto sugli schermi grandi, come l'Echo Show 15." className="mt-4">
+              <Select
+                id="testo"
+                value={testo}
+                onChange={(e) => {
+                  const t = e.target.value as Testo
+                  setTesto(t)
+                  applicaTesto(t)
+                }}
+              >
+                <option value="auto">Automatica</option>
+                <option value="normale">Normale</option>
+                <option value="grande">Grande</option>
+                <option value="molto-grande">Molto grande</option>
+                <option value="enorme">Enorme</option>
               </Select>
             </Campo>
           </CardContent>

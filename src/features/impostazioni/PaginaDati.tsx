@@ -181,7 +181,7 @@ export function PaginaDati() {
                         <div className="font-medium">
                           {dataOra(b.creatoIl)} {b.verificato ? <CheckCircle2 className="inline size-4 text-successo" aria-label="verificato" /> : null}
                         </div>
-                        <div className="text-[13px] text-testo-tenue">
+                        <div className="text-[0.8125rem] text-testo-tenue">
                           {NOMI_TIPO[b.tipo]} · {dimensione(b.byte)} · {b.conteggi.eventi ?? 0} eventi
                         </div>
                       </div>

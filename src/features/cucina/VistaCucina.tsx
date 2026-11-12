@@ -78,7 +78,7 @@ export function VistaCucina({ piatto, porzioniIniziali, indietro, sottotitolo }:
 
   return (
     <Pagina titolo={piatto.nome} sottotitolo={sottotitolo} indietro={indietro}>
-      <div className="flex flex-col gap-5 text-[17px]">
+      <div className="flex flex-col gap-5 text-[1.0625rem]">
         <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-carta p-3">
           <span className="text-sm text-testo-tenue">Porzioni</span>
           {piatto.porzioniBase ? (
@@ -154,7 +154,7 @@ export function VistaCucina({ piatto, porzioniIniziali, indietro, sottotitolo }:
             </ol>
           </section>
         ) : null}
-        {piatto.note ? <p className="whitespace-pre-line rounded-xl bg-tenue p-3 text-[15px]">{piatto.note}</p> : null}
+        {piatto.note ? <p className="whitespace-pre-line rounded-xl bg-tenue p-3 text-[0.9375rem]">{piatto.note}</p> : null}
       </div>
     </Pagina>
   )

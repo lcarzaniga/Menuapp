@@ -40,7 +40,7 @@ export function PaginaMenu() {
   const puoScrivere = usePuoScrivere()
 
   if (q.isPending) return <Caricamento />
-  if (!q.data) return <CorpoScheda><Vuoto titolo="Impossibile caricare il menù" /></CorpoScheda>
+  if (!q.data) return <CorpoScheda><Vuoto illustrazione="tavola" titolo="Impossibile caricare il menù" /></CorpoScheda>
   const menu = q.data
   const totale = menu.portate.reduce((n, p) => n + p.voci.length, 0)
 
@@ -84,9 +84,10 @@ function SezionePortata({
 }) {
   return (
     <section aria-labelledby={`portata-${portata.id}`}>
-      <h2 id={`portata-${portata.id}`} className="mb-2 flex items-baseline gap-2 font-serif text-lg font-semibold text-primario">
-        {portata.nome}
-        {portata.voci.length ? <span className="font-sans text-xs font-normal text-testo-tenue">{portata.voci.length}</span> : null}
+      <h2 id={`portata-${portata.id}`} className="mb-2.5 flex items-center gap-3">
+        <span className="titolo text-xl font-semibold text-primario">{portata.nome}</span>
+        {portata.voci.length ? <span className="text-xs text-testo-tenue">{portata.voci.length}</span> : null}
+        <span className="filetto flex-1 opacity-70" />
       </h2>
       <ul className="flex flex-col gap-1.5">
         {portata.voci.map((v, j) => (
@@ -212,7 +213,7 @@ function RigaVoce({
   const personalizzate = voce.porzioni !== null
   const altre = menu.portate.filter((p) => p.id !== portata.id)
   return (
-    <li className="flex items-center gap-1 rounded-xl border border-bordo bg-carta pl-3">
+    <li className="flex items-center gap-1 rounded-xl border border-bordo/70 bg-carta pl-3 shadow-carta">
       <button
         type="button"
         className="flex min-h-12 min-w-0 flex-1 flex-col items-start justify-center py-2 text-left"

@@ -59,3 +59,16 @@ LAN 9870 chiusa. Da fare: collaudo manuale sui dispositivi (`docs/collaudo/colla
 Collaudo manuale di Loris sui dispositivi e disattivazione di GitHub Pages; poi rifiniture
 concordate. Nota: l'installazione di servizi systemd da Claude è bloccata dal controllo dei
 permessi: Loris la esegue con `! comando`.
+
+## In corso (branch `grafica`, non ancora su `main` né in produzione)
+
+- Grafica più elegante: font inclusi (Fraunces per i titoli, Inter per il testo), nuova
+  palette calda con salvia e filetti oro, ombre morbide, illustrazioni SVG proprie
+  (`src/components/Illustrazioni.tsx`) scelte per occasione, riquadro del prossimo evento.
+- Misure in rem con dimensione del testo automatica sugli schermi grandi (Echo Show 15,
+  1920×1080: 143,75 %) e preferenza per dispositivo in Impostazioni.
+- Controllo visivo: `npx playwright test test/e2e/vetrina.spec.ts` → `test-results/vetrina/`.
+- Da fare: notifiche (sonner) in px, troppo piccole sull'Echo Show; e2e completi; rilascio
+  (richiede autorizzazione per merge su main).
+- Aperto: l'Echo Show 15 deve raggiungere l'app (Tailscale su Echo Show non verificato) e
+  proposta di standard di importazione ricette con foto (da definire con Loris).

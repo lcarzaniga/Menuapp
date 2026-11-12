@@ -17,7 +17,7 @@ export const varianteBottone = cva(
       },
       misura: {
         normale: 'h-11 px-4',
-        piccolo: 'h-9 px-3 text-[13px]',
+        piccolo: 'h-9 px-3 text-[0.8125rem]',
         grande: 'h-12 px-5 text-base',
         icona: 'size-11',
         iconaPiccola: 'size-9',

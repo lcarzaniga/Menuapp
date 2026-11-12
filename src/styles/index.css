@@ -1,40 +1,50 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import '@fontsource-variable/fraunces/opsz.css';
+@import '@fontsource-variable/fraunces/opsz-italic.css';
+@import '@fontsource-variable/inter';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --sfondo: #fbf7f2;
-  --testo: #2a211c;
-  --carta: #ffffff;
-  --tenue: #f2ebe3;
-  --testo-tenue: #6f625a;
-  --bordo: #e4d9ce;
-  --primario: #b5482c;
+  --sfondo: #f6f0e7;
+  --testo: #2b211b;
+  --carta: #fffdf9;
+  --tenue: #efe6da;
+  --testo-tenue: #6e6057;
+  --bordo: #e2d6c6;
+  --primario: #a5412a;
   --primario-testo: #ffffff;
-  --primario-tenue: #f6e1d9;
-  --successo: #2f7d4f;
-  --successo-tenue: #dff1e5;
-  --avviso: #9a6400;
-  --avviso-tenue: #fbedcf;
+  --primario-tenue: #f5dfd5;
+  --salvia: #5f7556;
+  --salvia-tenue: #e3eadc;
+  --oro: #b08a47;
+  --successo: #3b7a4f;
+  --successo-tenue: #dff0e3;
+  --avviso: #95600a;
+  --avviso-tenue: #fbecd0;
   --pericolo: #b42318;
   --pericolo-tenue: #fde4e1;
-  --info: #2958a8;
-  --info-tenue: #e3ecfb;
-  --anello: #b5482c66;
+  --info: #2f5a9e;
+  --info-tenue: #e2ebf9;
+  --anello: #a5412a66;
+  --ombra: 0 1px 2px rgb(70 45 25 / 0.05), 0 10px 28px -16px rgb(70 45 25 / 0.28);
   color-scheme: light;
 }
 
 .dark {
-  --sfondo: #181412;
-  --testo: #f1e9e1;
-  --carta: #221c19;
-  --tenue: #2c2521;
-  --testo-tenue: #b3a69c;
-  --bordo: #3d332d;
-  --primario: #e07a5c;
+  --sfondo: #16120f;
+  --testo: #f1e8de;
+  --carta: #211a16;
+  --tenue: #2b231e;
+  --testo-tenue: #b2a397;
+  --bordo: #3b3029;
+  --primario: #e08467;
   --primario-testo: #1b1210;
-  --primario-tenue: #47271d;
+  --primario-tenue: #45261c;
+  --salvia: #9fb592;
+  --salvia-tenue: #26301f;
+  --oro: #d2ad69;
   --successo: #6cc391;
   --successo-tenue: #1d3a29;
   --avviso: #f0b54a;
@@ -43,7 +53,8 @@
   --pericolo-tenue: #4a201c;
   --info: #86aef0;
   --info-tenue: #1d2c47;
-  --anello: #e07a5c80;
+  --anello: #e0846780;
+  --ombra: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 28px -16px rgb(0 0 0 / 0.6);
   color-scheme: dark;
 }
 
@@ -66,18 +77,58 @@
   --color-info: var(--info);
   --color-info-tenue: var(--info-tenue);
   --color-anello: var(--anello);
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --color-salvia: var(--salvia);
+  --color-salvia-tenue: var(--salvia-tenue);
+  --color-oro: var(--oro);
+  --shadow-carta: var(--ombra);
+  --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Fraunces Variable', 'Iowan Old Style', Palatino, Georgia, serif;
 }
 
 @layer base {
+  /* Tutte le misure sono in rem: la dimensione del testo scala l'intera interfaccia. */
   html {
     -webkit-tap-highlight-color: transparent;
     text-size-adjust: 100%;
+    font-size: 100%;
+  }
+  html[data-testo='normale'] {
+    font-size: 100%;
+  }
+  html[data-testo='grande'] {
+    font-size: 112.5%;
+  }
+  html[data-testo='molto-grande'] {
+    font-size: 131.25%;
+  }
+  html[data-testo='enorme'] {
+    font-size: 150%;
+  }
+  /* «Automatica»: schermi grandi guardati da lontano (es. Echo Show 15, 1920×1080). */
+  @media (min-width: 1400px) and (min-height: 700px) {
+    html:not([data-testo]),
+    html[data-testo='auto'] {
+      font-size: 125%;
+    }
+  }
+  @media (min-width: 1800px) and (min-height: 900px) {
+    html:not([data-testo]),
+    html[data-testo='auto'] {
+      font-size: 143.75%;
+    }
   }
   body {
     @apply bg-sfondo text-testo font-sans antialiased;
     min-height: 100dvh;
+    font-feature-settings: 'cv11', 'ss01';
+    background-image: radial-gradient(120% 60% at 100% 0%, rgb(176 138 71 / 0.10), transparent 60%),
+      radial-gradient(90% 50% at 0% 100%, rgb(95 117 86 / 0.08), transparent 60%);
+    background-attachment: fixed;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
   }
   * {
     @apply border-bordo;
@@ -88,7 +139,7 @@
   input,
   textarea,
   select {
-    font-size: 16px; /* niente zoom automatico su Android/iOS */
+    font-size: max(1rem, 16px); /* niente zoom automatico su Android/iOS */
   }
 }
 
@@ -101,4 +152,15 @@
   [data-sonner-toaster] {
     display: none !important;
   }
+}
+
+@utility titolo {
+  font-family: var(--font-serif);
+  font-variation-settings: 'opsz' 72, 'SOFT' 50;
+  letter-spacing: -0.01em;
+}
+
+@utility filetto {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--oro), transparent);
 }
