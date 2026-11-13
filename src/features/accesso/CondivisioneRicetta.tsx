@@ -1,4 +1,4 @@
-// Ricette: condivisione in sola lettura e copia indipendente nel proprio ricettario (SPEC §15.4).
+// Ricette: condivisione in sola lettura e copia indipendente nel proprio ricettario (SPEC §19.4).
 import { Copy, Share2 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'

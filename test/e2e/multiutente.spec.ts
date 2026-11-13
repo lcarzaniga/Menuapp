@@ -1,4 +1,4 @@
-// Multiutente con due browser indipendenti (SPEC §15): invito, approvazione del dispositivo,
+// Multiutente con due browser indipendenti (SPEC §19): invito, approvazione del dispositivo,
 // evento condiviso in modifica e in lettura, revoca, ricetta condivisa e copiata, revoca del
 // dispositivo.
 import { mkdirSync } from 'node:fs'

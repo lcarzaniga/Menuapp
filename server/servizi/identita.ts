@@ -1,4 +1,4 @@
-// Utenti, inviti, attivazione dei dispositivi e sessioni (SPEC §15.1–15.2).
+// Utenti, inviti, attivazione dei dispositivi e sessioni (SPEC §19.1–15.2).
 // Token casuali da 256 bit; sul server resta solo l'impronta SHA-256.
 import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto'
 import type {

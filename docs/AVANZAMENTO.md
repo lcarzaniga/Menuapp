@@ -105,3 +105,33 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Rilasciato il 13/11 (`20261113-1015-0c5a473`, schema v4 invariato, backup
   `manuale-20261113-101602-v4.db`): salute ok sui quattro indirizzi, dati invariati
   (3 eventi, 38 piatti, 38 foto), dailymeals e kidscalendar attivi.
+
+## Multiutente con inviti e Tailscale Funnel (13/11/2026, ramo `multiutente`, da rilasciare)
+
+- SPEC 3.0 / §19. Utenti, inviti monouso (24 h), richiesta di attivazione legata al browser con
+  codice di verifica, approvazione dall'amministratore (o dall'utente da un altro suo
+  dispositivo), sessioni lato server revocabili (`__Host-`, HttpOnly, Secure, SameSite),
+  console `scripts/amministra.sh` per primo accesso e recupero.
+- Eventi privati con condivisione in lettura/modifica, revoca, uscita, trasferimento; ricette
+  private condivisibili in lettura, usate per copia (con foto); voce collegabile solo a piatti
+  del proprietario dell'evento (servizio + trigger).
+- Controllo dei permessi su tutte le rotte (`server/servizi/permessi.ts`), prima della
+  validazione; 404 indistinguibili per chi non ha accesso; funzioni di sistema solo
+  amministratore e solo dall'ingresso privato; ingresso pubblico su loopback 9873 per Funnel;
+  9880 senza dati (rimanda all'HTTPS).
+- Interfaccia: attivazione, attesa con codice, Il mio account (dispositivi, nuovo dispositivo,
+  esporta i miei dati, esci), Utenti e dispositivi (amministratore), eventi «Condivisi con me»,
+  scheda Condivisione, sola lettura per permesso, ricette «di …», «Copia nel mio ricettario».
+- Migrazione `0005_utenti.sql` provata su una copia del database di produzione: conteggi
+  invariati (3 eventi, 38 piatti, 282 ingredienti dei piatti, 38 foto, 4 voci), relazioni
+  voci/foto identiche, `foreign_key_check` vuoto, `integrity_check` ok, spesa ricalcolata
+  identica, 38 ricette leggibili, tutti i file delle foto presenti.
+- Collaudo isolato (copia dei dati reali, porte di prova su loopback): ingressi, flusso
+  d'invito da console, 401/404/403 attesi, origine estranea rifiutata.
+- Test: `npm run check` 261 verdi (nuovi `accesso.test.ts`, `autorizzazione.test.ts`),
+  `npm run test:e2e` 34 verdi (primo accesso reale nel progetto `accesso`, `multiutente.spec.ts`
+  con due browser; schermate in `test-results/multiutente/`).
+- Nota sviluppo: il server di sviluppo (9871) ha già migrato `dati-sviluppo/`: per entrare da
+  8443 serve `npm run admin -- invito` e `npm run admin -- approva <codice>`.
+- Da autorizzare: merge e push, rilascio con migrazione 0005, attivazione dell'ingresso
+  pubblico (`scripts/attiva-ingresso-pubblico.sh`) e di Funnel sulla 443.

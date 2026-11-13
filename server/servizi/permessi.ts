@@ -1,4 +1,4 @@
-// Autorizzazione: chi può fare cosa su eventi, piatti e risorse figlie (SPEC §15.3).
+// Autorizzazione: chi può fare cosa su eventi, piatti e risorse figlie (SPEC §19.3).
 // Una risorsa che l'utente non può vedere risponde come inesistente (404); una visibile
 // ma non modificabile risponde 403 con il motivo.
 import type { Ingresso, PermessoEvento, Ruolo } from '../../src/contratto/accesso.ts'

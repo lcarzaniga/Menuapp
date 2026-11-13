@@ -45,7 +45,7 @@ export function hostLocale(host: string | undefined): boolean {
 }
 
 /**
- * Ingressi (SPEC §15.5): `privato` = Tailscale Serve (tutte le funzioni), `pubblico` =
+ * Ingressi (SPEC §19.5): `privato` = Tailscale Serve (tutte le funzioni), `pubblico` =
  * Tailscale Funnel (niente funzioni di sistema), `lan` = HTTP dalla rete di casa: senza
  * HTTPS i cookie di sessione non sono sicuri, quindi rimanda all'indirizzo HTTPS.
  */

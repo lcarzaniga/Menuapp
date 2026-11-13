@@ -40,10 +40,10 @@ ok "Rilascio preparato: rilasci/$id (schema v$schema)"
 if [[ -f "$DATI/menuapp.db" ]]; then
   prova=$(mktemp -d)
   "$NODE" -e "const {DatabaseSync,backup}=require('node:sqlite');const d=new DatabaseSync(process.argv[1],{readOnly:true});backup(d,process.argv[2]).then(()=>d.close())" "$DATI/menuapp.db" "$prova/menuapp.db"
-  MENUAPP_PORTA=9872 MENUAPP_DATI="$prova" MENUAPP_STATICI="$RILASCI/$id/dist" "$NODE" "$RILASCI/$id/server/main.ts" >"$prova/log" 2>&1 &
+  MENUAPP_PORTA=$PORTA_PROVA MENUAPP_DATI="$prova" MENUAPP_STATICI="$RILASCI/$id/dist" "$NODE" "$RILASCI/$id/server/main.ts" >"$prova/log" 2>&1 &
   pid=$!
-  for _ in $(seq 1 20); do curl -fsS http://127.0.0.1:9872/api/v1/salute >/dev/null 2>&1 && break; sleep 0.5; done
-  if ! curl -fsS http://127.0.0.1:9872/api/v1/salute >/dev/null; then
+  for _ in $(seq 1 20); do curl -fsS http://127.0.0.1:$PORTA_PROVA/api/v1/salute >/dev/null 2>&1 && break; sleep 0.5; done
+  if ! curl -fsS http://127.0.0.1:$PORTA_PROVA/api/v1/salute >/dev/null; then
     kill $pid 2>/dev/null || true
     cat "$prova/log"
     rm -rf "$prova"
@@ -75,8 +75,15 @@ controlla() {
   grep -q "\"rilascio\":\"$id\"" <<<"$s" || return 1
   curl -fsSI "http://127.0.0.1:$PORTA/sw.js" | grep -qi '^cache-control: no-cache' || return 1
   ! ss -tlnH | awk '{print $4}' | grep -qE "^(0\.0\.0\.0|\*|\[::\]):$PORTA\$" || return 1
+  # Rete di casa in HTTP: risponde ma non dà dati (le API 403, le pagine rimandano all'HTTPS).
   if systemctl --user cat menuapp 2>/dev/null | grep -q MENUAPP_PORTA_LAN; then
-    curl -fsS "http://$IP_LAN:$PORTA_LAN/api/v1/salute" | grep -q "\"rilascio\":\"$id\"" || return 1
+    [[ "$(curl -s -o /dev/null -w '%{http_code}' "http://$IP_LAN:$PORTA_LAN/api/v1/salute")" == 403 ]] || return 1
+  fi
+  # Ingresso pubblico (Funnel), se configurato: niente funzioni di sistema.
+  if grep -q MENUAPP_PORTA_PUBBLICA "$DATI/server.json" 2>/dev/null; then
+    curl -fsS "http://127.0.0.1:$PORTA_PUBBLICA/api/v1/salute" | grep -q '"ok":true' || return 1
+    [[ "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORTA_PUBBLICA/api/v1/backup")" == 404 ]] || return 1
+    ! ss -tlnH | awk '{print $4}' | grep -qE "^(0\.0\.0\.0|\*|\[::\]):$PORTA_PUBBLICA\$" || return 1
   fi
   if tailscale serve status 2>/dev/null | grep -q ":$PORTA"; then
     curl -fsS "$URL_PUBBLICO/api/v1/salute" | grep -q "\"rilascio\":\"$id\"" || return 1

@@ -1,4 +1,4 @@
-// Contratto API: utenti, dispositivi autorizzati su invito, sessioni e condivisioni (SPEC §15).
+// Contratto API: utenti, dispositivi autorizzati su invito, sessioni e condivisioni (SPEC §19).
 import { z } from 'zod'
 import { Epoch, Id, NomeObbligatorio, Versione } from './comune.ts'
 

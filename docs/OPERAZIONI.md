@@ -14,12 +14,15 @@ systemctl --user list-timers menuapp-backup.timer
 systemctl --user start menuapp-backup      # backup subito
 ```
 
-Accesso HTTPS dal tailnet: `tailscale serve --bg --https=9870 http://127.0.0.1:9870`
-(`tailscale serve status` per verificarlo; mai `funnel`).
+Accesso HTTPS dal tailnet (ingresso privato, anche funzioni di sistema):
+`tailscale serve --bg --https=9870 http://127.0.0.1:9870` (`tailscale serve status`).
 
-Accesso dalla rete di casa senza Tailscale: `http://192.168.1.160:9880/` (Echo Show, ospiti).
-Funziona tutto tranne installazione PWA e schermo sempre acceso. Conviene una prenotazione
-DHCP nel router per l'indirizzo del server. Chiunque sia sul Wi-Fi può usare l'app.
+Accesso da Internet (ingresso pubblico, dalla versione multiutente, SPEC §19.5): Tailscale
+Funnel sulla 443 verso `127.0.0.1:9873`; vedi «Accesso esterno» più sotto.
+
+Rete di casa in HTTP (`http://192.168.1.160:9880/`): dalla versione multiutente non dà dati
+(senza HTTPS non esiste il cookie di sessione) e rimanda all'indirizzo HTTPS. L'Echo Show
+usa l'indirizzo pubblico con un suo invito.
 
 Prima installazione: `scripts/rilascia.sh --senza-riavvio` (crea il primo rilascio), poi
 `scripts/installa-servizio.sh` (crea solo unità `menuapp*`, verifica che gli altri servizi
@@ -57,8 +60,59 @@ restino invariati, chiede conferma prima di `tailscale serve`).
 - Aggiornamento di Node con nvm: aggiorna il percorso in `scripts/comuni.sh` e riesegui
   `scripts/installa-servizio.sh`.
 
-## Accesso (Tailscale)
+## Utenti e dispositivi (SPEC §19)
 
-Chi raggiunge la porta 9870 del tailnet può leggere e modificare tutto. Per limitarla:
-regola in SPEC §14.5, da applicare nella console di Tailscale riportando anche le regole
-degli altri servizi del server.
+Console sul server (solo dal terminale; usa i dati e il Node del servizio):
+
+```sh
+scripts/amministra.sh stato                 # utenti e richieste in attesa
+scripts/amministra.sh invito                # link per un dispositivo dell'amministratore
+scripts/amministra.sh invito Anna           # link per un dispositivo di Anna
+scripts/amministra.sh approva K7P-M2Q       # approva la richiesta con quel codice
+scripts/amministra.sh rifiuta K7P-M2Q
+scripts/amministra.sh sessioni              # dispositivi autorizzati
+scripts/amministra.sh revoca <id | nome>    # scollega un dispositivo o tutti quelli di un utente
+```
+
+- **Primo accesso dopo il rilascio multiutente**: nessun dispositivo è autorizzato. Sul server
+  `scripts/amministra.sh invito`, apri il link sul telefono (via Tailscale), «Richiedi
+  l'accesso», poi `scripts/amministra.sh approva <codice>`. Gli altri dispositivi si collegano
+  da *Il mio account → Collega un nuovo dispositivo*.
+- **Recupero dell'amministratore** (telefono perso, sessioni revocate): stessa procedura dalla
+  console; poi scollega il dispositivo perso da *Utenti e dispositivi*.
+- **Familiari**: *Impostazioni → Il mio account → Utenti e dispositivi* (solo dall'indirizzo
+  Tailscale) → «Utente» → nome → link da mandare con WhatsApp → quando apre il link compare
+  la richiesta: approva solo se il codice coincide con quello che vede.
+- **Sospendere** un utente scollega subito tutti i suoi dispositivi; i suoi dati restano.
+
+## Accesso esterno (Tailscale Funnel)
+
+Attivazione (dopo autorizzazione, con il rilascio multiutente già attivo):
+
+1. `scripts/attiva-ingresso-pubblico.sh`: scrive `dati/server.json` (porta 9873 su loopback,
+   indirizzo pubblico `https://loris-srv01.dala-tortoise.ts.net` per i link d'invito),
+   riavvia il servizio e verifica che l'ingresso pubblico risponda senza funzioni di sistema.
+2. `tailscale funnel --bg --https=443 http://127.0.0.1:9873` (richiede l'attributo `funnel`
+   per il nodo nella policy del tailnet; la console di Tailscale lo propone al primo uso).
+3. Verifica da un telefono fuori dal tailnet: la pagina «Dispositivo non autorizzato».
+
+Coesiste con i serve già attivi (9870 e 8443, solo tailnet): Funnel usa solo la 443.
+Spegnimento: `tailscale funnel --https=443 off` (l'app resta raggiungibile via Tailscale).
+Mai `tailscale funnel reset` / `tailscale serve reset`: cancellano anche gli altri serve.
+
+## Ritorno indietro dalla versione multiutente
+
+La migrazione `0005_utenti.sql` aggiunge tabelle e colonne; il codice precedente non sa
+scrivere eventi e piatti con il proprietario e `ripristina-rilascio.sh` rifiuta il cambio di
+schema. Si torna indietro codice **e** database, in quest'ordine (altrimenti il codice nuovo
+rimigrerebbe il backup):
+
+1. `tailscale funnel --https=443 off` (se attivo);
+2. `systemctl --user stop menuapp`;
+3. `ln -sfn <rilascio precedente> rilasci/attuale` (es. `20261113-1015-0c5a473`, schema v4);
+4. `scripts/ripristino-emergenza.sh pre-migrazione-<data>-v4.db` (backup automatico fatto
+   all'avvio del nuovo rilascio prima della migrazione: mette da parte il database attuale in
+   `dati/backup/emergenza-…`, sostituisce, riavvia con il codice precedente).
+
+Le modifiche fatte dopo il rilascio restano nel database messo da parte. `dati/server.json`
+viene ignorato dal codice precedente.

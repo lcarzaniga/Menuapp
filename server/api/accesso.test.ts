@@ -1,4 +1,4 @@
-// Sicurezza dell'accesso (SPEC §15): inviti, attivazione dei dispositivi, sessioni, ingressi.
+// Sicurezza dell'accesso (SPEC §19): inviti, attivazione dei dispositivi, sessioni, ingressi.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { esegui, uno } from '../db/connessione.ts'
 import * as identita from '../servizi/identita.ts'

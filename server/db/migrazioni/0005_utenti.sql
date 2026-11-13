@@ -1,4 +1,4 @@
--- Multiutente (SPEC §15): utenti, dispositivi autorizzati su invito, condivisioni.
+-- Multiutente (SPEC §19): utenti, dispositivi autorizzati su invito, condivisioni.
 -- I token (inviti, richieste, sessioni) sono conservati solo come impronta SHA-256.
 -- Tutti i dati esistenti passano all'amministratore iniziale.
 

@@ -1,5 +1,5 @@
 // Autenticazione: cookie di sessione, attivazione dei dispositivi su invito, account e
-// amministrazione degli utenti (SPEC §15).
+// amministrazione degli utenti (SPEC §19).
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { PREFISSO_API } from '../../src/contratto/comune.ts'
 import {

@@ -170,7 +170,7 @@ export function leggiMenu(db: Db, eventoId: string): Menu {
 
 /**
  * Piatto da collegare a una voce: `risolvi` verifica che l'utente possa usarlo e restituisce
- * il piatto del proprietario dell'evento (eventualmente una copia, SPEC §15.4).
+ * il piatto del proprietario dell'evento (eventualmente una copia, SPEC §19.4).
  */
 export type RisolviPiatto = (piattoId: string) => string
 

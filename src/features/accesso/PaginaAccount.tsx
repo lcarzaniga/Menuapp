@@ -1,4 +1,4 @@
-// Il mio account: dispositivi autorizzati, nuovo dispositivo, esportazione, uscita (SPEC §15).
+// Il mio account: dispositivi autorizzati, nuovo dispositivo, esportazione, uscita (SPEC §19).
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronRight, Download, LogOut, Plus, Users } from 'lucide-react'
 import { useState } from 'react'

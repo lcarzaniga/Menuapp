@@ -1,4 +1,4 @@
-// Sessione corrente, persone e accesso agli eventi (SPEC §15).
+// Sessione corrente, persone e accesso agli eventi (SPEC §19).
 import { useQuery } from '@tanstack/react-query'
 import type { AccessoEvento, Persona, SessioneCorrente } from '@/contratto/accesso.ts'
 import { api, ErroreRichiesta } from '@/api/client'

@@ -1,4 +1,4 @@
-// Autorizzazione (SPEC §15.3–15.4): ogni rotta con l'id di una risorsa verificata per
+// Autorizzazione (SPEC §19.3–15.4): ogni rotta con l'id di una risorsa verificata per
 // proprietario, invitato in modifica, invitato in lettura e utente senza accesso.
 import { unzipSync, strFromU8 } from 'fflate'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'

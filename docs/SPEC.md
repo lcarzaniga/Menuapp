@@ -231,6 +231,9 @@ Da 768 px: barra laterale con le stesse voci. Il contenuto dell'evento usa sched
 | `#/ricettario/:id/cucina` | Vista cucina | Ricetta con porzioni scelte |
 | `#/ingredienti` | Catalogo | Ricerca, reparto, sinonimi, unità preferita |
 | `#/impostazioni` | Impostazioni | Portate predefinite, coefficiente bambini, reparti, tema (del dispositivo) |
+| `#/attiva/:token`, `#/accesso` | Attivazione | Dispositivo non autorizzato: richiesta d'accesso dal link d'invito, codice, attesa dell'approvazione (§19.2) |
+| `#/account` | Il mio account | Dispositivi autorizzati e revoca, nuovo dispositivo, richieste da approvare, «Esporta i miei dati», esci |
+| `#/impostazioni/utenti` | Utenti e dispositivi | Solo amministratore dall'ingresso privato: utenti, inviti, richieste, dispositivi di tutti |
 | `#/impostazioni/dati` | Dati | Stato del server, ultimo backup, elenco backup, backup ora, esportazione JSON e `.db`, ripristino, versione app e schema |
 | `*` | Non trovata | Link a Eventi |
 
@@ -1549,6 +1552,8 @@ richiede di rieseguire `installa-servizio.sh`.
 
 ### 14.5 Accesso e autorizzazioni (Tailscale)
 
+> Superato dalla §19 (multiutente con accesso su invito): resta valido per la rete del server.
+
 - La porta 9870 esiste solo dentro il tailnet (`tailscale serve`); il backend ascolta su
   loopback; il server non ha firewall ma nulla di Menù & Co. ascolta sugli indirizzi LAN.
 - Chi accede è deciso nella policy del tailnet (console di amministrazione, *Access
@@ -1738,6 +1743,112 @@ schermo acceso in vista cucina · stampa/Salva PDF · tema scuro · riavvio del 
 
 ---
 
+## 19. Multiutente e accesso su invito
+
+Decisione di Loris (13/11/2026): Menù & Co. diventa multiutente per la famiglia, con
+accesso da Internet tramite **Tailscale Funnel** senza installare Tailscale sui dispositivi
+dei familiari. Restano PWA, Fastify, SQLite centrale; niente app native, niente database
+locali, niente dominio proprio, niente password, niente login Google.
+
+### 19.1 Utenti e sessioni
+
+- Tabella `utenti` (id, nome unico, ruolo `amministratore|utente`, stato `attivo|sospeso`,
+  versione). La migrazione `0005_utenti.sql` crea `utente-amministratore` («Loris») e gli
+  assegna tutti gli eventi e i piatti esistenti (e quindi foto, spesa, piano, snapshot).
+- Sessioni lato server (`sessioni`): cookie `__Host-menuapp-sessione` con token casuale da
+  256 bit, `HttpOnly; Secure; SameSite=Lax; Path=/`, 180 giorni con scadenza scorrevole
+  (rinnovo al più una volta l'ora). Sul server solo l'impronta SHA-256. Revocabili una per
+  una (dall'utente per i suoi dispositivi, dall'amministratore per tutti); un utente sospeso
+  perde subito tutte le sessioni, gli inviti e le richieste in corso.
+- Una sessione è un browser autorizzato, non un'identità dell'hardware: chi copia il cookie
+  di un dispositivo ne ha l'accesso finché la sessione non viene revocata.
+
+### 19.2 Inviti e attivazione dei dispositivi
+
+1. L'amministratore crea l'utente e un **invito monouso** (token da 256 bit, 24 ore, sul
+   server solo l'impronta): link `<URL pubblico>/#/attiva/<token>` (il token sta nel
+   frammento: non finisce nei log). Si copia o si manda con WhatsApp.
+2. Il link apre la pagina di attivazione: il dispositivo chiede l'accesso con un nome. L'invito
+   si **consuma** in quel momento e nasce una *richiesta di attivazione* legata al browser da un
+   secondo segreto (cookie `__Host-menuapp-richiesta`, `SameSite=Strict`, 24 ore). Il
+   dispositivo mostra un **codice di verifica** (es. `K7P-M2Q`).
+3. L'amministratore (o l'utente stesso da un dispositivo già autorizzato) vede la richiesta con
+   lo stesso codice, nome del dispositivo e browser, e la **approva** o la rifiuta.
+4. Solo il browser che possiede il segreto di quella richiesta riceve la sessione (una volta);
+   chi ha soltanto il link non ottiene nulla. Tentativi: al massimo 10 ogni 15 minuti per
+   indirizzo e 60 l'ora in tutto (429).
+- **Nuovo dispositivo**: «Il mio account → Collega un nuovo dispositivo» crea un invito per sé;
+  si approva dal dispositivo già collegato (o lo approva l'amministratore).
+- **Primo accesso e recupero dell'amministratore**: solo dalla console del server,
+  `scripts/amministra.sh invito` (link) e `scripts/amministra.sh approva <codice>`. Nessuna
+  credenziale predefinita, nessuna rotta pubblica di creazione dell'amministratore.
+
+### 19.3 Eventi: proprietà e condivisione
+
+- Ogni evento ha un `proprietario_id` ed è privato. Il proprietario lo condivide
+  (`condivisioni_evento`) in **lettura** o **modifica** con utenti specifici, cambia il
+  permesso, revoca; l'invitato può lasciare l'evento.
+- Modifica: menù, portate, voci, spesa, piano, stile di stampa, «concludi»/«riapri» di un
+  evento concluso. Solo il proprietario: condivisioni, eliminazione, archiviazione, riapertura
+  di un archiviato, **trasferimento di proprietà** (il nuovo proprietario riceve copie delle
+  ricette collegate; il vecchio resta con la modifica).
+- Le modifiche si vedono agli altri con la revisione (§12.6, ogni 10 s). Conflitti: versioni e
+  409 come prima, ma il record attuale torna solo a chi ha accesso.
+
+### 19.4 Ricette: proprietà, condivisione, copie
+
+- Ogni piatto ha un proprietario. Il ricettario mostra i propri piatti e quelli condivisi con
+  l'utente (`condivisioni_piatto`, sola lettura). Una ricetta collegata a un evento visibile è
+  leggibile (con le foto) da chi vede l'evento, per cucinare quel menù.
+- Le ricette altrui si usano **per copia** («Copia nel mio ricettario»): ingredienti e foto
+  duplicati (file nuovi), `origine_piatto_id` e `origine_autore` per ricordare la provenienza.
+  Una voce di menù si collega solo a un piatto del proprietario dell'evento (verifica nel
+  servizio e trigger nel database): se un invitato collega una sua ricetta, il proprietario
+  dell'evento ne riceve una copia (riusata se esiste). Nessun collegamento vivo fra utenti:
+  modifiche, eliminazioni e revoche dell'originale non toccano copie, spese ed eventi altrui.
+- Catalogo ingredienti e reparti: comuni a tutti. Tutti leggono e aggiungono ingredienti;
+  eliminazioni di ingredienti, reparti e impostazioni comuni (coefficiente bambini, portate
+  proposte) solo all'amministratore. L'elenco degli usi di un ingrediente mostra i nomi solo
+  delle proprie ricette (gli altri come numero).
+
+### 19.5 Ingressi e superficie esposta
+
+| Ingresso | Ascolto | Cosa offre |
+|---|---|---|
+| Privato (Tailscale Serve `:9870`) | 127.0.0.1:9870 | Tutto, comprese le funzioni di sistema per l'amministratore |
+| Pubblico (Tailscale Funnel `:443`) | 127.0.0.1:9873 (`MENUAPP_PORTA_PUBBLICA`) | App e API utente; `/admin/*`, `/backup*`, `/esportazione`, `/ripristino/*`, `/foto/:id/file` **non esistono** (404 come una rotta sconosciuta), anche per l'amministratore |
+| Rete di casa HTTP `:9880` | 0.0.0.0:9880 | Nessun dato (senza HTTPS il cookie Secure non esiste): API 403, pagine → reindirizzate all'indirizzo HTTPS configurato |
+
+- Senza sessione rispondono solo `GET /salute` (sull'ingresso pubblico solo `{ok, versioneApi}`)
+  e le rotte di attivazione; ogni altra rotta API risponde 401. I file statici (codice
+  dell'app, font, icone) sono pubblici: non contengono dati. Le foto passano dalle API con
+  controllo del permesso sulla ricetta.
+- Sull'ingresso privato le richieste marcate dal Funnel (`Tailscale-Funnel-Request`) sono
+  rifiutate. Scritture: origine ammessa (URL privato, URL pubblico) e corpo JSON come prima
+  (§12.7), più `SameSite` dei cookie.
+- Configurazione in `dati/server.json` (stesse chiavi delle variabili d'ambiente, che hanno la
+  precedenza): `MENUAPP_PORTA_PUBBLICA`, `MENUAPP_URL_PUBBLICO` (link d'invito),
+  `MENUAPP_URL_PRIVATO`. Nessun indirizzo scritto nel codice.
+
+### 19.6 Autorizzazione nel codice
+
+- `server/servizi/permessi.ts` è l'unico punto delle regole: `richiediEvento`,
+  `richiediVoce`/`Attivita`/`Articolo`/`Snapshot` (risalgono all'evento), `richiediPiatto`,
+  `richiediFoto`, `richiediAmministratore`, `richiediSistema`. Ogni rotta chiama il controllo
+  **prima** della validazione del corpo: chi non ha accesso riceve lo stesso 404 di un id
+  inesistente; chi vede ma non può modificare riceve 403 con il motivo.
+- Elenchi e ricerche (`/eventi`, `/piatti?q=`, usi degli ingredienti, «usato in») filtrano per
+  utente. L'esportazione completa resta all'amministratore; ognuno ha «Esporta i miei dati»
+  (`GET /account/esportazione`: i propri eventi e le proprie ricette con le foto).
+- Test: `server/api/accesso.test.ts` (ogni rotta senza sessione → 401, inviti, approvazione,
+  revoca, ingressi) e `server/api/autorizzazione.test.ts` (ogni rotta con id per proprietario,
+  invitato in modifica, in lettura, utente senza accesso), e2e `test/e2e/multiutente.spec.ts`
+  con due browser.
+- Limiti noti: la revisione (§12.6) resta un contatore unico, quindi un utente sa *che* è
+  cambiato qualcosa (non cosa) e ricarica le sue viste; il ripristino completo riporta indietro
+  i dati di tutti e, se il file è precedente alla versione 5, scollega tutti i dispositivi
+  (recupero con la console).
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -1752,3 +1863,4 @@ schermo acceso in vista cucina · stampa/Salva PDF · tema scuro · riavvio del 
 | 12/11/2026 | 2.4 — Foto collegate ai passaggi del procedimento: migrazione `0003_foto_passi.sql` (colonna `passo`, indice da 0), campo `passo` (da 1) nel formato ricetta v1 (facoltativo, retrocompatibile), ricollegamento automatico quando il procedimento cambia (stesso testo o testo appena ritoccato; altrimenti solo galleria), foto sotto i passaggi in scheda e vista cucina. Porta 9880 aperta anche ai nomi e agli indirizzi Tailscale (`*.ts.net`, 100.64.0.0/10) |
 | 12/11/2026 | 2.5 — Designer del menù stampato (richiesta di Loris, F8 riscritta): cinque modelli, palette, caratteri, decorazioni, formati A4/A5/2×A5, impaginazione misurata su più pagine; migrazione `0004_stili_stampa.sql` (tabella `stili_stampa`: `evento_id` PK con CASCADE, `opzioni` JSON validato dal contratto `src/contratto/stampa.ts`, `versione`); rotte `GET|PUT /eventi/:id/stampa` (versione 0 = primo salvataggio); stile incluso nello snapshot all'archiviazione e nelle esportazioni/ripristini; nuovi caratteri locali (Cormorant Garamond, Josefin Sans, Great Vibes, solo sottoinsieme latino) caricati solo dalla schermata di stampa |
 | 13/11/2026 | 2.6 — Ricettario sfogliabile (richiesta di Loris): filtro per portata in testa all'elenco (portate predefinite nel loro ordine, poi le altre, poi «Senza portata»; le varianti importate come «Antipasti / Fritti» o «Dolci al cucchiaio» ricadono nella predefinita da cui cominciano, regola in `src/domain/ricettario.ts`), elenco in ordine alfabetico italiano diviso per iniziale e rubrica alfabetica a lato come un'agenda telefonica (lettere vuote attenuate: portano alla successiva piena). Nessuna modifica a dati, API o schema |
+| 13/11/2026 | 3.0 — **Multiutente** (§19, decisione di Loris): utenti, accesso su invito con approvazione del dispositivo e codice di verifica, sessioni lato server revocabili, eventi privati condivisibili in lettura o modifica, ricette condivisibili in lettura e usate per copia, trasferimento di proprietà, amministrazione dalla console e dall'ingresso privato, ingresso pubblico per Tailscale Funnel senza funzioni di sistema, rete di casa HTTP senza dati; migrazione `0005_utenti.sql` (tutti i dati all'amministratore); «Esporta i miei dati» |

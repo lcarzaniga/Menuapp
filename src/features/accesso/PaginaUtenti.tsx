@@ -1,4 +1,4 @@
-// Amministrazione: utenti, inviti, richieste di attivazione, dispositivi (SPEC §15.2).
+// Amministrazione: utenti, inviti, richieste di attivazione, dispositivi (SPEC §19.2).
 // Raggiungibile solo dall'indirizzo privato: dall'ingresso pubblico le rotte non esistono.
 import { useQuery } from '@tanstack/react-query'
 import { KeyRound, Plus, UserRound } from 'lucide-react'

@@ -11,6 +11,10 @@ PORTA=9870
 URL_PUBBLICO="https://$HOST_TS:$PORTA"
 # Accesso dalla rete di casa in HTTP, senza Tailscale (Echo Show e ospiti del Wi-Fi).
 PORTA_LAN=9880
+# Ingresso pubblico per Tailscale Funnel (solo loopback), attivo se configurato in dati/server.json.
+PORTA_PUBBLICA=9873
+# Porta della prova del rilascio su una copia dei dati.
+PORTA_PROVA=9872
 IP_LAN=$(ip -4 -br addr show eno1 2>/dev/null | awk '{print $3}' | cut -d/ -f1)
 export PATH="$NPM_DIR:$PATH"
 

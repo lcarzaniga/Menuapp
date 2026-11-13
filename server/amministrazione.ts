@@ -1,4 +1,4 @@
-// Console di amministrazione, solo dal terminale del server (SPEC §15.2): primo accesso e
+// Console di amministrazione, solo dal terminale del server (SPEC §19.2): primo accesso e
 // recupero dell'amministratore senza credenziali predefinite né rotte pubbliche.
 //
 //   node server/amministrazione.ts stato

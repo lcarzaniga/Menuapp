@@ -48,7 +48,7 @@ const CampiPiatto = {
 export const SchemaPiatto = z.object({ id: Id, ...CampiPiatto, versione: Versione, creatoIl: Epoch, aggiornatoIl: Epoch })
 
 export const SchemaUsoPiatto = z.object({ eventoId: Id, eventoNome: z.string(), data: z.string(), stato: z.string(), voceId: Id, voceNome: z.string() })
-/** Proprietà della ricetta vista dall'utente corrente (SPEC §15.4). */
+/** Proprietà della ricetta vista dall'utente corrente (SPEC §19.4). */
 const CampiProprieta = {
   proprietario: SchemaPersona,
   /** true se la ricetta è dell'utente corrente (può modificarla). */

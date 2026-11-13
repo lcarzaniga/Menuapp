@@ -1,4 +1,4 @@
-// Condivisione di eventi e ricette, copie indipendenti, trasferimento di proprietà (SPEC §15.3–15.4).
+// Condivisione di eventi e ricette, copie indipendenti, trasferimento di proprietà (SPEC §19.3–15.4).
 import { randomUUID } from 'node:crypto'
 import type { AccessoEvento, PermessoCondivisione, Persona } from '../../src/contratto/accesso.ts'
 import { type Db, transazione } from '../db/connessione.ts'

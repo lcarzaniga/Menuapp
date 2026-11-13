@@ -1,4 +1,4 @@
-// Dispositivo non autorizzato: attivazione su invito e attesa dell'approvazione (SPEC §15.2).
+// Dispositivo non autorizzato: attivazione su invito e attesa dell'approvazione (SPEC §19.2).
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Clock, KeyRound, ShieldX } from 'lucide-react'
 import { useEffect, useState } from 'react'
