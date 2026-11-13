@@ -8,6 +8,19 @@ import type { Evento } from '@/domain/tipi.ts'
 import { dataLunga } from '@/domain/tempo.ts'
 import { cn } from '@/lib/utils'
 import { IllustrazioneEvento } from '@/components/Illustrazioni'
+import { SolaLettura } from '@/connessione/stato'
+import { useAccessoEvento } from '@/features/accesso/sessione'
+
+/**
+ * Permesso dell'utente sull'evento: in sola lettura tutti i comandi di scrittura dentro
+ * `children` si disattivano (il server rifiuta comunque).
+ */
+export function ConPermessoEvento({ children }: { children: React.ReactNode }) {
+  const { id = '' } = useParams()
+  const accesso = useAccessoEvento(id)
+  const motivo = accesso.data?.permesso === 'lettura' ? `Evento di ${accesso.data.proprietario.nome}, condiviso con te in sola lettura` : null
+  return <SolaLettura motivo={motivo}>{children}</SolaLettura>
+}
 
 const SCHEDE = [
   { a: '', etichetta: 'Panoramica', fine: true },
@@ -23,12 +36,16 @@ export function useEventoCorrente(): Evento {
 export function LayoutEvento() {
   const { id = '' } = useParams()
   const q = useEvento(id)
+  const accesso = useAccessoEvento(id)
   if (q.isPending) return <Caricamento />
   if (q.isError || !q.data) {
     const assente = q.error instanceof ErroreRichiesta && q.error.stato === 404
     return (
-      <Pagina titolo={assente ? 'Evento non trovato' : 'Evento'} indietro="/">
-        <Vuoto titolo={assente ? 'Questo evento non esiste più' : 'Impossibile caricare l\'evento'} testo={assente ? 'Forse è stato eliminato da un altro dispositivo.' : 'Controlla la connessione al server.'} />
+      <Pagina titolo={assente ? 'Evento non disponibile' : 'Evento'} indietro="/">
+        <Vuoto
+          titolo={assente ? 'Questo evento non è disponibile' : 'Impossibile caricare l\'evento'}
+          testo={assente ? 'Forse è stato eliminato, oppure non è più condiviso con te.' : 'Controlla la connessione al server.'}
+        />
       </Pagina>
     )
   }
@@ -42,6 +59,11 @@ export function LayoutEvento() {
               ← Eventi
             </NavLink>
             {e.stato === 'archiviato' ? <Badge variante="info">Archiviato · sola lettura</Badge> : e.stato === 'concluso' ? <Badge>Concluso</Badge> : null}
+            {accesso.data && accesso.data.permesso !== 'proprietario' ? (
+              <Badge variante={accesso.data.permesso === 'lettura' ? 'info' : 'primario'} data-testid="permesso-evento">
+                Di {accesso.data.proprietario.nome} · {accesso.data.permesso === 'lettura' ? 'sola lettura' : 'puoi modificare'}
+              </Badge>
+            ) : null}
           </div>
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
@@ -69,7 +91,9 @@ export function LayoutEvento() {
           </nav>
         </div>
       </div>
-      <Outlet context={e} />
+      <SolaLettura motivo={accesso.data?.permesso === 'lettura' ? `Evento di ${accesso.data.proprietario.nome}, condiviso con te in sola lettura` : null}>
+        <Outlet context={e} />
+      </SolaLettura>
     </div>
   )
 }

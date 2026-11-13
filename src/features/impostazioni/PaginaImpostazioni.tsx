@@ -1,5 +1,5 @@
 // Impostazioni: portate predefinite, coefficiente bambini, reparti, tema del dispositivo (SPEC §5).
-import { ArrowDown, ArrowUp, ChevronRight, Database, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronRight, CircleUserRound, Database, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { api, nuovoId } from '@/api/client'
@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Campo, Input, Select } from '@/components/ui/campi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Conferma } from '@/components/ui/dialog'
-import { usePuoScrivere } from '@/connessione/stato'
+import { SolaLettura, usePuoScrivere } from '@/connessione/stato'
+import { useUtenteCorrente } from '@/features/accesso/sessione'
 import type { Impostazioni, Reparto } from '@/domain/tipi.ts'
 
 type Tema = 'sistema' | 'chiaro' | 'scuro'
@@ -56,19 +57,34 @@ const COEFFICIENTI = Array.from({ length: 21 }, (_, i) => Math.round(i * 5) / 10
 export function PaginaImpostazioni() {
   const [tema, setTema] = useState<Tema>(leggiTema)
   const [testo, setTesto] = useState<Testo>(leggiTesto)
+  const { utente, amministratore, ingressoPrivato } = useUtenteCorrente()
   return (
     <Pagina titolo="Impostazioni">
       <div className="flex flex-col gap-4">
-        <Link to="/impostazioni/dati" className="flex items-center gap-3 rounded-2xl border border-bordo bg-carta p-4 hover:bg-tenue/60">
-          <Database className="size-5 text-primario" />
+        <Link to="/account" className="flex items-center gap-3 rounded-2xl border border-bordo bg-carta p-4 hover:bg-tenue/60">
+          <CircleUserRound className="size-5 text-primario" />
           <span className="flex-1">
-            <span className="block font-medium">Dati e backup</span>
-            <span className="text-sm text-testo-tenue">Stato del server, backup, esportazione, ripristino</span>
+            <span className="block font-medium">Il mio account · {utente?.nome}</span>
+            <span className="text-sm text-testo-tenue">Dispositivi autorizzati, nuovo dispositivo, i miei dati</span>
           </span>
           <ChevronRight className="size-5 text-testo-tenue" />
         </Link>
-        <ImpostazioniEventi />
-        <GestioneReparti />
+        {amministratore && ingressoPrivato ? (
+          <Link to="/impostazioni/dati" className="flex items-center gap-3 rounded-2xl border border-bordo bg-carta p-4 hover:bg-tenue/60">
+            <Database className="size-5 text-primario" />
+            <span className="flex-1">
+              <span className="block font-medium">Dati e backup</span>
+              <span className="text-sm text-testo-tenue">Stato del server, backup, esportazione, ripristino</span>
+            </span>
+            <ChevronRight className="size-5 text-testo-tenue" />
+          </Link>
+        ) : null}
+        {/* Impostazioni comuni a tutti: le cambia l'amministratore. */}
+        <SolaLettura motivo={amministratore ? null : 'Le cambia l\'amministratore'}>
+          {!amministratore ? <p className="-mb-2 text-sm text-testo-tenue">Portate proposte e reparti sono comuni a tutti: li cambia l&apos;amministratore.</p> : null}
+          <ImpostazioniEventi />
+          <GestioneReparti />
+        </SolaLettura>
         <Card>
           <CardHeader>
             <CardTitle>Aspetto</CardTitle>

@@ -1,7 +1,7 @@
 // Client HTTP tipizzato sul contratto (SPEC §12.4).
 import type { z } from 'zod'
 import { type CodiceErrore, PREFISSO_API, SchemaErrore } from '@/contratto/comune.ts'
-import { segnalaEsito } from '@/connessione/stato'
+import { segnalaEsito, segnalaSessionePersa } from '@/connessione/stato'
 
 export class ErroreRichiesta extends Error {
   readonly stato: number
@@ -58,6 +58,7 @@ export async function richiesta<T>(metodo: Metodo, percorso: string, corpo?: unk
   }
   if (risposta.status === 503) segnalaEsito('manutenzione')
   else segnalaEsito('ok')
+  if (risposta.status === 401 && !percorso.startsWith('/sessione') && !percorso.startsWith('/accesso/')) segnalaSessionePersa()
 
   const intestazione = risposta.headers.get('x-revisione')
   if (intestazione !== null) revisioneNota = Number(intestazione)

@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Campo, Input, Select, Textarea } from '@/components/ui/campi'
 import { Card, CardContent } from '@/components/ui/card'
 import { Conferma } from '@/components/ui/dialog'
-import { usePuoScrivere } from '@/connessione/stato'
+import { SolaLettura, usePuoScrivere } from '@/connessione/stato'
+import { CondividiRicetta, CopiaRicetta } from '@/features/accesso/CondivisioneRicetta'
 import type { DettaglioPiatto } from '@/contratto/ricettario.ts'
 import { formattaCoperti } from '@/domain/porzioni.ts'
 import { dataBreve } from '@/domain/tempo.ts'
@@ -44,10 +45,14 @@ export function PaginaPiatto() {
       </Pagina>
     )
   }
-  return inModifica ? (
-    <EditorPiatto piatto={q.data} onFine={() => setParametri({}, { replace: true })} />
+  // Le ricette di altri si leggono e si copiano, non si modificano.
+  const p = q.data
+  return inModifica && p.mio ? (
+    <EditorPiatto piatto={p} onFine={() => setParametri({}, { replace: true })} />
   ) : (
-    <SchedaPiatto piatto={q.data} onModifica={() => setParametri({ modifica: '1' })} />
+    <SolaLettura motivo={p.mio ? null : `Ricetta di ${p.proprietario.nome}`}>
+      <SchedaPiatto piatto={p} onModifica={() => setParametri({ modifica: '1' })} />
+    </SolaLettura>
   )
 }
 
@@ -69,12 +74,22 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
   return (
     <Pagina
       titolo={p.nome}
-      sottotitolo={p.portataSuggerita ?? undefined}
+      sottotitolo={
+        [p.portataSuggerita, !p.mio ? `ricetta di ${p.proprietario.nome}` : p.origineAutore ? `dalla ricetta di ${p.origineAutore}` : null].filter(Boolean).join(' · ') ||
+        undefined
+      }
       indietro="/ricettario"
       azioni={
-        <Button variante="contorno" misura="piccolo" disabled={!puoScrivere} onClick={onModifica}>
-          <Pencil /> Modifica
-        </Button>
+        p.mio ? (
+          <>
+            <CondividiRicetta piatto={p} />
+            <Button variante="contorno" misura="piccolo" disabled={!puoScrivere} onClick={onModifica}>
+              <Pencil /> Modifica
+            </Button>
+          </>
+        ) : (
+          <CopiaRicetta piatto={p} />
+        )
       }
     >
       <div className="flex flex-col gap-4">

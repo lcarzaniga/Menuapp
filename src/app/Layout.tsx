@@ -1,7 +1,11 @@
-import { BookOpen, CalendarDays, Carrot, Settings } from 'lucide-react'
+import { BookOpen, CalendarDays, Carrot, CircleUserRound, Settings } from 'lucide-react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { Caricamento, Pagina, Vuoto } from '@/components/Pagina'
+import { quandoSessionePersa } from '@/connessione/stato'
+import { PaginaAccesso } from '@/features/accesso/Attivazione'
+import { chiaviAccesso, useSessione } from '@/features/accesso/sessione'
 import { controllaRevisione } from '@/connessione/sorveglianza'
 import { BannerConnessione } from '@/connessione/BannerConnessione'
 import { cn } from '@/lib/utils'
@@ -11,10 +15,37 @@ const SEZIONI = [
   { a: '/', etichetta: 'Eventi', icona: CalendarDays, attiva: (p: string) => p === '/' || p.startsWith('/eventi') },
   { a: '/ricettario', etichetta: 'Ricettario', icona: BookOpen, attiva: (p: string) => p.startsWith('/ricettario') },
   { a: '/ingredienti', etichetta: 'Ingredienti', icona: Carrot, attiva: (p: string) => p.startsWith('/ingredienti') },
-  { a: '/impostazioni', etichetta: 'Impostazioni', icona: Settings, attiva: (p: string) => p.startsWith('/impostazioni') },
+  { a: '/impostazioni', etichetta: 'Impostazioni', icona: Settings, attiva: (p: string) => p.startsWith('/impostazioni') || p.startsWith('/account') },
 ]
 
+/** L'app si apre solo con una sessione valida; altrimenti la schermata di accesso. */
 export function Layout() {
+  const client = useQueryClient()
+  const sessione = useSessione()
+  const [revocata, setRevocata] = useState(false)
+  useEffect(
+    () =>
+      quandoSessionePersa(() => {
+        // Via tutti i dati in memoria: il dispositivo non deve più mostrarli.
+        setRevocata(true)
+        client.clear()
+        client.setQueryData(chiaviAccesso.sessione, null)
+      }),
+    [client],
+  )
+  if (sessione.isPending) return <Caricamento />
+  if (sessione.data === null) return <PaginaAccesso revocata={revocata} />
+  if (sessione.isError) {
+    return (
+      <Pagina titolo="Menù & Co.">
+        <Vuoto titolo="Server non raggiungibile" testo="Controlla la connessione e riprova tra poco." azione={<button type="button" className="text-primario underline" onClick={() => void sessione.refetch()}>Riprova</button>} />
+      </Pagina>
+    )
+  }
+  return <Guscio nome={sessione.data.utente.nome} />
+}
+
+function Guscio({ nome }: { nome: string }) {
   const { pathname } = useLocation()
   const client = useQueryClient()
   useEffect(() => {
@@ -38,6 +69,12 @@ export function Layout() {
             <s.icona className="size-5" /> {s.etichetta}
           </NavLink>
         ))}
+        <NavLink
+          to="/account"
+          className={cn('mt-auto flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium hover:bg-tenue', pathname.startsWith('/account') && 'bg-primario-tenue text-primario')}
+        >
+          <CircleUserRound className="size-5" /> <span className="truncate">{nome}</span>
+        </NavLink>
       </nav>
       <main>
         <Outlet />

@@ -3,7 +3,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { aggiornaRevisione, revisioneCorrente } from '@/api/client'
 import { SchemaRevisione } from '@/contratto/comune.ts'
-import { quandoTorna, segnalaEsito, statoConnessione } from './stato'
+import { quandoTorna, segnalaEsito, segnalaSessionePersa, statoConnessione } from './stato'
 
 export const INTERVALLO_REVISIONE_MS = 10_000
 
@@ -12,6 +12,12 @@ export async function controllaRevisione(client: QueryClient): Promise<void> {
     const r = await fetch('/api/v1/revisione', { cache: 'no-store', headers: { accept: 'application/json' } })
     if (r.status === 503) {
       segnalaEsito('manutenzione')
+      return
+    }
+    if (r.status === 401) {
+      // Server raggiungibile ma questo dispositivo non è (più) autorizzato.
+      segnalaEsito('ok')
+      segnalaSessionePersa()
       return
     }
     if (!r.ok) throw new Error(String(r.status))

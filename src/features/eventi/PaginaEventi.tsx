@@ -34,6 +34,12 @@ export function SchedaEvento({ e }: { e: RiepilogoEvento }) {
           {e.stato === 'concluso' ? <Badge>Concluso</Badge> : null}
           {e.stato === 'archiviato' ? <Badge variante="info">Archiviato</Badge> : null}
           {daConcludere(e, oggiISO()) ? <Badge variante="avviso">Da concludere</Badge> : null}
+          {e.permesso !== 'proprietario' ? (
+            <Badge variante={e.permesso === 'lettura' ? 'info' : 'primario'}>
+              di {e.proprietario.nome}
+              {e.permesso === 'lettura' ? ' · sola lettura' : ''}
+            </Badge>
+          ) : null}
         </div>
         <p className="mt-0.5 text-sm first-letter:uppercase">
           {dataLunga(e.data)}
@@ -95,8 +101,11 @@ function Prossimo({ e }: { e: RiepilogoEvento }) {
 }
 
 export function PaginaEventi() {
-  const attivi = useEventi('attivo')
+  const tuttiAttivi = useEventi('attivo')
   const conclusi = useEventi('concluso')
+  // Prima i propri eventi; quelli condivisi con me in una sezione a parte.
+  const attivi = { ...tuttiAttivi, data: tuttiAttivi.data?.filter((e) => e.permesso === 'proprietario') ?? [] }
+  const condivisi = tuttiAttivi.data?.filter((e) => e.permesso !== 'proprietario') ?? []
   return (
     <Pagina
       titolo="Eventi"
@@ -108,11 +117,11 @@ export function PaginaEventi() {
         </Button>
       }
     >
-      {attivi.isPending ? (
+      {tuttiAttivi.isPending ? (
         <Caricamento />
-      ) : attivi.isError ? (
+      ) : tuttiAttivi.isError ? (
         <Vuoto titolo="Impossibile caricare gli eventi" testo="Controlla la connessione al server." />
-      ) : attivi.data.length === 0 && !conclusi.data?.length ? (
+      ) : attivi.data.length === 0 && condivisi.length === 0 && !conclusi.data?.length ? (
         <Vuoto
           illustrazione="tavola"
           titolo="Crea il tuo primo evento"
@@ -131,6 +140,16 @@ export function PaginaEventi() {
             .map((e) => (
               <SchedaEvento key={e.id} e={e} />
             ))}
+          {condivisi.length ? (
+            <section aria-label="Condivisi con me" className="flex flex-col gap-3">
+              <h2 className="mt-4 flex items-center gap-3 text-sm font-semibold uppercase tracking-wide text-testo-tenue">
+                Condivisi con me <span className="filetto flex-1" />
+              </h2>
+              {condivisi.map((e) => (
+                <SchedaEvento key={e.id} e={e} />
+              ))}
+            </section>
+          ) : null}
           {conclusi.data?.length ? (
             <>
               <h2 className="mt-4 flex items-center gap-3 text-sm font-semibold uppercase tracking-wide text-testo-tenue">Conclusi <span className="filetto flex-1" /></h2>

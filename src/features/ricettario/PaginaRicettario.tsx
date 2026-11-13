@@ -148,6 +148,7 @@ function RigaPiatto({ piatto: p }: { piatto: RiepilogoPiatto }) {
       <div className="min-w-0 flex-1">
         <p className="titolo truncate text-lg font-semibold">{p.nome}</p>
         <p className="mt-0.5 flex flex-wrap gap-1.5 text-xs text-testo-tenue">
+          {!p.mio ? <Badge variante="info">di {p.proprietario.nome}</Badge> : p.condiviso ? <Badge variante="primario">condivisa</Badge> : null}
           {p.portataSuggerita ? <span>{p.portataSuggerita}</span> : null}
           {p.porzioniBase ? <span>per {formattaCoperti(p.porzioniBase)}</span> : <span>porzioni da indicare</span>}
           <span>· {p.numeroIngredienti} ingredienti</span>

@@ -1,10 +1,11 @@
 import { lazy, Suspense, type ComponentType } from 'react'
 import { createHashRouter } from 'react-router'
 import { Caricamento } from '@/components/Pagina'
-import { LayoutEvento } from '@/features/eventi/LayoutEvento'
+import { ConPermessoEvento, LayoutEvento } from '@/features/eventi/LayoutEvento'
 import { PaginaArchivio, PaginaEventi } from '@/features/eventi/PaginaEventi'
 import { PaginaPanoramica } from '@/features/eventi/PaginaPanoramica'
 import { PaginaMenu } from '@/features/menu/PaginaMenu'
+import { PaginaAccesso, PaginaAttivazione } from '@/features/accesso/Attivazione'
 import { NonTrovata, PaginaErrore } from './Errore'
 import { Layout } from './Layout'
 
@@ -20,6 +21,9 @@ function pigra<M>(carica: () => Promise<M>, scegli: (m: M) => ComponentType) {
 
 // Rotte di SPEC §5 (hash routing).
 export const router = createHashRouter([
+  // Senza sessione: attivazione del dispositivo dal link d'invito.
+  { path: '/attiva/:token', element: <PaginaAttivazione />, errorElement: <PaginaErrore /> },
+  { path: '/accesso', element: <PaginaAccesso />, errorElement: <PaginaErrore /> },
   {
     element: <Layout />,
     errorElement: <PaginaErrore />,
@@ -37,8 +41,11 @@ export const router = createHashRouter([
           { path: 'piano', element: pigra(() => import('@/features/piano/PaginaPiano'), (m) => m.PaginaPiano) },
         ],
       },
-      { path: '/eventi/:id/stampa', element: pigra(() => import('@/features/stampa/PaginaStampa'), (m) => m.PaginaStampa) },
-      { path: '/eventi/:id/voci/:voceId/cucina', element: pigra(() => import('@/features/cucina/VistaCucina'), (m) => m.PaginaCucinaVoce) },
+      { path: '/eventi/:id/stampa', element: <ConPermessoEvento>{pigra(() => import('@/features/stampa/PaginaStampa'), (m) => m.PaginaStampa)}</ConPermessoEvento> },
+      {
+        path: '/eventi/:id/voci/:voceId/cucina',
+        element: <ConPermessoEvento>{pigra(() => import('@/features/cucina/VistaCucina'), (m) => m.PaginaCucinaVoce)}</ConPermessoEvento>,
+      },
       { path: '/ricettario', element: pigra(() => import('@/features/ricettario/PaginaRicettario'), (m) => m.PaginaRicettario) },
       { path: '/ricettario/nuovo', element: pigra(() => import('@/features/ricettario/PaginaPiatto'), (m) => m.PaginaNuovoPiatto) },
       { path: '/ricettario/:id', element: pigra(() => import('@/features/ricettario/PaginaPiatto'), (m) => m.PaginaPiatto) },
@@ -46,6 +53,8 @@ export const router = createHashRouter([
       { path: '/ingredienti', element: pigra(() => import('@/features/ingredienti/PaginaIngredienti'), (m) => m.PaginaIngredienti) },
       { path: '/impostazioni', element: pigra(() => import('@/features/impostazioni/PaginaImpostazioni'), (m) => m.PaginaImpostazioni) },
       { path: '/impostazioni/dati', element: pigra(() => import('@/features/impostazioni/PaginaDati'), (m) => m.PaginaDati) },
+      { path: '/impostazioni/utenti', element: pigra(() => import('@/features/accesso/PaginaUtenti'), (m) => m.PaginaUtenti) },
+      { path: '/account', element: pigra(() => import('@/features/accesso/PaginaAccount'), (m) => m.PaginaAccount) },
       { path: '*', element: <NonTrovata /> },
     ],
   },

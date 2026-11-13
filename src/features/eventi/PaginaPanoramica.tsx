@@ -8,7 +8,9 @@ import { useScrittura } from '@/api/scrittura'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Conferma, Finestra } from '@/components/ui/dialog'
-import { usePuoScrivere } from '@/connessione/stato'
+import { SolaLettura, usePuoScrivere } from '@/connessione/stato'
+import { CondivisioneEvento } from '@/features/accesso/CondivisioneEvento'
+import { useAccessoEvento } from '@/features/accesso/sessione'
 import { copertiEquivalenti, formattaCoperti } from '@/domain/porzioni.ts'
 import { daConcludere } from '@/domain/regole/evento.ts'
 import { differenzaGiorni, oggiISO } from '@/domain/tempo.ts'
@@ -30,6 +32,7 @@ export function PaginaPanoramica() {
   const [spostamento, setSpostamento] = useState(0)
   const attivita = useAttivita(e.id)
   const archiviato = e.stato === 'archiviato'
+  const proprietario = useAccessoEvento(e.id).data?.permesso === 'proprietario'
 
   const salva = useScrittura(
     (d: DatiModuloEvento & { versione: number }) =>
@@ -125,12 +128,18 @@ export function PaginaPanoramica() {
               <RotateCcw /> Riapri
             </Button>
           ) : null}
-          <Button variante="fantasma" className="text-pericolo" disabled={!puoScrivere} onClick={() => setElimina(true)}>
-            <Trash2 /> Elimina
-          </Button>
+          {proprietario ? (
+            <Button variante="fantasma" className="text-pericolo" disabled={!puoScrivere} onClick={() => setElimina(true)}>
+              <Trash2 /> Elimina
+            </Button>
+          ) : null}
         </div>
 
-        <PannelloArchivio evento={e} />
+        {/* Archiviare e riaprire un archiviato spettano al proprietario. */}
+        <SolaLettura motivo={proprietario ? null : 'Solo il proprietario archivia l\'evento'}>
+          <PannelloArchivio evento={e} />
+        </SolaLettura>
+        <CondivisioneEvento evento={e} />
       </div>
 
       <Finestra aperta={modifica} onCambia={setModifica} titolo="Modifica evento">

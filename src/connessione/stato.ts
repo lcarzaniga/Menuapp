@@ -1,5 +1,5 @@
 // Stato della connessione al server e modalità sola lettura (SPEC §13).
-import { useSyncExternalStore } from 'react'
+import { createContext, createElement, type ReactNode, useContext, useSyncExternalStore } from 'react'
 
 export type StatoConnessione = 'connesso' | 'non_raggiungibile' | 'in_manutenzione'
 
@@ -57,7 +57,39 @@ export function useStatoConnessione(): StatoConnessione {
 
 /** Unico punto che decide se i comandi di scrittura sono attivi. */
 export function usePuoScrivere(): boolean {
-  return useStatoConnessione() === 'connesso'
+  const connesso = useStatoConnessione() === 'connesso'
+  const solaLettura = useContext(ContestoSolaLettura) !== null
+  return connesso && !solaLettura
+}
+
+/**
+ * Sola lettura per permesso (evento condiviso in lettura, ricetta di un altro utente): tutti
+ * i comandi sotto questo contenitore che usano usePuoScrivere() si disattivano. Il server
+ * rifiuta comunque le scritture non permesse.
+ */
+const ContestoSolaLettura = createContext<string | null>(null)
+
+export function SolaLettura({ motivo, children }: { motivo: string | null; children: ReactNode }) {
+  // Un contenitore interno non può riattivare ciò che uno esterno ha messo in sola lettura.
+  const esterno = useContext(ContestoSolaLettura)
+  return createElement(ContestoSolaLettura.Provider, { value: esterno ?? motivo }, children)
+}
+
+/** Motivo della sola lettura per permesso (null se si può modificare). */
+export function useMotivoSolaLettura(): string | null {
+  return useContext(ContestoSolaLettura)
+}
+
+// ── Sessione ─────────────────────────────────────────────────
+
+const ascoltatoriSessione = new Set<() => void>()
+/** Il server ha risposto 401: questo dispositivo non è (più) autorizzato. */
+export function segnalaSessionePersa(): void {
+  ascoltatoriSessione.forEach((f) => f())
+}
+export function quandoSessionePersa(f: () => void): () => void {
+  ascoltatoriSessione.add(f)
+  return () => ascoltatoriSessione.delete(f)
 }
 
 if (typeof window !== 'undefined') {

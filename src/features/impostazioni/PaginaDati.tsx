@@ -6,8 +6,9 @@ import { tipoDaNome } from '@/lib/immagini'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import { useSalute, useStatoBackup } from '@/api/query'
+import { useUtenteCorrente } from '@/features/accesso/sessione'
 import { messaggioErrore, useScrittura } from '@/api/scrittura'
-import { Caricamento, Pagina } from '@/components/Pagina'
+import { Caricamento, Pagina, Vuoto } from '@/components/Pagina'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -47,7 +48,20 @@ function riassuntoConteggi(c: Record<string, number>): string {
     .join(' · ')
 }
 
+/** Backup, esportazione completa e ripristino: amministratore dall'indirizzo privato. */
 export function PaginaDati() {
+  const { amministratore, ingressoPrivato } = useUtenteCorrente()
+  if (!amministratore || !ingressoPrivato) {
+    return (
+      <Pagina titolo="Dati e backup" indietro="/impostazioni">
+        <Vuoto titolo="Non disponibile" testo={amministratore ? 'Backup e ripristino si aprono solo dall\'indirizzo privato (Tailscale).' : 'Funzione riservata all\'amministratore. I tuoi dati li esporti da «Il mio account».'} />
+      </Pagina>
+    )
+  }
+  return <Dati />
+}
+
+function Dati() {
   const salute = useSalute()
   const stato = useStatoBackup()
   const puoScrivere = usePuoScrivere()
