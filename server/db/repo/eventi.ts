@@ -54,28 +54,45 @@ export function leggiEvento(db: Db, id: string): Evento | undefined {
   return r ? daRigaEvento(r, portateEvento(db, id)) : undefined
 }
 
-export function elencaEventi(db: Db, stato?: StatoEvento): (Evento & { numeroVoci: number })[] {
-  const righe = stato
-    ? tutti<RigaEvento & { numero_voci: number }>(
-        db,
-        'SELECT e.*, (SELECT count(*) FROM voci_menu v WHERE v.evento_id = e.id) AS numero_voci FROM eventi e WHERE stato = ? ORDER BY data, ora_servizio, nome',
-        stato,
-      )
-    : tutti<RigaEvento & { numero_voci: number }>(
-        db,
-        'SELECT e.*, (SELECT count(*) FROM voci_menu v WHERE v.evento_id = e.id) AS numero_voci FROM eventi e ORDER BY data, ora_servizio, nome',
-      )
-  return righe.map((r) => ({ ...daRigaEvento(r, portateEvento(db, r.id)), numeroVoci: r.numero_voci }))
+/** Eventi visibili all'utente (suoi e condivisi), con il suo permesso e il proprietario. */
+export function elencaEventi(db: Db, utenteId: string, stato?: StatoEvento) {
+  const righe = tutti<RigaEvento & { numero_voci: number; proprietario_id: string; proprietario_nome: string; permesso: string | null }>(
+    db,
+    `SELECT e.*, (SELECT count(*) FROM voci_menu v WHERE v.evento_id = e.id) AS numero_voci,
+       u.nome AS proprietario_nome, c.permesso
+     FROM eventi e JOIN utenti u ON u.id = e.proprietario_id
+     LEFT JOIN condivisioni_evento c ON c.evento_id = e.id AND c.utente_id = ?
+     WHERE (e.proprietario_id = ? OR c.utente_id IS NOT NULL) AND (? IS NULL OR e.stato = ?)
+     ORDER BY e.data, e.ora_servizio, e.nome`,
+    utenteId,
+    utenteId,
+    stato ?? null,
+    stato ?? null,
+  )
+  return righe.map((r) => ({
+    ...daRigaEvento(r, portateEvento(db, r.id)),
+    numeroVoci: r.numero_voci,
+    proprietario: { id: r.proprietario_id, nome: r.proprietario_nome },
+    permesso: (r.proprietario_id === utenteId ? 'proprietario' : r.permesso) as 'proprietario' | 'modifica' | 'lettura',
+  }))
 }
 
-export function inserisciEvento(db: Db, e: Omit<Evento, 'versione' | 'portate'>): void {
+export function cambiaProprietario(db: Db, id: string, proprietarioId: string, adesso: number): void {
+  esegui(db, 'UPDATE eventi SET proprietario_id = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ?', proprietarioId, adesso, id)
+}
+
+export function collegaPiatto(db: Db, voceId: string, piattoId: string | null, adesso: number): void {
+  esegui(db, 'UPDATE voci_menu SET piatto_id = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ?', piattoId, adesso, voceId)
+}
+
+export function inserisciEvento(db: Db, e: Omit<Evento, 'versione' | 'portate'>, proprietarioId: string): void {
   esegui(
     db,
     `INSERT INTO eventi (id, nome, data, ora_servizio, tipo, occasione, adulti, bambini, coefficiente_bambini, note, stato,
-       concluso_il, archiviato_il, versione, creato_il, aggiornato_il)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+       concluso_il, archiviato_il, versione, creato_il, aggiornato_il, proprietario_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
     e.id, e.nome, e.data, e.oraServizio, e.tipo, e.occasione, e.adulti, e.bambini, e.coefficienteBambini, e.note, e.stato,
-    e.conclusoIl, e.archiviatoIl, e.creatoIl, e.aggiornatoIl,
+    e.conclusoIl, e.archiviatoIl, e.creatoIl, e.aggiornatoIl, proprietarioId,
   )
 }
 

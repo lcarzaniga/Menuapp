@@ -48,8 +48,15 @@ async function avvia(): Promise<void> {
   process.on('SIGINT', () => void chiudi('SIGINT'))
 
   await app.listen({ host: config.host, port: config.porta })
+  // Ingresso pubblico (Tailscale Funnel): solo loopback, senza funzioni di sistema.
+  if (config.portaPubblica) {
+    const pubblico = await costruisciApp(ctx, { log: true, ingresso: 'pubblico' })
+    await pubblico.listen({ host: '127.0.0.1', port: config.portaPubblica })
+    process.once('SIGTERM', () => void pubblico.close())
+    console.log(`Ingresso pubblico su http://127.0.0.1:${config.portaPubblica} (${config.urlPubblico ?? 'URL pubblico non configurato'})`)
+  }
   if (config.portaLan) {
-    const lan = await costruisciApp(ctx, { log: true, lan: true })
+    const lan = await costruisciApp(ctx, { log: true, ingresso: 'lan' })
     await lan.listen({ host: config.hostLan, port: config.portaLan })
     process.once('SIGTERM', () => void lan.close())
     console.log(`Accesso dalla rete di casa: http://<indirizzo del server>:${config.portaLan}`)

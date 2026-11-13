@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:server": "MENUAPP_PORTA=9871 MENUAPP_DATI=./dati-sviluppo node --watch server/main.ts",
+    "admin": "MENUAPP_DATI=./dati-sviluppo MENUAPP_URL_PRIVATO=https://loris-srv01.dala-tortoise.ts.net:8443 node server/amministrazione.ts",
     "build": "vite build",
     "typecheck": "tsc -b",
     "lint": "oxlint",

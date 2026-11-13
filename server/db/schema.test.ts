@@ -17,15 +17,15 @@ const conta = (tabella: string, where = '1') =>
 function evento(id = 'e1', extra: Partial<Record<string, string | number | null>> = {}) {
   const v = { data: '2026-12-25', ora_servizio: '13:00', tipo: 'pranzo', adulti: 8, bambini: 2, coefficiente_bambini: 0.5, stato: 'attivo', archiviato_il: null, ...extra }
   run(
-    `INSERT INTO eventi (id, nome, data, ora_servizio, tipo, adulti, bambini, coefficiente_bambini, stato, archiviato_il, creato_il, aggiornato_il)
-     VALUES (?, 'Natale', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO eventi (proprietario_id, id, nome, data, ora_servizio, tipo, adulti, bambini, coefficiente_bambini, stato, archiviato_il, creato_il, aggiornato_il)
+     VALUES ('utente-amministratore', ?, 'Natale', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     id, v.data, v.ora_servizio, v.tipo, v.adulti, v.bambini, v.coefficiente_bambini, v.stato, v.archiviato_il, T, T,
   )
 }
 const portata = (id: string, ev = 'e1') =>
   run('INSERT INTO portate_evento (id, evento_id, nome, ordine) VALUES (?, ?, ?, 0)', id, ev, 'Primi')
 const piatto = (id: string, extra = '') =>
-  run(`INSERT INTO piatti (id, nome, nome_norm, creato_il, aggiornato_il${extra ? ', porzioni_base' : ''}) VALUES (?, 'Lasagne', 'lasagne', ?, ?${extra ? ', ' + extra : ''})`, id, T, T)
+  run(`INSERT INTO piatti (proprietario_id, id, nome, nome_norm, creato_il, aggiornato_il${extra ? ', porzioni_base' : ''}) VALUES ('utente-amministratore', ?, 'Lasagne', 'lasagne', ?, ?${extra ? ', ' + extra : ''})`, id, T, T)
 const voce = (id: string, ev = 'e1', port = 'p1', piattoId: string | null = null) =>
   run(
     'INSERT INTO voci_menu (id, evento_id, portata_id, ordine, nome, piatto_id, creato_il, aggiornato_il) VALUES (?, ?, ?, 0, ?, ?, ?, ?)',
@@ -57,9 +57,9 @@ describe('vincoli CHECK', () => {
     ['data di archiviazione su evento attivo', () => evento('e1', { archiviato_il: T })],
     ['tipo STRICT: testo in colonna intera', () => evento('e1', { adulti: 'otto' })],
     ['porzioni base zero', () => piatto('d1', '0')],
-    ['tempo di cottura negativo', () => run("INSERT INTO piatti (id, nome, nome_norm, tempo_cottura_min, creato_il, aggiornato_il) VALUES ('d1','A','a',-5,1,1)")],
-    ['procedimento non JSON', () => run("INSERT INTO piatti (id, nome, nome_norm, procedimento, creato_il, aggiornato_il) VALUES ('d1','A','a','passo 1',1,1)")],
-    ['attrezzature JSON non array', () => run("INSERT INTO piatti (id, nome, nome_norm, attrezzature, creato_il, aggiornato_il) VALUES ('d1','A','a','{}',1,1)")],
+    ['tempo di cottura negativo', () => run("INSERT INTO piatti (proprietario_id, id, nome, nome_norm, tempo_cottura_min, creato_il, aggiornato_il) VALUES ('utente-amministratore', 'd1','A','a',-5,1,1)")],
+    ['procedimento non JSON', () => run("INSERT INTO piatti (proprietario_id, id, nome, nome_norm, procedimento, creato_il, aggiornato_il) VALUES ('utente-amministratore', 'd1','A','a','passo 1',1,1)")],
+    ['attrezzature JSON non array', () => run("INSERT INTO piatti (proprietario_id, id, nome, nome_norm, attrezzature, creato_il, aggiornato_il) VALUES ('utente-amministratore', 'd1','A','a','{}',1,1)")],
     ['nome voce vuoto', () => { evento(); portata('p1'); run("INSERT INTO voci_menu (id, evento_id, portata_id, ordine, nome, creato_il, aggiornato_il) VALUES ('v1','e1','p1',0,'',1,1)") }],
     ['porzioni voce negative', () => { evento(); portata('p1'); run("INSERT INTO voci_menu (id, evento_id, portata_id, ordine, nome, porzioni, creato_il, aggiornato_il) VALUES ('v1','e1','p1',0,'A',-2,1,1)") }],
     ['in_spesa non booleano', () => { evento(); portata('p1'); run("INSERT INTO voci_menu (id, evento_id, portata_id, ordine, nome, in_spesa, creato_il, aggiornato_il) VALUES ('v1','e1','p1',0,'A',2,1,1)") }],

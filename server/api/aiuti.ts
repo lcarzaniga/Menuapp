@@ -3,7 +3,22 @@ import type { z } from 'zod'
 import type { Config } from '../config.ts'
 import type { Db } from '../db/connessione.ts'
 import type { RegistroRipristini } from '../backup/ripristino.ts'
-import { richiestaNonValida } from '../servizi/errori.ts'
+import type { FastifyRequest } from 'fastify'
+import { nonAutenticato, richiestaNonValida } from '../servizi/errori.ts'
+import type { UtenteCorrente } from '../servizi/permessi.ts'
+
+declare module 'fastify' {
+  interface FastifyRequest {
+    /** Utente della sessione, impostato dal controllo d'accesso (null sulle rotte pubbliche). */
+    utente: UtenteCorrente | null
+  }
+}
+
+/** Utente corrente: ogni rotta protetta lo richiede esplicitamente. */
+export function chi(req: FastifyRequest): UtenteCorrente {
+  if (!req.utente) throw nonAutenticato()
+  return req.utente
+}
 
 export interface StatoServizio {
   /** true durante un ripristino: le API rispondono 503. */

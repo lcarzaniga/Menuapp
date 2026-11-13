@@ -1,7 +1,7 @@
 // Foto dei piatti: file in dati/foto, metadati in foto_piatti (formato ricetta v1).
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { copyFile, mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { type Foto, LIMITE_BYTE_FOTO, MASSIMO_FOTO, type TipoFoto } from '../../src/contratto/foto.ts'
 import { pulisci } from '../../src/domain/testo.ts'
@@ -215,3 +215,23 @@ export async function rimettiFile(db: Db, cartella: string, id: string, dati: Bu
 }
 
 export { ESTENSIONI }
+
+/**
+ * Copia le foto di un piatto in un altro (copia di una ricetta condivisa): file nuovi con id
+ * nuovi, così le due ricette restano indipendenti. Da chiamare dentro una transazione.
+ */
+export function copiaFotoPiatto(db: Db, cartella: string, daPiatto: string, aPiatto: string, adesso = Date.now()): void {
+  mkdirSync(cartella, { recursive: true })
+  for (const f of tutti<Riga>(db, 'SELECT * FROM foto_piatti WHERE piatto_id = ? ORDER BY ordine', daPiatto)) {
+    const sorgente = join(cartella, nomeFile({ id: String(f.id), tipo: f.tipo as TipoFoto }))
+    if (!existsSync(sorgente)) continue
+    const id = randomUUID()
+    copyFileSync(sorgente, join(cartella, nomeFile({ id, tipo: f.tipo as TipoFoto })))
+    esegui(
+      db,
+      `INSERT INTO foto_piatti (id, piatto_id, ordine, didascalia, principale, passo, tipo, byte, sha256, versione, creato_il, aggiornato_il)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+      id, aPiatto, f.ordine, f.didascalia, f.principale, f.passo, f.tipo, f.byte, f.sha256, adesso, adesso,
+    )
+  }
+}

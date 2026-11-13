@@ -1,5 +1,6 @@
 // Contratto API: eventi, portate e voci di menù (SPEC §12.4).
 import { z } from 'zod'
+import { SchemaPersona } from './accesso.ts'
 import { STATI_EVENTO, TIPI_EVENTO } from '../domain/tipi.ts'
 import { DataISO, Epoch, Id, NomeObbligatorio, Ora, TestoBreve, TestoLungo, Versione } from './comune.ts'
 import { Coefficiente } from './impostazioni.ts'
@@ -28,7 +29,13 @@ export const SchemaEvento = z.object({
   aggiornatoIl: Epoch,
 })
 
-export const SchemaRiepilogoEvento = SchemaEvento.extend({ numeroVoci: z.number().int(), copertiEquivalenti: z.number() })
+export const SchemaRiepilogoEvento = SchemaEvento.extend({
+  numeroVoci: z.number().int(),
+  copertiEquivalenti: z.number(),
+  proprietario: SchemaPersona,
+  /** Permesso dell'utente corrente: suo, oppure condiviso in modifica o lettura. */
+  permesso: z.enum(['proprietario', 'modifica', 'lettura']),
+})
 export type RiepilogoEvento = z.infer<typeof SchemaRiepilogoEvento>
 
 const CampiEvento = {

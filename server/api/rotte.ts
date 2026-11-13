@@ -1,6 +1,8 @@
 // Registro di tutte le rotte API.
 import type { FastifyInstance } from 'fastify'
+import type { Ingresso } from '../../src/contratto/accesso.ts'
 import type { Contesto } from './aiuti.ts'
+import { rotteSessione } from './sessione.ts'
 import { rotteBackup } from './backup.ts'
 import { rotteEventi } from './eventi.ts'
 import { rotteRicettario } from './ricettario.ts'
@@ -9,8 +11,9 @@ import { rotteFoto } from './foto.ts'
 import { rotteSistema } from './sistema.ts'
 import { rotteStampa } from './stampa.ts'
 
-export function registraRotte(app: FastifyInstance, ctx: Contesto): void {
-  rotteSistema(app, ctx)
+export function registraRotte(app: FastifyInstance, ctx: Contesto, ingresso: Ingresso): void {
+  rotteSistema(app, ctx, ingresso)
+  rotteSessione(app, ctx, ingresso)
   rotteBackup(app, ctx)
   rotteEventi(app, ctx)
   rotteRicettario(app, ctx)

@@ -31,9 +31,9 @@ const corpo = (r: { body: string }) => JSON.parse(r.body)
 function popola(d: DbDiProva['db'], n = 1) {
   for (let i = 0; i < n; i++) {
     const e = `e${i}`
-    esegui(d, `INSERT INTO eventi (id, nome, data, tipo, adulti, bambini, coefficiente_bambini, creato_il, aggiornato_il) VALUES (?, ?, '2026-12-25', 'pranzo', 8, 2, 0.5, 1, 1)`, e, `Natale ${i}`)
+    esegui(d, `INSERT INTO eventi (proprietario_id, id, nome, data, tipo, adulti, bambini, coefficiente_bambini, creato_il, aggiornato_il) VALUES ('utente-amministratore', ?, ?, '2026-12-25', 'pranzo', 8, 2, 0.5, 1, 1)`, e, `Natale ${i}`)
     esegui(d, `INSERT INTO portate_evento (id, evento_id, nome, ordine) VALUES (?, ?, 'Primi', 0)`, `p${i}`, e)
-    esegui(d, `INSERT INTO piatti (id, nome, nome_norm, porzioni_base, procedimento, creato_il, aggiornato_il) VALUES (?, 'Lasagne', 'lasagne', 6, '["Stendere"]', 1, 1)`, `d${i}`)
+    esegui(d, `INSERT INTO piatti (proprietario_id, id, nome, nome_norm, porzioni_base, procedimento, creato_il, aggiornato_il) VALUES ('utente-amministratore', ?, 'Lasagne', 'lasagne', 6, '["Stendere"]', 1, 1)`, `d${i}`)
     esegui(d, `INSERT INTO voci_menu (id, evento_id, portata_id, ordine, nome, piatto_id, creato_il, aggiornato_il) VALUES (?, ?, ?, 0, 'Lasagne', ?, 1, 1)`, `v${i}`, e, `p${i}`, `d${i}`)
     esegui(d, `INSERT INTO articoli_spesa (id, evento_id, tipo, nome, creato_il, aggiornato_il) VALUES (?, ?, 'manuale', 'Ghiaccio', 1, 1)`, `a${i}`, e)
     esegui(d, `INSERT INTO attivita (id, evento_id, titolo, data, voce_menu_id, creato_il, aggiornato_il) VALUES (?, ?, 'Ragù', '2026-12-24', ?, 1, 1)`, `t${i}`, e, `v${i}`)

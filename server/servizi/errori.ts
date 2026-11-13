@@ -27,3 +27,11 @@ export const regolaViolata = (regola: string, messaggio: string, extra?: Record<
 
 export const richiestaNonValida = (messaggio: string, dettagli?: unknown) =>
   new ErroreApi(400, 'richiesta_non_valida', messaggio, dettagli)
+
+/** Nessuna sessione valida: il dispositivo deve essere autorizzato. */
+export const nonAutenticato = (messaggio = 'Questo dispositivo non è autorizzato') => new ErroreApi(401, 'non_autenticato', messaggio)
+
+/** Risorsa visibile ma azione non permessa (es. sola lettura, funzione da amministratore). */
+export const accessoNegato = (messaggio: string) => new ErroreApi(403, 'accesso_negato', messaggio)
+
+export const troppiTentativi = () => new ErroreApi(429, 'troppi_tentativi', 'Troppi tentativi: riprova fra qualche minuto')

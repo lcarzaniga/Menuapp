@@ -5,6 +5,8 @@ import { PREFISSO_API, type RispostaErrore } from '../src/contratto/comune.ts'
 import { revisione } from './db/repo/meta.ts'
 import { type Contesto } from './api/aiuti.ts'
 import { registraRotte } from './api/rotte.ts'
+import { registraAutenticazione } from './api/sessione.ts'
+import type { Ingresso } from '../src/contratto/accesso.ts'
 import { ErroreApi } from './servizi/errori.ts'
 import { LIMITE_BYTE_FOTO, TIPI_FOTO } from '../src/contratto/foto.ts'
 
@@ -42,7 +44,15 @@ export function hostLocale(host: string | undefined): boolean {
   return a === 10 || a === 127 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31) || (a === 100 && b >= 64 && b <= 127)
 }
 
-export async function costruisciApp(ctx: Contesto, opzioni: { log?: boolean; lan?: boolean } = {}): Promise<FastifyInstance> {
+/**
+ * Ingressi (SPEC §15.5): `privato` = Tailscale Serve (tutte le funzioni), `pubblico` =
+ * Tailscale Funnel (niente funzioni di sistema), `lan` = HTTP dalla rete di casa: senza
+ * HTTPS i cookie di sessione non sono sicuri, quindi rimanda all'indirizzo HTTPS.
+ */
+export type TipoIngresso = Ingresso | 'lan'
+
+export async function costruisciApp(ctx: Contesto, opzioni: { log?: boolean; lan?: boolean; ingresso?: TipoIngresso } = {}): Promise<FastifyInstance> {
+  const ingresso: TipoIngresso = opzioni.ingresso ?? (opzioni.lan ? 'lan' : 'privato')
   const app = Fastify({
     logger: opzioni.log ? { level: 'warn' } : false,
     bodyLimit: LIMITE_CORPO,
@@ -52,8 +62,15 @@ export async function costruisciApp(ctx: Contesto, opzioni: { log?: boolean; lan
   // Protezione dalle richieste di altri siti (SPEC §12.7) e manutenzione.
   app.addHook('onRequest', async (req, reply) => {
     const percorso = req.url.split('?')[0] ?? ''
-    if (opzioni.lan && !hostLocale(req.headers.host)) {
-      return reply.code(403).send(corpoErrore('origine_non_ammessa', 'Indirizzo non ammesso sulla rete locale'))
+    if (ingresso === 'lan') {
+      if (!hostLocale(req.headers.host)) return reply.code(403).send(corpoErrore('origine_non_ammessa', 'Indirizzo non ammesso sulla rete locale'))
+      const https = ctx.config.urlPubblico ?? ctx.config.urlPrivato
+      if (!percorso.startsWith('/api/') && https) return reply.redirect(https, 302)
+      return reply.code(403).send(corpoErrore('origine_non_ammessa', 'Dalla rete di casa usa l\'indirizzo HTTPS dell\'app'))
+    }
+    // Il Funnel marca le richieste che arrivano da Internet: sull'ingresso privato non devono esserci.
+    if (ingresso === 'privato' && req.headers['tailscale-funnel-request'] !== undefined) {
+      return reply.code(403).send(corpoErrore('origine_non_ammessa', 'Ingresso non ammesso'))
     }
     if (!percorso.startsWith('/api/')) return
     if (ctx.stato.manutenzione && percorso !== `${PREFISSO_API}/salute`) {
@@ -61,9 +78,7 @@ export async function costruisciApp(ctx: Contesto, opzioni: { log?: boolean; lan
     }
     if (!METODI_SCRITTURA.has(req.method)) return
     const origine = req.headers.origin
-    // Sulla rete locale l'origine ammessa è quella dell'indirizzo usato (già verificato come locale).
-    const propria = opzioni.lan && origine === `http://${req.headers.host}`
-    if (!origine || (!ctx.config.origini.includes(origine) && !propria)) {
+    if (!origine || !ctx.config.origini.includes(origine)) {
       return reply.code(403).send(corpoErrore('origine_non_ammessa', 'Richiesta da un\'origine non ammessa'))
     }
     if (req.method !== 'DELETE' || req.headers['content-length']) {
@@ -108,9 +123,12 @@ export async function costruisciApp(ctx: Contesto, opzioni: { log?: boolean; lan
   })
 
   app.addContentTypeParser([...TIPI_FOTO], { parseAs: 'buffer', bodyLimit: LIMITE_BYTE_FOTO }, (_req, corpo, fatto) => fatto(null, corpo))
-  registraRotte(app, ctx)
+  if (ingresso !== 'lan') {
+    registraAutenticazione(app, ctx, ingresso)
+    registraRotte(app, ctx, ingresso)
+  }
 
-  if (ctx.config.cartellaStatici) {
+  if (ctx.config.cartellaStatici && ingresso !== 'lan') {
     await app.register(fastifyStatic, {
       root: ctx.config.cartellaStatici,
       index: ['index.html'],

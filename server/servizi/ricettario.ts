@@ -4,6 +4,7 @@ import { norm, pulisci } from '../../src/domain/testo.ts'
 import type { Ingrediente, IngredientePiatto, Piatto, Reparto, VoceMenu } from '../../src/domain/tipi.ts'
 import { REPARTO_ALTRO } from '../../src/domain/tipi.ts'
 import { type Db, esegui, lettura, transazione, uno } from '../db/connessione.ts'
+import * as repoAccesso from '../db/repo/accesso.ts'
 import * as repoEventi from '../db/repo/eventi.ts'
 import { incrementaRevisione } from '../db/repo/meta.ts'
 import * as repo from '../db/repo/ricettario.ts'
@@ -13,16 +14,28 @@ import { elencaReparti, leggiReparto } from './impostazioni.ts'
 import { elencaFoto, fotoPrincipali, ricollegaPassi } from './foto.ts'
 import { aggiornaConVersione, controllaVersioni, creaIdempotente, eliminaConVersione, incrementaVersione } from './versioni.ts'
 
-export function elencaPiatti(db: Db, ricerca?: string): RiepilogoPiatto[] {
+export function elencaPiatti(db: Db, utenteId: string, ricerca?: string): RiepilogoPiatto[] {
   const principali = fotoPrincipali(db)
-  return repo.elencaPiatti(db, ricerca).map((p) => ({ ...p, fotoPrincipale: principali.get(p.id) ?? null }))
+  return repo.elencaPiatti(db, utenteId, ricerca).map((p) => ({ ...p, fotoPrincipale: principali.get(p.id) ?? null }))
 }
 
-export function leggiPiatto(db: Db, id: string): DettaglioPiatto {
+/** Scheda del piatto vista da `utenteId` (l'accesso è già stato verificato). */
+export function leggiPiatto(db: Db, id: string, utenteId: string): DettaglioPiatto {
   return lettura(db, () => {
     const p = repo.leggiPiatto(db, id)
-    if (!p) throw nonTrovato('Piatto')
-    return { ...p, usatoIn: repo.usiPiatto(db, id), foto: elencaFoto(db, id) }
+    const prop = repo.proprietaPiatto(db, id)
+    if (!p || !prop) throw nonTrovato('Piatto')
+    const mio = prop.proprietarioId === utenteId
+    return {
+      ...p,
+      usatoIn: repo.usiPiatto(db, id, utenteId),
+      foto: elencaFoto(db, id),
+      proprietario: { id: prop.proprietarioId, nome: prop.proprietarioNome },
+      mio,
+      origineAutore: prop.origineAutore,
+      originePiattoId: prop.originePiattoId,
+      condivisaCon: mio ? repoAccesso.condivisioniPiatto(db, id).map((c) => ({ id: c.utente_id, nome: c.nome })) : [],
+    }
   })
 }
 
@@ -53,7 +66,7 @@ function controllaIngredienti(db: Db, piattoId: string, ingredienti: Ingrediente
   return ingredienti.map((i, ordine) => ({ ...i, ordine, nome: pulisci(i.nome), nota: pulisci(i.nota) }))
 }
 
-export function creaPiatto(db: Db, d: NuovoPiatto, adesso = Date.now()): { creato: boolean; valore: DettaglioPiatto } {
+export function creaPiatto(db: Db, d: NuovoPiatto, proprieta: repo.Proprieta, adesso = Date.now()): { creato: boolean; valore: DettaglioPiatto } {
   return transazione(db, () => {
     const dati = datiPiatto(d)
     const ingredienti = controllaIngredienti(db, d.id, d.ingredienti ?? [])
@@ -62,35 +75,36 @@ export function creaPiatto(db: Db, d: NuovoPiatto, adesso = Date.now()): { creat
       'piatti',
       d.id,
       () => repo.leggiPiatto(db, d.id),
-      (p) => p.nome === dati.nome,
+      // Ripetizione della stessa creazione solo se il piatto è dello stesso utente.
+      (p) => p.nome === dati.nome && repo.proprietaPiatto(db, d.id)?.proprietarioId === proprieta.proprietarioId,
       () => {
-        repo.inserisciPiatto(db, d.id, dati, adesso)
+        repo.inserisciPiatto(db, d.id, dati, adesso, proprieta)
         repo.scriviIngredienti(db, d.id, ingredienti)
       },
     )
     if (esito.creato) incrementaRevisione(db)
-    return { creato: esito.creato, valore: leggiPiatto(db, d.id) }
+    return { creato: esito.creato, valore: leggiPiatto(db, d.id, proprieta.proprietarioId) }
   })
 }
 
-export function aggiornaPiatto(db: Db, id: string, d: AggiornaPiatto, adesso = Date.now()): DettaglioPiatto {
+export function aggiornaPiatto(db: Db, id: string, d: AggiornaPiatto, utenteId: string, adesso = Date.now()): DettaglioPiatto {
   return transazione(db, () => {
     const ingredienti = controllaIngredienti(db, id, d.ingredienti)
     const prima = repo.leggiPiatto(db, id)?.procedimento ?? []
     const dati = datiPiatto(d)
-    aggiornaConVersione(db, 'piatti', id, d.versione, repo.colonnePiatto(dati), () => leggiPiatto(db, id), adesso)
+    aggiornaConVersione(db, 'piatti', id, d.versione, repo.colonnePiatto(dati), () => leggiPiatto(db, id, utenteId), adesso)
     ricollegaPassi(db, id, prima, dati.procedimento)
     repo.scriviIngredienti(db, id, ingredienti)
     incrementaRevisione(db)
-    return leggiPiatto(db, id)
+    return leggiPiatto(db, id, utenteId)
   })
 }
 
 /** Elimina il piatto: le voci restano con il loro nome e senza piatto; gli snapshot non cambiano. */
-export function eliminaPiatto(db: Db, id: string, versione: number): void {
+export function eliminaPiatto(db: Db, id: string, versione: number, utenteId: string): void {
   transazione(db, () => {
     const usi = repo.usiPiatto(db, id)
-    eliminaConVersione(db, 'piatti', id, versione, () => leggiPiatto(db, id))
+    eliminaConVersione(db, 'piatti', id, versione, () => leggiPiatto(db, id, utenteId))
     // Le voci scollegate cambiano: la loro versione sale, così chi le modifica se ne accorge.
     for (const u of usi) incrementaVersione(db, 'voci_menu', u.voceId)
     incrementaRevisione(db)
@@ -106,7 +120,9 @@ export function creaPiattoDaVoce(db: Db, voceId: string, piattoId: string, versi
     if (voce.piattoId) throw regolaViolata('voce_gia_collegata', 'La voce è già collegata a un piatto')
     controllaVersioni(db, 'voci_menu', [{ id: voceId, versione: versioneVoce }], () => repoEventi.leggiVoce(db, voceId))
     if (uno(db, 'SELECT 1 FROM piatti WHERE id = ?', piattoId)) throw richiestaNonValida('Identificativo di piatto già usato')
-    repo.inserisciPiatto(db, piattoId, datiPiatto({ id: piattoId, nome: voce.nome }), adesso)
+    // Il piatto nasce nel ricettario del proprietario dell'evento, come richiede il collegamento.
+    const proprietario = repoAccesso.proprietarioEvento(db, voce.eventoId)!
+    repo.inserisciPiatto(db, piattoId, datiPiatto({ id: piattoId, nome: voce.nome }), adesso, { proprietarioId: proprietario })
     aggiornaConVersione(db, 'voci_menu', voceId, versioneVoce, { piatto_id: piattoId }, () => repoEventi.leggiVoce(db, voceId), adesso)
     incrementaRevisione(db)
     return { voce: repoEventi.leggiVoce(db, voceId)!, piatto: repo.leggiPiatto(db, piattoId)! }
@@ -187,9 +203,9 @@ export function eliminaIngrediente(db: Db, id: string, versione: number): void {
   })
 }
 
-export function usiIngrediente(db: Db, id: string) {
+export function usiIngrediente(db: Db, id: string, utenteId: string) {
   leggiIngrediente(db, id)
-  return { piatti: repo.piattiConIngrediente(db, id) }
+  return repo.piattiConIngrediente(db, id, utenteId)
 }
 
 // ── Reparti ─────────────────────────────────────────────────

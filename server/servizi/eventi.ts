@@ -5,6 +5,7 @@ import { modificabile, statoDopo } from '../../src/domain/regole/evento.ts'
 import { norm, pulisci } from '../../src/domain/testo.ts'
 import type { Evento, StatoEvento, VoceMenu } from '../../src/domain/tipi.ts'
 import { type Db, esegui, lettura, transazione } from '../db/connessione.ts'
+import * as repoAccesso from '../db/repo/accesso.ts'
 import * as repo from '../db/repo/eventi.ts'
 import { incrementaRevisione } from '../db/repo/meta.ts'
 import { nonTrovato, regolaViolata, richiestaNonValida } from './errori.ts'
@@ -24,8 +25,8 @@ export function richiediModificabile(e: Evento): void {
   }
 }
 
-export function elencaEventi(db: Db, stato?: StatoEvento): RiepilogoEvento[] {
-  return lettura(db, () => repo.elencaEventi(db, stato).map((e) => ({ ...e, copertiEquivalenti: copertiEquivalenti(e) })))
+export function elencaEventi(db: Db, utenteId: string, stato?: StatoEvento): RiepilogoEvento[] {
+  return lettura(db, () => repo.elencaEventi(db, utenteId, stato).map((e) => ({ ...e, copertiEquivalenti: copertiEquivalenti(e) })))
 }
 
 function nomiPortateUnici(portate: { nome: string }[]): void {
@@ -33,7 +34,7 @@ function nomiPortateUnici(portate: { nome: string }[]): void {
   if (new Set(nomi).size !== nomi.length) throw richiestaNonValida('Due portate hanno lo stesso nome')
 }
 
-export function creaEvento(db: Db, d: NuovoEvento, adesso = Date.now()): { creato: boolean; valore: Evento } {
+export function creaEvento(db: Db, d: NuovoEvento, proprietarioId: string, adesso = Date.now()): { creato: boolean; valore: Evento } {
   return transazione(db, () => {
     const imp = leggiImpostazioni(db)
     const portate = (d.portate ?? imp.portatePredefinite.map((p) => ({ id: `${d.id}:${p.id}`, nome: p.nome }))).map((p, i) => ({
@@ -59,9 +60,12 @@ export function creaEvento(db: Db, d: NuovoEvento, adesso = Date.now()): { creat
       'eventi',
       d.id,
       () => repo.leggiEvento(db, d.id),
-      (e) => e.nome === dati.nome && e.data === dati.data && e.tipo === dati.tipo && e.adulti === dati.adulti && e.bambini === dati.bambini,
+      // Ripetizione della stessa creazione solo se l'evento è dello stesso utente.
+      (e) =>
+        e.nome === dati.nome && e.data === dati.data && e.tipo === dati.tipo && e.adulti === dati.adulti && e.bambini === dati.bambini &&
+        repoAccesso.proprietarioEvento(db, d.id) === proprietarioId,
       () => {
-        repo.inserisciEvento(db, { ...dati, stato: 'attivo', conclusoIl: null, archiviatoIl: null, creatoIl: adesso, aggiornatoIl: adesso })
+        repo.inserisciEvento(db, { ...dati, stato: 'attivo', conclusoIl: null, archiviatoIl: null, creatoIl: adesso, aggiornatoIl: adesso }, proprietarioId)
         portate.forEach((p) => repo.inserisciPortata(db, d.id, p))
       },
     )
@@ -164,12 +168,20 @@ export function leggiMenu(db: Db, eventoId: string): Menu {
   })
 }
 
-function controllaPiatto(db: Db, piattoId: string | null | undefined): void {
-  if (piattoId && !repo.piattoEsiste(db, piattoId)) throw regolaViolata('piatto_inesistente', 'Il piatto collegato non esiste più')
+/**
+ * Piatto da collegare a una voce: `risolvi` verifica che l'utente possa usarlo e restituisce
+ * il piatto del proprietario dell'evento (eventualmente una copia, SPEC §15.4).
+ */
+export type RisolviPiatto = (piattoId: string) => string
+
+function controllaPiatto(db: Db, piattoId: string | null | undefined, risolvi: RisolviPiatto): string | null {
+  if (!piattoId) return null
+  if (!repo.piattoEsiste(db, piattoId)) throw regolaViolata('piatto_inesistente', 'Il piatto collegato non esiste più')
+  return risolvi(piattoId)
 }
 
 /** Crea una o più voci (inserimento rapido multiriga). Ripetizioni con lo stesso id: idempotenti. */
-export function creaVoci(db: Db, eventoId: string, voci: NuovaVoce[], adesso = Date.now()): VoceMenu[] {
+export function creaVoci(db: Db, eventoId: string, voci: NuovaVoce[], risolvi: RisolviPiatto, adesso = Date.now()): VoceMenu[] {
   return transazione(db, () => {
     const e = leggiEvento(db, eventoId)
     richiediModificabile(e)
@@ -177,10 +189,10 @@ export function creaVoci(db: Db, eventoId: string, voci: NuovaVoce[], adesso = D
     let create = 0
     for (const v of voci) {
       if (!repo.portataDiEvento(db, eventoId, v.portataId)) throw richiestaNonValida('La portata non appartiene a questo evento')
-      controllaPiatto(db, v.piattoId)
+      const piattoId = controllaPiatto(db, v.piattoId, risolvi)
       const dati = {
         nome: pulisci(v.nome),
-        piattoId: v.piattoId ?? null,
+        piattoId,
         porzioni: v.porzioni ?? null,
         incaricato: pulisci(v.incaricato ?? ''),
         inSpesa: v.inSpesa ?? true,
@@ -214,17 +226,18 @@ export function leggiVoce(db: Db, id: string): VoceMenu {
   return v
 }
 
-export function aggiornaVoce(db: Db, id: string, d: AggiornaVoce, adesso = Date.now()): VoceMenu {
+export function aggiornaVoce(db: Db, id: string, d: AggiornaVoce, risolvi: RisolviPiatto, adesso = Date.now()): VoceMenu {
   return transazione(db, () => {
     const v = leggiVoce(db, id)
     richiediModificabile(leggiEvento(db, v.eventoId))
-    controllaPiatto(db, d.piattoId)
+    // Lo stesso piatto già collegato non passa di nuovo dalla verifica (resta com'è).
+    const piattoId = d.piattoId === v.piattoId ? v.piattoId : controllaPiatto(db, d.piattoId, risolvi)
     aggiornaConVersione(
       db,
       'voci_menu',
       id,
       d.versione,
-      { nome: pulisci(d.nome), piatto_id: d.piattoId, porzioni: d.porzioni, incaricato: pulisci(d.incaricato), in_spesa: d.inSpesa, note: d.note },
+      { nome: pulisci(d.nome), piatto_id: piattoId, porzioni: d.porzioni, incaricato: pulisci(d.incaricato), in_spesa: d.inSpesa, note: d.note },
       () => leggiVoce(db, id),
       adesso,
     )

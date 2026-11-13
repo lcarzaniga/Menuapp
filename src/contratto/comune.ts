@@ -6,6 +6,9 @@ export const PREFISSO_API = '/api/v1'
 export const CODICI_ERRORE = [
   'richiesta_non_valida',
   'origine_non_ammessa',
+  'non_autenticato',
+  'accesso_negato',
+  'troppi_tentativi',
   'non_trovato',
   'conflitto_versione',
   'id_esistente',

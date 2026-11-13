@@ -4,6 +4,7 @@ import { SCALATURE, STATI_PARSING } from '../domain/tipi.ts'
 import { CODICI_UNITA } from '../domain/unita.ts'
 import { Epoch, Id, NomeObbligatorio, TestoBreve, TestoLungo, Versione } from './comune.ts'
 import { SchemaFoto } from './foto.ts'
+import { SchemaPersona } from './accesso.ts'
 
 const Minuti = z.number().int().min(0).max(100_000).nullable()
 const Quantita = z.number().min(0).max(1_000_000).nullable()
@@ -47,7 +48,23 @@ const CampiPiatto = {
 export const SchemaPiatto = z.object({ id: Id, ...CampiPiatto, versione: Versione, creatoIl: Epoch, aggiornatoIl: Epoch })
 
 export const SchemaUsoPiatto = z.object({ eventoId: Id, eventoNome: z.string(), data: z.string(), stato: z.string(), voceId: Id, voceNome: z.string() })
-export const SchemaDettaglioPiatto = SchemaPiatto.extend({ usatoIn: z.array(SchemaUsoPiatto), foto: z.array(SchemaFoto) })
+/** Proprietà della ricetta vista dall'utente corrente (SPEC §15.4). */
+const CampiProprieta = {
+  proprietario: SchemaPersona,
+  /** true se la ricetta è dell'utente corrente (può modificarla). */
+  mio: z.boolean(),
+  /** Autore della ricetta originale, se è una copia di una ricetta altrui. */
+  origineAutore: z.string(),
+}
+
+export const SchemaDettaglioPiatto = SchemaPiatto.extend({
+  usatoIn: z.array(SchemaUsoPiatto),
+  foto: z.array(SchemaFoto),
+  ...CampiProprieta,
+  originePiattoId: Id.nullable(),
+  /** Con chi è condivisa (solo per il proprietario). */
+  condivisaCon: z.array(SchemaPersona),
+})
 export type DettaglioPiatto = z.infer<typeof SchemaDettaglioPiatto>
 
 export const SchemaRiepilogoPiatto = z.object({
@@ -61,6 +78,9 @@ export const SchemaRiepilogoPiatto = z.object({
   fotoPrincipale: Id.nullable(),
   versione: Versione,
   aggiornatoIl: Epoch,
+  ...CampiProprieta,
+  /** Il proprietario la condivide con qualcuno. */
+  condiviso: z.boolean(),
 })
 export type RiepilogoPiatto = z.infer<typeof SchemaRiepilogoPiatto>
 

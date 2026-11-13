@@ -136,7 +136,7 @@ export function riapriArchiviato(db: Db, eventoId: string, versione: number, ade
 }
 
 /** «Copia nel ricettario»: nuovo piatto dai dati dello snapshot; non tocca i piatti esistenti. */
-export function copiaPiattoDaSnapshot(db: Db, snapshotId: string, piattoId: string, nuovoId: string) {
+export function copiaPiattoDaSnapshot(db: Db, snapshotId: string, piattoId: string, nuovoId: string, proprietarioId: string) {
   return transazione(db, () => {
     const s = leggiSnapshot(db, snapshotId)
     const p = s.contenuto.piatti.find((x) => x.id === piattoId)
@@ -159,7 +159,7 @@ export function copiaPiattoDaSnapshot(db: Db, snapshotId: string, piattoId: stri
         id: randomUUID(),
         ingredienteId: i.ingredienteId && catalogoVivo.has(i.ingredienteId) ? i.ingredienteId : null,
       })),
-    }).valore
+    }, { proprietarioId }).valore
   })
 }
 

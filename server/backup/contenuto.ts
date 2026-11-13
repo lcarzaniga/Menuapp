@@ -8,6 +8,9 @@ export const TABELLE_CONTENUTO = [
   'reparti',
   'ingredienti',
   'sinonimi_ingrediente',
+  'utenti',
+  // Le sessioni restano valide dopo un ripristino; inviti e richieste di attivazione no.
+  'sessioni',
   'piatti',
   'ingredienti_piatto',
   'eventi',
@@ -18,6 +21,8 @@ export const TABELLE_CONTENUTO = [
   'snapshot_eventi',
   'foto_piatti',
   'stili_stampa',
+  'condivisioni_evento',
+  'condivisioni_piatto',
   'meta',
 ] as const
 
@@ -60,6 +65,8 @@ export function inserisciContenuto(db: Db, dati: Record<string, RigaGenerica[]>)
   for (const t of TABELLE_CONTENUTO) {
     const righe = dati[t] ?? []
     if (righe.length === 0) continue
+    // L'amministratore iniziale nasce con la migrazione 0005: il file porta gli utenti veri.
+    if (t === 'utenti') esegui(db, 'DELETE FROM utenti')
     const ammesse = new Set(colonne(db, t).map((c) => c.nome))
     for (const riga of righe) {
       const nomi = Object.keys(riga)
