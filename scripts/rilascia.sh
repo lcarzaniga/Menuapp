@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
-# Rilascio in produzione (SPEC §14.4). Uso: scripts/rilascia.sh [--senza-riavvio] [--consenti-ramo]
+# Rilascio in produzione (SPEC §14.4). Uso: scripts/rilascia.sh [--senza-riavvio] [--consenti-ramo] [--senza-push]
+# Da main, dopo i controlli pubblica anche main su GitHub (solo avanzamento, mai forzato).
 source "$(dirname "$0")/comuni.sh"
 cd "$RADICE"
 
 SENZA_RIAVVIO=0
 CONSENTI_RAMO=0
+SENZA_PUSH=0
 for a in "$@"; do
   case "$a" in
     --senza-riavvio) SENZA_RIAVVIO=1 ;;
     --consenti-ramo) CONSENTI_RAMO=1 ;;
+    --senza-push) SENZA_PUSH=1 ;;
     *) errore "Opzione sconosciuta: $a" ;;
   esac
 done
@@ -20,6 +23,18 @@ ramo=$(git branch --show-current)
 info "Controlli (lint, tipi, test, build)…"
 npm run check >/dev/null || errore "npm run check non è verde"
 ok "Controlli verdi"
+
+# Pubblicazione di main su GitHub: solo se è avanti rispetto a origin/main (nessun push forzato).
+if [[ "$ramo" == "main" && $SENZA_PUSH == 0 ]]; then
+  git fetch -q origin main || errore "GitHub non raggiungibile: riprova o usa --senza-push"
+  if [[ "$(git rev-list --count origin/main..HEAD)" -gt 0 ]]; then
+    git merge-base --is-ancestor origin/main HEAD || errore "origin/main ha commit che main non ha: allinea prima di rilasciare"
+    git push -q origin main || errore "Push su GitHub non riuscito"
+    ok "main pubblicato su GitHub ($(git rev-parse --short HEAD))"
+  else
+    ok "main già pubblicato su GitHub"
+  fi
+fi
 
 # 2. Costruzione del rilascio in una cartella temporanea
 commit=$(git rev-parse --short HEAD)

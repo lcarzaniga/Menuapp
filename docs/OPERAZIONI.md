@@ -48,7 +48,8 @@ restino invariati, chiede conferma prima di `tailscale serve`).
 
 ## Rilasci
 
-- `scripts/rilascia.sh`: da `main` pulito; `npm run check`; build in cartella temporanea;
+- `scripts/rilascia.sh`: da `main` pulito; `npm run check`; pubblica `main` su GitHub se è
+  avanti (mai forzato; `--senza-push` per saltarlo); build in cartella temporanea;
   prova del nuovo rilascio su una copia del database (porta 9872); backup manuale; cambio
   atomico di `rilasci/attuale`; riavvio; controlli (salute, `no-cache` su `sw.js`, porta
   solo su loopback, HTTPS via Tailscale). Se i controlli falliscono e lo schema non è
