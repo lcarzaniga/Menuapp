@@ -89,7 +89,7 @@ export function leggiPiatti(db: Db, ids: string[]): Map<string, Piatto> {
   return m
 }
 
-/** Piatti visibili all'utente nel ricettario: i suoi e quelli condivisi con lui. */
+/** Piatti visibili all'utente nel ricettario: i suoi, quelli di famiglia e quelli condivisi con lui. */
 export function elencaPiatti(db: Db, utenteId: string, ricerca?: string) {
   const filtro = ricerca ? `%${norm(ricerca).replace(/[%_]/g, '')}%` : '%'
   return tutti<{
@@ -106,9 +106,10 @@ export function elencaPiatti(db: Db, utenteId: string, ricerca?: string) {
     proprietario_nome: string
     origine_autore: string
     condiviso: number
+    visibilita: 'famiglia' | 'privata'
   }>(
     db,
-    `SELECT p.id, p.nome, p.portata_suggerita, p.porzioni_base, p.versione, p.aggiornato_il, p.proprietario_id, p.origine_autore,
+    `SELECT p.id, p.nome, p.portata_suggerita, p.porzioni_base, p.versione, p.aggiornato_il, p.proprietario_id, p.origine_autore, p.visibilita,
        u.nome AS proprietario_nome,
        (SELECT count(*) FROM ingredienti_piatto i WHERE i.piatto_id = p.id) AS numero_ingredienti,
        (SELECT count(*) FROM ingredienti_piatto i WHERE i.piatto_id = p.id AND i.stato_parsing = 'da_verificare') AS da_verificare,
@@ -116,7 +117,7 @@ export function elencaPiatti(db: Db, utenteId: string, ricerca?: string) {
        EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id) AS condiviso
      FROM piatti p JOIN utenti u ON u.id = p.proprietario_id
      WHERE p.nome_norm LIKE ?
-       AND (p.proprietario_id = ? OR EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id AND c.utente_id = ?))
+       AND (p.proprietario_id = ? OR p.visibilita = 'famiglia' OR EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id AND c.utente_id = ?))
      ORDER BY p.nome_norm`,
     filtro,
     utenteId,
@@ -135,6 +136,7 @@ export function elencaPiatti(db: Db, utenteId: string, ricerca?: string) {
     mio: r.proprietario_id === utenteId,
     condiviso: r.proprietario_id === utenteId && r.condiviso === 1,
     origineAutore: r.origine_autore,
+    visibilita: r.visibilita,
   }))
 }
 
@@ -143,15 +145,18 @@ export interface InfoProprieta {
   proprietarioNome: string
   originePiattoId: string | null
   origineAutore: string
+  visibilita: 'famiglia' | 'privata'
 }
 
 export function proprietaPiatto(db: Db, id: string): InfoProprieta | undefined {
-  const r = uno<{ proprietario_id: string; nome: string; origine_piatto_id: string | null; origine_autore: string }>(
+  const r = uno<{ proprietario_id: string; nome: string; origine_piatto_id: string | null; origine_autore: string; visibilita: 'famiglia' | 'privata' }>(
     db,
-    'SELECT p.proprietario_id, u.nome, p.origine_piatto_id, p.origine_autore FROM piatti p JOIN utenti u ON u.id = p.proprietario_id WHERE p.id = ?',
+    'SELECT p.proprietario_id, u.nome, p.origine_piatto_id, p.origine_autore, p.visibilita FROM piatti p JOIN utenti u ON u.id = p.proprietario_id WHERE p.id = ?',
     id,
   )
-  return r && { proprietarioId: r.proprietario_id, proprietarioNome: r.nome, originePiattoId: r.origine_piatto_id, origineAutore: r.origine_autore }
+  return (
+    r && { proprietarioId: r.proprietario_id, proprietarioNome: r.nome, originePiattoId: r.origine_piatto_id, origineAutore: r.origine_autore, visibilita: r.visibilita }
+  )
 }
 
 /** Copia già fatta di un piatto nel ricettario di un utente (la più recente). */
@@ -195,6 +200,7 @@ export interface Proprieta {
   proprietarioId: string
   originePiattoId?: string | null
   origineAutore?: string
+  visibilita?: 'famiglia' | 'privata'
 }
 
 export function inserisciPiatto(db: Db, id: string, d: DatiPiatto, adesso: number, p: Proprieta): void {
@@ -203,6 +209,7 @@ export function inserisciPiatto(db: Db, id: string, d: DatiPiatto, adesso: numbe
     proprietario_id: p.proprietarioId,
     origine_piatto_id: p.originePiattoId ?? null,
     origine_autore: p.origineAutore ?? '',
+    visibilita: p.visibilita ?? 'famiglia',
   }
   const nomi = Object.keys(c)
   esegui(

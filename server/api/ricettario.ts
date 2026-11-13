@@ -9,6 +9,7 @@ import {
   SchemaCreaPiattoDaVoce,
   SchemaNuovoIngrediente,
   SchemaNuovoPiatto,
+  SchemaVisibilita,
 } from '../../src/contratto/ricettario.ts'
 import * as r from '../servizi/ricettario.ts'
 import { SchemaCopiaPiatto } from '../../src/contratto/accesso.ts'
@@ -29,7 +30,8 @@ export function rotteRicettario(app: FastifyInstance, ctx: Contesto): void {
   // Ricettario: piatti propri e condivisi; modifica solo del proprietario.
   app.get(`${P}/piatti`, async (req) => r.elencaPiatti(db, chi(req).id, valida(SchemaRicerca, req.query).q))
   app.post(`${P}/piatti`, async (req, reply) => {
-    const esito = r.creaPiatto(db, valida(SchemaNuovoPiatto, req.body), { proprietarioId: chi(req).id })
+    const d = valida(SchemaNuovoPiatto, req.body)
+    const esito = r.creaPiatto(db, d, { proprietarioId: chi(req).id, visibilita: d.visibilita })
     return reply.code(esito.creato ? 201 : 200).send(esito.valore)
   })
   app.get<ConId>(`${P}/piatti/:id`, async (req) => {
@@ -60,6 +62,12 @@ export function rotteRicettario(app: FastifyInstance, ctx: Contesto): void {
     const u = chi(req)
     richiediPiatto(db, u, req.params.id, 'proprietario')
     return condivisione.impostaCondivisioniPiatto(db, u, req.params.id, valida(SchemaImpostaCondivisioniPiatto, req.body).utenti)
+  })
+  app.put<ConId>(`${P}/piatti/:id/visibilita`, async (req) => {
+    const u = chi(req)
+    richiediPiatto(db, u, req.params.id, 'proprietario')
+    condivisione.impostaVisibilita(db, u, req.params.id, valida(SchemaVisibilita, req.body).visibilita)
+    return r.leggiPiatto(db, req.params.id, u.id)
   })
   app.post<ConId>(`${P}/piatti/:id/copia`, async (req, reply) => {
     const u = chi(req)

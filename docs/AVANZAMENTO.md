@@ -106,7 +106,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   `manuale-20261113-101602-v4.db`): salute ok sui quattro indirizzi, dati invariati
   (3 eventi, 38 piatti, 38 foto), dailymeals e kidscalendar attivi.
 
-## Multiutente con inviti e Tailscale Funnel (13/11/2026, ramo `multiutente`, da rilasciare)
+## Multiutente con inviti e Tailscale Funnel (13/11/2026, in produzione)
 
 - SPEC 3.0 / §19. Utenti, inviti monouso (24 h), richiesta di attivazione legata al browser con
   codice di verifica, approvazione dall'amministratore (o dall'utente da un altro suo
@@ -133,5 +133,17 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   con due browser; schermate in `test-results/multiutente/`).
 - Nota sviluppo: il server di sviluppo (9871) ha già migrato `dati-sviluppo/`: per entrare da
   8443 serve `npm run admin -- invito` e `npm run admin -- approva <codice>`.
-- Da autorizzare: merge e push, rilascio con migrazione 0005, attivazione dell'ingresso
-  pubblico (`scripts/attiva-ingresso-pubblico.sh`) e di Funnel sulla 443.
+- Rilasciato il 13/11 (`20261113-1204-2a4c181`, schema v5, backup
+  `pre-migrazione-20261113-120451-v4.db`); telefono di Loris attivato dalla console. Nota: due
+  ricette («Baccalà con cipolle», «Bourguignonne») erano state eliminate dall'app fra le 11:16
+  e le 12:04, prima del rilascio: recuperabili da `manuale-20261113-101602-v4.db`.
+- Funnel non ancora attivato (autorizzato; lo esegue Loris con
+  `scripts/attiva-ingresso-pubblico.sh` e `tailscale funnel`).
+
+## Ricettario di famiglia (13/11/2026, ramo `ricettario-famiglia`, da rilasciare)
+
+- SPEC 3.1: ricette visibili a tutti per impostazione predefinita, «Rendi privata» per il
+  proprietario (le private si condividono con persone scelte); modifica solo del proprietario;
+  negli eventi altrui per copia. Migrazione `0006_visibilita_piatti.sql` provata su una copia
+  del database di produzione (conteggi invariati, 36 ricette di famiglia, chiavi esterne e
+  integrità ok). Filtro «Solo le mie», «Utenti e dispositivi» in Impostazioni.

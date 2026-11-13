@@ -1795,13 +1795,19 @@ locali, niente dominio proprio, niente password, niente login Google.
 - Le modifiche si vedono agli altri con la revisione (§12.6, ogni 10 s). Conflitti: versioni e
   409 come prima, ma il record attuale torna solo a chi ha accesso.
 
-### 19.4 Ricette: proprietà, condivisione, copie
+### 19.4 Ricette: ricettario di famiglia, ricette private, copie
 
-- Ogni piatto ha un proprietario. Il ricettario mostra i propri piatti e quelli condivisi con
-  l'utente (`condivisioni_piatto`, sola lettura). Una ricetta collegata a un evento visibile è
-  leggibile (con le foto) da chi vede l'evento, per cucinare quel menù.
+- Ogni piatto ha un proprietario e una **visibilità** (migrazione `0006_visibilita_piatti.sql`):
+  `famiglia` (predefinita, anche per tutte le ricette esistenti) = visibile a tutti gli utenti
+  in sola lettura; `privata` = solo il proprietario, più le persone con cui la condivide
+  (`condivisioni_piatto`). Solo il proprietario modifica, elimina e cambia la visibilità
+  («Rendi privata» / «Rendi visibile a tutti» nella scheda). Una ricetta collegata a un evento
+  visibile è leggibile (con le foto) da chi vede l'evento, per cucinare quel menù.
+- Il ricettario mostra le proprie ricette, quelle di famiglia degli altri («di Anna») e quelle
+  private condivise; filtro «Solo le mie».
 - Le ricette altrui si usano **per copia** («Copia nel mio ricettario»): ingredienti e foto
-  duplicati (file nuovi), `origine_piatto_id` e `origine_autore` per ricordare la provenienza.
+  duplicati (file nuovi), `origine_piatto_id` e `origine_autore` per ricordare la provenienza;
+  la copia ha la visibilità dell'originale (la copia di una privata resta privata).
   Una voce di menù si collega solo a un piatto del proprietario dell'evento (verifica nel
   servizio e trigger nel database): se un invitato collega una sua ricetta, il proprietario
   dell'evento ne riceve una copia (riusata se esiste). Nessun collegamento vivo fra utenti:
@@ -1864,3 +1870,4 @@ locali, niente dominio proprio, niente password, niente login Google.
 | 12/11/2026 | 2.5 — Designer del menù stampato (richiesta di Loris, F8 riscritta): cinque modelli, palette, caratteri, decorazioni, formati A4/A5/2×A5, impaginazione misurata su più pagine; migrazione `0004_stili_stampa.sql` (tabella `stili_stampa`: `evento_id` PK con CASCADE, `opzioni` JSON validato dal contratto `src/contratto/stampa.ts`, `versione`); rotte `GET|PUT /eventi/:id/stampa` (versione 0 = primo salvataggio); stile incluso nello snapshot all'archiviazione e nelle esportazioni/ripristini; nuovi caratteri locali (Cormorant Garamond, Josefin Sans, Great Vibes, solo sottoinsieme latino) caricati solo dalla schermata di stampa |
 | 13/11/2026 | 2.6 — Ricettario sfogliabile (richiesta di Loris): filtro per portata in testa all'elenco (portate predefinite nel loro ordine, poi le altre, poi «Senza portata»; le varianti importate come «Antipasti / Fritti» o «Dolci al cucchiaio» ricadono nella predefinita da cui cominciano, regola in `src/domain/ricettario.ts`), elenco in ordine alfabetico italiano diviso per iniziale e rubrica alfabetica a lato come un'agenda telefonica (lettere vuote attenuate: portano alla successiva piena). Nessuna modifica a dati, API o schema |
 | 13/11/2026 | 3.0 — **Multiutente** (§19, decisione di Loris): utenti, accesso su invito con approvazione del dispositivo e codice di verifica, sessioni lato server revocabili, eventi privati condivisibili in lettura o modifica, ricette condivisibili in lettura e usate per copia, trasferimento di proprietà, amministrazione dalla console e dall'ingresso privato, ingresso pubblico per Tailscale Funnel senza funzioni di sistema, rete di casa HTTP senza dati; migrazione `0005_utenti.sql` (tutti i dati all'amministratore); «Esporta i miei dati» |
+| 13/11/2026 | 3.1 — **Ricettario di famiglia** (decisione di Loris): le ricette sono visibili a tutti gli utenti per impostazione predefinita e il proprietario può renderle private (condivisibili con persone scelte); modifica sempre solo del proprietario, uso negli eventi altrui per copia; migrazione `0006_visibilita_piatti.sql` (tutte le ricette esistenti di famiglia); filtro «Solo le mie»; «Utenti e dispositivi» anche in Impostazioni |

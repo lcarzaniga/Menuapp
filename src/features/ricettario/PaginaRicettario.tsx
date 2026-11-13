@@ -32,6 +32,7 @@ export function PaginaRicettario() {
   const [parametri, setParametri] = useSearchParams()
   const [cerca, setCerca] = useState('')
   const [soloVuoti, setSoloVuoti] = useState(false)
+  const [soloMie, setSoloMie] = useState(false)
   const [importa, setImporta] = useState(false)
   const tutti = useMemo(() => piatti.data ?? [], [piatti.data])
   const predefinite = useMemo(() => (imp.data?.portatePredefinite ?? []).map((p) => p.nome), [imp.data])
@@ -44,9 +45,9 @@ export function PaginaRicettario() {
   const elenco = useMemo(
     () =>
       tutti.filter(
-        (p) => (!q || norm(p.nome).includes(q)) && (!soloVuoti || p.numeroIngredienti === 0) && (!portata || portataDelPiatto(p.portataSuggerita, predefinite) === portata),
+        (p) => (!q || norm(p.nome).includes(q)) && (!soloVuoti || p.numeroIngredienti === 0) && (!soloMie || p.mio) && (!portata || portataDelPiatto(p.portataSuggerita, predefinite) === portata),
       ),
-    [tutti, q, soloVuoti, portata, predefinite],
+    [tutti, q, soloVuoti, soloMie, portata, predefinite],
   )
   const gruppi = useMemo(() => rubrica(elenco), [elenco])
   const lettere = useMemo(() => gruppi.map((g) => g.lettera), [gruppi])
@@ -72,7 +73,7 @@ export function PaginaRicettario() {
         <Search className="absolute left-3 top-3.5 size-4 text-testo-tenue" />
         <Input className="pl-9" placeholder="Cerca un piatto" aria-label="Cerca un piatto" value={cerca} onChange={(e) => setCerca(e.target.value)} />
       </div>
-      {portate.length > 1 || vuoti > 0 ? (
+      {portate.length > 1 || vuoti > 0 || tutti.some((p) => !p.mio) ? (
         <div role="group" aria-label="Filtra per portata" className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
           {portate.length > 1 ? (
             <>
@@ -85,6 +86,11 @@ export function PaginaRicettario() {
                 </button>
               ))}
             </>
+          ) : null}
+          {tutti.some((p) => !p.mio) ? (
+            <button type="button" aria-pressed={soloMie} onClick={() => setSoloMie(!soloMie)} className={cn(classeFiltro(soloMie), 'border-dashed', soloMie && 'border-solid')}>
+              Solo le mie
+            </button>
           ) : null}
           {vuoti > 0 ? (
             <button
@@ -148,7 +154,7 @@ function RigaPiatto({ piatto: p }: { piatto: RiepilogoPiatto }) {
       <div className="min-w-0 flex-1">
         <p className="titolo truncate text-lg font-semibold">{p.nome}</p>
         <p className="mt-0.5 flex flex-wrap gap-1.5 text-xs text-testo-tenue">
-          {!p.mio ? <Badge variante="info">di {p.proprietario.nome}</Badge> : p.condiviso ? <Badge variante="primario">condivisa</Badge> : null}
+          {!p.mio ? <Badge variante="info">di {p.proprietario.nome}</Badge> : p.visibilita === 'privata' ? <Badge>{p.condiviso ? 'privata, condivisa' : 'privata'}</Badge> : null}
           {p.portataSuggerita ? <span>{p.portataSuggerita}</span> : null}
           {p.porzioniBase ? <span>per {formattaCoperti(p.porzioniBase)}</span> : <span>porzioni da indicare</span>}
           <span>· {p.numeroIngredienti} ingredienti</span>

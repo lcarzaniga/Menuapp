@@ -83,6 +83,15 @@ export function trasferisciEvento(db: Db, cartellaFoto: string, u: UtenteCorrent
 
 // ── Ricette ──────────────────────────────────────────────────
 
+/** Ricettario di famiglia o ricetta privata (solo il proprietario la cambia). */
+export function impostaVisibilita(db: Db, u: UtenteCorrente, piattoId: string, visibilita: 'famiglia' | 'privata', adesso = Date.now()): void {
+  transazione(db, () => {
+    richiediPiatto(db, u, piattoId, 'proprietario')
+    repo.impostaVisibilitaPiatto(db, piattoId, visibilita, adesso)
+    incrementaRevisione(db)
+  })
+}
+
 export function condivisioniPiatto(db: Db, u: UtenteCorrente, piattoId: string): Persona[] {
   richiediPiatto(db, u, piattoId, 'proprietario')
   return repo.condivisioniPiatto(db, piattoId).map((c) => ({ id: c.utente_id, nome: c.nome }))
@@ -108,6 +117,8 @@ function copiaPiattoInterna(db: Db, cartellaFoto: string, piattoId: string, nuov
   const { id: _id, versione: _v, creatoIl: _c, aggiornatoIl: _a, ingredienti, ...dati } = p
   repoRic.inserisciPiatto(db, nuovoId, dati, adesso, {
     proprietarioId,
+    // La copia ha la visibilità dell'originale: una ricetta privata resta privata.
+    visibilita: prop.visibilita,
     // Una copia di una copia ricorda l'autore originale.
     originePiattoId: prop.originePiattoId ?? piattoId,
     origineAutore: prop.origineAutore || prop.proprietarioNome,

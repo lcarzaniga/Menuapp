@@ -31,8 +31,9 @@ beforeEach(async () => {
   carla = t.utente('Carla')
   // Evento di Loris con menù collegato a una ricetta con foto, spesa, piano, stile.
   const ev = await nuovoEvento(t, 'ev')
-  await ok(t.scrivi('POST', `${P}/piatti`, { id: 'p-lasagne', nome: 'Lasagne', porzioniBase: 4, ingredienti: [] }))
-  await ok(t.scrivi('POST', `${P}/piatti`, { id: 'p-privato', nome: 'Ricetta segreta', ingredienti: [] }))
+  // Ricette private: la matrice verifica l'accesso dato dall'evento, non dal ricettario di famiglia.
+  await ok(t.scrivi('POST', `${P}/piatti`, { id: 'p-lasagne', nome: 'Lasagne', porzioniBase: 4, ingredienti: [], visibilita: 'privata' }))
+  await ok(t.scrivi('POST', `${P}/piatti`, { id: 'p-privato', nome: 'Ricetta segreta', ingredienti: [], visibilita: 'privata' }))
   await ok(t.inietta({ method: 'POST', url: `${P}/piatti/p-lasagne/foto?id=f1`, headers: { origin: ORIGINE_PROVA, 'content-type': 'image/jpeg' }, payload: jpeg() }))
   await ok(t.scrivi('POST', `${P}/eventi/ev/voci`, { voci: [{ id: 'v1', portataId: ev.portate[1].id, nome: 'Lasagne', piattoId: 'p-lasagne' }] }))
   await ok(t.scrivi('POST', `${P}/eventi/ev/spesa/manuali`, { id: 'm1', nome: 'Ghiaccio', quantitaTesto: '', repartoId: null, nota: '' }))
@@ -244,7 +245,7 @@ describe('ricette e foto', () => {
   })
 
   it('l\'invitato in modifica collega una sua ricetta: il proprietario dell\'evento ne riceve una copia', async () => {
-    await ok(anna.scrivi('POST', `${P}/piatti`, { id: 'p-anna', nome: 'Tiramisù di Anna', porzioniBase: 8, ingredienti: [] }))
+    await ok(anna.scrivi('POST', `${P}/piatti`, { id: 'p-anna', nome: 'Tiramisù di Anna', porzioniBase: 8, ingredienti: [], visibilita: 'privata' }))
     const ev = corpo(await anna.leggi(`${P}/eventi/ev`))
     const [voce] = await ok(anna.scrivi('POST', `${P}/eventi/ev/voci`, { voci: [{ id: 'v-dolce', portataId: ev.portate[4].id, nome: 'Tiramisù', piattoId: 'p-anna' }] }))
     expect(voce.piattoId).not.toBe('p-anna')
@@ -274,10 +275,59 @@ describe('ricette e foto', () => {
   })
 })
 
+describe('ricettario di famiglia', () => {
+  it('le ricette sono visibili a tutti per impostazione predefinita, in sola lettura', async () => {
+    await ok(t.scrivi('POST', `${P}/piatti`, { id: 'p-fam', nome: 'Ragù della nonna', porzioniBase: 6, ingredienti: [] }))
+    await ok(t.inietta({ method: 'POST', url: `${P}/piatti/p-fam/foto?id=f-fam`, headers: { origin: ORIGINE_PROVA, 'content-type': 'image/jpeg' }, payload: jpeg(5) }))
+    const elenco = corpo(await carla.leggi(`${P}/piatti?q=nonna`))
+    expect(elenco).toEqual([expect.objectContaining({ id: 'p-fam', mio: false, visibilita: 'famiglia', proprietario: { id: 'utente-amministratore', nome: 'Loris' } })])
+    expect(corpo(await carla.leggi(`${P}/piatti/p-fam`))).toMatchObject({ mio: false, visibilita: 'famiglia' })
+    expect((await carla.leggi(`${P}/foto/f-fam`)).statusCode).toBe(200)
+    const vista = corpo(await carla.leggi(`${P}/piatti/p-fam`))
+    expect((await carla.scrivi('PUT', `${P}/piatti/p-fam`, { ...vista, nome: 'Cambiato' })).statusCode).toBe(403)
+    expect((await carla.scrivi('PUT', `${P}/piatti/p-fam/visibilita`, { visibilita: 'privata' })).statusCode).toBe(403)
+    expect((await carla.scrivi('DELETE', `${P}/piatti/p-fam?versione=1`)).statusCode).toBe(403)
+  })
+
+  it('resa privata: sparisce dagli altri (lista, scheda, foto); le copie già fatte restano', async () => {
+    await ok(t.scrivi('POST', `${P}/piatti`, { id: 'p-fam', nome: 'Ragù della nonna', ingredienti: [] }))
+    await ok(t.inietta({ method: 'POST', url: `${P}/piatti/p-fam/foto?id=f-fam`, headers: { origin: ORIGINE_PROVA, 'content-type': 'image/jpeg' }, payload: jpeg(5) }))
+    await ok(carla.scrivi('POST', `${P}/piatti/p-fam/copia`, { id: 'copia-ragu' }))
+    expect(corpo(await t.scrivi('PUT', `${P}/piatti/p-fam/visibilita`, { visibilita: 'privata' })).visibilita).toBe('privata')
+    expect(corpo(await carla.leggi(`${P}/piatti?q=nonna`)).map((p: { id: string }) => p.id)).toEqual(['copia-ragu'])
+    expect((await carla.leggi(`${P}/piatti/p-fam`)).statusCode).toBe(404)
+    expect((await carla.leggi(`${P}/foto/f-fam`)).statusCode).toBe(404)
+    expect(corpo(await carla.leggi(`${P}/piatti/copia-ragu`))).toMatchObject({ mio: true, origineAutore: 'Loris' })
+    // Di nuovo di famiglia: torna visibile.
+    await ok(t.scrivi('PUT', `${P}/piatti/p-fam/visibilita`, { visibilita: 'famiglia' }))
+    expect((await carla.leggi(`${P}/piatti/p-fam`)).statusCode).toBe(200)
+  })
+
+  it('la copia di una ricetta privata condivisa resta privata', async () => {
+    await ok(t.scrivi('PUT', `${P}/piatti/p-privato/condivisioni`, { utenti: [carla.id] }))
+    const copia = corpo(await carla.scrivi('POST', `${P}/piatti/p-privato/copia`, { id: 'copia-segreta' }))
+    expect(copia.visibilita).toBe('privata')
+    expect((await bruno.leggi(`${P}/piatti/copia-segreta`)).statusCode).toBe(404)
+  })
+
+  it('un evento che usa una ricetta di famiglia di altri ne riceve una copia (nessun collegamento vivo)', async () => {
+    await ok(anna.scrivi('POST', `${P}/piatti`, { id: 'p-anna-fam', nome: 'Torta di mele di Anna', ingredienti: [] }))
+    const ev = corpo(await t.leggi(`${P}/eventi/ev`))
+    const [voce] = await ok(t.scrivi('POST', `${P}/eventi/ev/voci`, { voci: [{ id: 'v-torta', portataId: ev.portate[4].id, nome: 'Torta di mele', piattoId: 'p-anna-fam' }] }))
+    expect(voce.piattoId).not.toBe('p-anna-fam')
+    expect(corpo(await t.leggi(`${P}/piatti/${voce.piattoId}`))).toMatchObject({ mio: true, origineAutore: 'Anna', visibilita: 'famiglia' })
+    // Anna la rende privata: l'evento di Loris non cambia.
+    await ok(anna.scrivi('PUT', `${P}/piatti/p-anna-fam/visibilita`, { visibilita: 'privata' }))
+    expect(corpo(await t.leggi(`${P}/voci/v-torta`)).piattoId).toBe(voce.piattoId)
+  })
+})
+
 describe('esportazioni', () => {
   it('«i miei dati» contiene solo eventi e ricette dell\'utente', async () => {
     await nuovoEvento(carla, 'ev-carla', 'Compleanno di Carla')
     await ok(carla.scrivi('POST', `${P}/piatti`, { id: 'p-carla', nome: 'Torta di Carla', ingredienti: [] }))
+    // Anche le ricette di famiglia degli altri restano fuori dall'esportazione personale.
+    await ok(t.scrivi('POST', `${P}/piatti`, { id: 'p-famiglia', nome: 'Ragù della nonna', ingredienti: [] }))
     const r = await carla.leggi(`${P}/account/esportazione`)
     expect(r.statusCode).toBe(200)
     const zip = unzipSync(new Uint8Array(r.rawPayload))
@@ -285,6 +335,7 @@ describe('esportazioni', () => {
     expect(dati.eventi.map((e: { evento: { id: string } }) => e.evento.id)).toEqual(['ev-carla'])
     expect(dati.ricette.map((x: { nome: string }) => x.nome)).toEqual(['Torta di Carla'])
     expect(JSON.stringify(dati)).not.toMatch(/Lasagne|Pasqua|segreta|Ghiaccio|Ragù/)
+    expect(JSON.stringify(dati)).not.toContain('nonna')
     // Anche Anna (invitata in modifica) esporta solo ciò che è suo.
     const perAnna = JSON.parse(strFromU8(unzipSync(new Uint8Array((await anna.leggi(`${P}/account/esportazione`)).rawPayload))['dati.json']!))
     expect(perAnna.eventi).toEqual([])

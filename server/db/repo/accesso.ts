@@ -217,18 +217,22 @@ export const proprietarioPiatto = (db: Db, id: string) => uno<{ proprietario_id:
 export const proprietarioEvento = (db: Db, id: string) => uno<{ proprietario_id: string }>(db, 'SELECT proprietario_id FROM eventi WHERE id = ?', id)?.proprietario_id
 
 /**
- * Lettura di un piatto non proprio: condiviso con l'utente, oppure collegato a una voce di
- * un evento che l'utente può leggere (la ricetta serve per cucinare quel menù).
+ * Lettura di un piatto non proprio: del ricettario di famiglia (non privato), condiviso con
+ * l'utente, oppure collegato a una voce di un evento che l'utente può leggere (la ricetta
+ * serve per cucinare quel menù).
  */
 export function piattoLeggibileDaAltri(db: Db, piattoId: string, utenteId: string): boolean {
   return (
     uno(
       db,
-      `SELECT 1 FROM condivisioni_piatto WHERE piatto_id = ? AND utente_id = ?
+      `SELECT 1 FROM piatti WHERE id = ? AND visibilita = 'famiglia'
+       UNION ALL
+       SELECT 1 FROM condivisioni_piatto WHERE piatto_id = ? AND utente_id = ?
        UNION ALL
        SELECT 1 FROM voci_menu v JOIN eventi e ON e.id = v.evento_id
        WHERE v.piatto_id = ? AND (e.proprietario_id = ? OR EXISTS (SELECT 1 FROM condivisioni_evento c WHERE c.evento_id = e.id AND c.utente_id = ?))
        LIMIT 1`,
+      piattoId,
       piattoId,
       utenteId,
       piattoId,
@@ -270,6 +274,10 @@ export const condivisioniPiatto = (db: Db, piattoId: string) =>
     'SELECT c.utente_id, u.nome FROM condivisioni_piatto c JOIN utenti u ON u.id = c.utente_id WHERE c.piatto_id = ? ORDER BY u.nome_norm',
     piattoId,
   )
+
+export function impostaVisibilitaPiatto(db: Db, piattoId: string, visibilita: 'famiglia' | 'privata', adesso: number): void {
+  esegui(db, 'UPDATE piatti SET visibilita = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ?', visibilita, adesso, piattoId)
+}
 
 export function sostituisciCondivisioniPiatto(db: Db, piattoId: string, utenti: string[], adesso: number): void {
   esegui(db, 'DELETE FROM condivisioni_piatto WHERE piatto_id = ?', piattoId)

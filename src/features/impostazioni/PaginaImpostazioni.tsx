@@ -1,5 +1,5 @@
 // Impostazioni: portate predefinite, coefficiente bambini, reparti, tema del dispositivo (SPEC §5).
-import { ArrowDown, ArrowUp, ChevronRight, CircleUserRound, Database, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronRight, CircleUserRound, Database, Plus, Trash2, UsersRound } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { api, nuovoId } from '@/api/client'
@@ -69,6 +69,16 @@ export function PaginaImpostazioni() {
           </span>
           <ChevronRight className="size-5 text-testo-tenue" />
         </Link>
+        {amministratore && ingressoPrivato ? (
+          <Link to="/impostazioni/utenti" className="flex items-center gap-3 rounded-2xl border border-bordo bg-carta p-4 hover:bg-tenue/60">
+            <UsersRound className="size-5 text-primario" />
+            <span className="flex-1">
+              <span className="block font-medium">Utenti e dispositivi</span>
+              <span className="text-sm text-testo-tenue">Nuovi utenti e inviti, approvazioni, dispositivi di tutti</span>
+            </span>
+            <ChevronRight className="size-5 text-testo-tenue" />
+          </Link>
+        ) : null}
         {amministratore && ingressoPrivato ? (
           <Link to="/impostazioni/dati" className="flex items-center gap-3 rounded-2xl border border-bordo bg-carta p-4 hover:bg-tenue/60">
             <Database className="size-5 text-primario" />

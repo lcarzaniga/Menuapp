@@ -101,24 +101,34 @@ test('invito, approvazione, condivisione e revoca fra due persone', async ({ pag
   await expect(anna.page.getByText('Questo evento non è disponibile')).toBeVisible()
   await foto(anna.page, '07-evento-revocato')
 
-  // ── Ricetta condivisa e copiata da Anna
+  // ── Ricettario di famiglia: Anna vede la ricetta di Loris senza condivisioni e la copia
   await apiScrivi(request, 'post', '/piatti', { id: 'p-cotechino', nome: 'Cotechino con lenticchie', porzioniBase: 6, ingredienti: [] })
-  await page.goto('/#/ricettario/p-cotechino')
-  await page.getByRole('button', { name: 'Condividi con…' }).click()
-  await page.getByRole('checkbox', { name: 'Anna' }).check()
-  await page.getByRole('button', { name: 'Salva' }).click()
-  await expect(page.getByRole('button', { name: 'Condivisa con 1' })).toBeVisible()
   await anna.page.goto('/#/ricettario')
-  await expect(anna.page.getByText('di Loris')).toBeVisible()
-  await anna.page.getByRole('link', { name: /Cotechino con lenticchie/ }).click()
+  const riga = anna.page.getByRole('link', { name: /Cotechino con lenticchie/ })
+  await expect(riga).toContainText('di Loris')
+  await foto(anna.page, '08-ricettario-famiglia')
+  await riga.click()
   await expect(anna.page.getByRole('button', { name: 'Modifica' })).toHaveCount(0)
   await anna.page.getByRole('button', { name: 'Copia nel mio ricettario' }).click()
   await expect(anna.page.getByText('dalla ricetta di Loris')).toBeVisible()
   await expect(anna.page.getByRole('button', { name: 'Modifica' })).toBeEnabled()
-  await foto(anna.page, '08-copia-ricetta')
-  // La copia è di Anna: Loris non la vede.
-  const diLoris = await apiLeggi<{ nome: string; mio: boolean }[]>(request, '/piatti?q=cotechino')
-  expect(diLoris).toEqual([expect.objectContaining({ nome: 'Cotechino con lenticchie', mio: true })])
+  await foto(anna.page, '09-copia-ricetta')
+
+  // ── Loris rende privata la ricetta: Anna non vede più l'originale, la sua copia resta
+  await page.goto('/#/ricettario/p-cotechino')
+  await expect(page.getByTestId('visibilita-ricetta')).toContainText('ricettario di famiglia')
+  await page.getByRole('button', { name: 'Rendi privata' }).click()
+  await expect(page.getByTestId('visibilita-ricetta')).toContainText('la vedi solo tu')
+  await foto(page, '10-ricetta-privata')
+  await anna.page.goto('/#/ricettario')
+  await expect(anna.page.getByRole('link', { name: /Cotechino con lenticchie/ })).toHaveCount(1)
+  await expect(anna.page.getByRole('link', { name: /Cotechino con lenticchie/ })).not.toContainText('di Loris')
+  // Loris vede la sua (privata) e la copia di Anna, che è nel ricettario di famiglia come ricetta di Anna.
+  const diLoris = await apiLeggi<{ nome: string; mio: boolean; visibilita: string; proprietario: { nome: string } }[]>(request, '/piatti?q=cotechino')
+  expect(diLoris.map((p) => [p.proprietario.nome, p.mio, p.visibilita]).sort()).toEqual([
+    ['Anna', false, 'famiglia'],
+    ['Loris', true, 'privata'],
+  ])
 
   // ── Revoca del dispositivo di Anna
   await page.goto('/#/impostazioni/utenti')
@@ -128,7 +138,7 @@ test('invito, approvazione, condivisione e revoca fra due persone', async ({ pag
   await expect(page.getByText('Dispositivo scollegato')).toBeVisible()
   await anna.page.goto('/#/')
   await expect(anna.page.getByRole('heading', { name: /non autorizzato|non più valido/ })).toBeVisible({ timeout: 15_000 })
-  await foto(anna.page, '09-dispositivo-revocato')
+  await foto(anna.page, '11-dispositivo-revocato')
   await anna.ctx.close()
 })
 
