@@ -75,7 +75,7 @@ permessi: Loris la esegue con `! comando`.
 
 Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collaudo/collaudo-v1.md`).
 
-## Designer del menù stampato (12/11/2026, ramo `designer-menu`, da rilasciare)
+## Designer del menù stampato (12/11/2026, in produzione)
 
 - SPEC 2.5 / F8: cinque modelli (Elegante, Minimal, Rustico, Festivo, Natale), 7 palette,
   4 combinazioni tipografiche, decorazioni, titolo/sottotitolo/data/nota, portate vuote e
@@ -87,6 +87,18 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Test: API (`server/api/stampa.test.ts`), impaginazione e modelli
   (`src/features/stampa/stampa.test.tsx`), e2e con PDF e schermate
   (`test/e2e/stampa.spec.ts`, schermate in `test-results/stampa/`).
-- Per il rilascio serve la migrazione 0004 sul database di produzione (backup automatico
-  verificato prima della migrazione, come per le precedenti).
+- Rilasciato il 12/11 (`20261112-1747-10f0947`, schema v4, migrazione 0004 applicata con
+  backup pre-migrazione). Verificato il 13/11: salute ok sui quattro indirizzi, 3 eventi,
+  38 piatti, 38 foto, backup notturno `giornaliero-20261113-034559-v4.db` ok.
 
+## Ricettario sfogliabile (13/11/2026, ramo `ricettario-rubrica`, da rilasciare)
+
+- SPEC 2.6: filtri per portata in testa all'elenco con il numero di piatti (nell'indirizzo,
+  ricordati tornando dal piatto), elenco alfabetico diviso per iniziale, rubrica A–Z a lato
+  da toccare o trascinare, con la lettera della sezione visibile evidenziata.
+- Le portate importate con varianti ricadono nella predefinita («Antipasti / Fritti» →
+  Antipasti, «Dolci al cucchiaio» → Dolci); le altre («Piatti unici», «Condimenti») hanno
+  un filtro loro. Logica pura in `src/domain/ricettario.ts` con test.
+- Solo interfaccia: nessuna migrazione, nessuna modifica ad API o dati.
+- Test: `src/domain/ricettario.test.ts`, `test/e2e/ricettario-rubrica.spec.ts` (schermate
+  in `test-results/ricettario/`). `npm run check` 224 test verdi, `npm run test:e2e` 31 verdi.
