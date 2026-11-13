@@ -1,23 +1,37 @@
 #!/usr/bin/env bash
-# Rilascio in produzione (SPEC §14.4). Uso: scripts/rilascia.sh [--senza-riavvio] [--consenti-ramo] [--senza-push]
-# Da main, dopo i controlli pubblica anche main su GitHub (solo avanzamento, mai forzato).
+# Rilascio in produzione (SPEC §14.4).
+# Uso: scripts/rilascia.sh [ramo] [--senza-riavvio] [--consenti-ramo] [--senza-push]
+# Con un ramo: lo unisce in main (solo avanzamento), esegue i controlli, pubblica main su
+# GitHub e rilascia. Lanciarlo è l'autorizzazione a merge, push, migrazioni e rilascio.
+# Tutto lo script sta in una funzione: bash lo legge per intero prima di eseguirlo, quindi il
+# merge può cambiare questo file senza effetti sull'esecuzione in corso.
 source "$(dirname "$0")/comuni.sh"
+
+rilascia() {
 cd "$RADICE"
 
 SENZA_RIAVVIO=0
 CONSENTI_RAMO=0
 SENZA_PUSH=0
+DA_UNIRE=""
 for a in "$@"; do
   case "$a" in
     --senza-riavvio) SENZA_RIAVVIO=1 ;;
     --consenti-ramo) CONSENTI_RAMO=1 ;;
     --senza-push) SENZA_PUSH=1 ;;
-    *) errore "Opzione sconosciuta: $a" ;;
+    -*) errore "Opzione sconosciuta: $a" ;;
+    *) [[ -z "$DA_UNIRE" ]] || errore "Un solo ramo alla volta"; DA_UNIRE="$a" ;;
   esac
 done
 
 # 1. Verifiche
 [[ -z "$(git status --porcelain)" ]] || errore "Albero Git non pulito"
+if [[ -n "$DA_UNIRE" && "$DA_UNIRE" != "main" ]]; then
+  git rev-parse -q --verify "refs/heads/$DA_UNIRE" >/dev/null || errore "Ramo inesistente: $DA_UNIRE"
+  git switch -q main
+  git merge -q --ff-only "$DA_UNIRE" || errore "$DA_UNIRE non è un avanzamento di main: niente unione"
+  ok "$DA_UNIRE unito in main ($(git rev-parse --short HEAD))"
+fi
 ramo=$(git branch --show-current)
 [[ "$ramo" == "main" || $CONSENTI_RAMO == 1 ]] || errore "Si rilascia da main (ramo attuale: $ramo)"
 info "Controlli (lint, tipi, test, build)…"
@@ -120,3 +134,7 @@ ok "Rilascio $id attivo e verificato"
 ls -1d "$RILASCI"/2* 2>/dev/null | sort | head -n -5 | while read -r vecchio; do
   [[ "$(basename "$vecchio")" == "$id" ]] || rm -rf "$vecchio"
 done
+}
+
+rilascia "$@"
+exit $?

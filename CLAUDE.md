@@ -43,5 +43,8 @@ verità) e `docs/AVANZAMENTO.md` (stato del lavoro) prima di cambiare qualcosa.
 
 - Niente push, merge su `main`, rilasci, modifiche a servizi systemd o a Tailscale,
   operazioni su dati di produzione senza autorizzazione esplicita di Loris.
+- Rilasci: il lavoro resta su un ramo; a Loris si indica il comando `! scripts/rilascia.sh <ramo>`
+  (merge in main, controlli, push, migrazioni, rilascio). Lanciarlo è la sua autorizzazione: non
+  chiedere un «autorizzo» separato e non fare merge o push da soli.
 - Non toccare altri progetti o servizi del server (dailyMeals, sharedKidsCalendar, Apache…).
 - Aggiorna `docs/AVANZAMENTO.md` a ogni attività significativa.

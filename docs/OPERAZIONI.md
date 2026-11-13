@@ -48,7 +48,9 @@ restino invariati, chiede conferma prima di `tailscale serve`).
 
 ## Rilasci
 
-- `scripts/rilascia.sh`: da `main` pulito; `npm run check`; pubblica `main` su GitHub se è
+- `scripts/rilascia.sh <ramo>`: unisce il ramo in `main` (solo avanzamento), poi tutto il resto
+  in un solo comando; lanciarlo è l'autorizzazione di Loris a merge, push e rilascio. Senza ramo
+  rilascia `main` com'è. Passi: albero pulito; `npm run check`; pubblica `main` su GitHub se è
   avanti (mai forzato; `--senza-push` per saltarlo); build in cartella temporanea;
   prova del nuovo rilascio su una copia del database (porta 9872); backup manuale; cambio
   atomico di `rilasci/attuale`; riavvio; controlli (salute, `no-cache` su `sw.js`, porta
