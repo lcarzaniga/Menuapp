@@ -91,7 +91,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   backup pre-migrazione). Verificato il 13/11: salute ok sui quattro indirizzi, 3 eventi,
   38 piatti, 38 foto, backup notturno `giornaliero-20261113-034559-v4.db` ok.
 
-## Ricettario sfogliabile (13/11/2026, ramo `ricettario-rubrica`, da rilasciare)
+## Ricettario sfogliabile (13/11/2026, in produzione)
 
 - SPEC 2.6: filtri per portata in testa all'elenco con il numero di piatti (nell'indirizzo,
   ricordati tornando dal piatto), elenco alfabetico diviso per iniziale, rubrica A–Z a lato
@@ -102,3 +102,6 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Solo interfaccia: nessuna migrazione, nessuna modifica ad API o dati.
 - Test: `src/domain/ricettario.test.ts`, `test/e2e/ricettario-rubrica.spec.ts` (schermate
   in `test-results/ricettario/`). `npm run check` 224 test verdi, `npm run test:e2e` 31 verdi.
+- Rilasciato il 13/11 (`20261113-1015-0c5a473`, schema v4 invariato, backup
+  `manuale-20261113-101602-v4.db`): salute ok sui quattro indirizzi, dati invariati
+  (3 eventi, 38 piatti, 38 foto), dailymeals e kidscalendar attivi.
