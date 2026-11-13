@@ -6,8 +6,13 @@ import { PREFISSO_API } from '../../src/contratto/comune.ts'
 import { SchemaAggiornaFoto, SchemaQueryCaricaFoto } from '../../src/contratto/foto.ts'
 import { daPiatto, nomeFileRicetta } from '../../src/domain/ricetta/formato.ts'
 import * as foto from '../servizi/foto.ts'
-import { leggiPiatto } from '../servizi/ricettario.ts'
+import { elencaPiatti, leggiPiatto } from '../servizi/ricettario.ts'
 import { richiediFoto, richiediPiatto, richiediSistema } from '../servizi/permessi.ts'
+import { attivitaDaSnapshot, menuDaSnapshot, spesaDaSnapshot } from '../servizi/archivio.ts'
+import { elencaAttivita } from '../servizi/attivita.ts'
+import { elencaEventi, leggiMenu } from '../servizi/eventi.ts'
+import { listaSpesa } from '../servizi/spesa.ts'
+import { leggiStileStampa } from '../servizi/stampa.ts'
 import { chi, type Contesto, valida } from './aiuti.ts'
 
 type ConId = { Params: { id: string } }
@@ -70,5 +75,53 @@ export function rotteFoto(app: FastifyInstance, ctx: Contesto): void {
       .header('content-type', 'application/zip')
       .header('content-disposition', `attachment; filename="${nomeFileRicetta(p.nome)}"`)
       .send(Buffer.from(zip))
+  })
+
+  /**
+   * «Esporta i miei dati»: eventi di cui l'utente è proprietario (con menù, spesa, piano e
+   * stile di stampa) e le sue ricette nel formato v1 con le foto. Niente dati di altri.
+   */
+  app.get(`${P}/account/esportazione`, async (req, reply) => {
+    const u = chi(req)
+    const file: Record<string, Uint8Array> = {}
+    const ricette = []
+    for (const r of elencaPiatti(db, u.id).filter((x) => x.mio)) {
+      const p = leggiPiatto(db, r.id, u.id)
+      const voci = []
+      for (const [k, f] of p.foto.entries()) {
+        const nome = `ricette/${p.id}/foto/${k + 1}.${foto.ESTENSIONI[f.tipo]}`
+        try {
+          file[nome] = await foto.leggiFile(config.cartellaFoto, f)
+          voci.push({ file: nome, didascalia: f.didascalia, principale: f.principale, ...(f.passo === null ? {} : { passo: f.passo + 1 }) })
+        } catch {
+          // file mancante: la ricetta si esporta senza quella foto
+        }
+      }
+      ricette.push(daPiatto(p, voci))
+    }
+    const eventiPropri = elencaEventi(db, u.id).filter((e) => e.permesso === 'proprietario')
+    const contenuto = {
+      formato: 'menuapp-dati-personali',
+      versione: 1,
+      esportatoIl: new Date().toISOString(),
+      utente: { id: u.id, nome: u.nome },
+      eventi: eventiPropri.map((e) => {
+        const archiviato = e.stato === 'archiviato'
+        return {
+          evento: e,
+          menu: archiviato ? menuDaSnapshot(db, e.id) : leggiMenu(db, e.id),
+          spesa: archiviato ? spesaDaSnapshot(db, e.id) : listaSpesa(db, e.id),
+          attivita: archiviato ? attivitaDaSnapshot(db, e.id) : elencaAttivita(db, e.id),
+          stampa: leggiStileStampa(db, e.id).opzioni,
+        }
+      }),
+      ricette,
+    }
+    file['dati.json'] = strToU8(JSON.stringify(contenuto, null, 2))
+    const giorno = new Date().toISOString().slice(0, 10)
+    return reply
+      .header('content-type', 'application/zip')
+      .header('content-disposition', `attachment; filename="menuapp-miei-dati-${giorno}.zip"`)
+      .send(Buffer.from(zipSync(file, { level: 0 })))
   })
 }

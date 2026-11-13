@@ -56,15 +56,13 @@ export function rotteEventi(app: FastifyInstance, ctx: Contesto): void {
     return eventi.cambiaStato(db, req.params.id, 'concludi', valida(SchemaVersione, req.body).versione)
   })
   app.post<ConId>(`${P}/eventi/:id/riapri`, async (req) => {
+    // Riaprire un archiviato spetta al proprietario; un concluso a chi può modificare.
     const u = chi(req)
     richiediEvento(db, u, req.params.id, 'lettura')
+    const archiviato = eventi.leggiEvento(db, req.params.id).stato === 'archiviato'
+    richiediEvento(db, u, req.params.id, archiviato ? 'proprietario' : 'modifica')
     const { versione } = valida(SchemaVersione, req.body)
-    if (eventi.leggiEvento(db, req.params.id).stato === 'archiviato') {
-      richiediEvento(db, u, req.params.id, 'proprietario')
-      return archivio.riapriArchiviato(db, req.params.id, versione)
-    }
-    richiediEvento(db, u, req.params.id, 'modifica')
-    return eventi.cambiaStato(db, req.params.id, 'riapri', versione)
+    return archiviato ? archivio.riapriArchiviato(db, req.params.id, versione) : eventi.cambiaStato(db, req.params.id, 'riapri', versione)
   })
 
   app.get<ConId>(`${P}/eventi/:id/menu`, async (req) => {
@@ -105,9 +103,11 @@ export function rotteEventi(app: FastifyInstance, ctx: Contesto): void {
 
   app.get<ConId>(`${P}/eventi/:id/accesso`, async (req) => condivisione.accessoEvento(db, chi(req), req.params.id))
 
-  app.put<{ Params: { id: string; utenteId: string } }>(`${P}/eventi/:id/condivisioni/:utenteId`, async (req) =>
-    condivisione.condividiEvento(db, chi(req), req.params.id, req.params.utenteId, valida(SchemaImpostaCondivisione, req.body).permesso),
-  )
+  app.put<{ Params: { id: string; utenteId: string } }>(`${P}/eventi/:id/condivisioni/:utenteId`, async (req) => {
+    const u = chi(req)
+    richiediEvento(db, u, req.params.id, 'proprietario')
+    return condivisione.condividiEvento(db, u, req.params.id, req.params.utenteId, valida(SchemaImpostaCondivisione, req.body).permesso)
+  })
 
   app.delete<{ Params: { id: string; utenteId: string } }>(`${P}/eventi/:id/condivisioni/:utenteId`, async (req, reply) => {
     condivisione.revocaCondivisioneEvento(db, chi(req), req.params.id, req.params.utenteId)
@@ -115,7 +115,9 @@ export function rotteEventi(app: FastifyInstance, ctx: Contesto): void {
   })
 
   app.post<ConId>(`${P}/eventi/:id/trasferisci`, async (req) => {
+    const u = chi(req)
+    richiediEvento(db, u, req.params.id, 'proprietario')
     const d = valida(SchemaTrasferisci, req.body)
-    return condivisione.trasferisciEvento(db, ctx.config.cartellaFoto, chi(req), req.params.id, d.utenteId, d.versione)
+    return condivisione.trasferisciEvento(db, ctx.config.cartellaFoto, u, req.params.id, d.utenteId, d.versione)
   })
 }

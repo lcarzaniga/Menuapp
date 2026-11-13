@@ -51,6 +51,12 @@ export function hostLocale(host: string | undefined): boolean {
  */
 export type TipoIngresso = Ingresso | 'lan'
 
+declare module 'fastify' {
+  interface FastifyInstance {
+    rotte: { metodo: string; url: string }[]
+  }
+}
+
 export async function costruisciApp(ctx: Contesto, opzioni: { log?: boolean; lan?: boolean; ingresso?: TipoIngresso } = {}): Promise<FastifyInstance> {
   const ingresso: TipoIngresso = opzioni.ingresso ?? (opzioni.lan ? 'lan' : 'privato')
   const app = Fastify({
@@ -122,6 +128,12 @@ export async function costruisciApp(ctx: Contesto, opzioni: { log?: boolean; lan
     reply.code(404).send(corpoErrore('non_trovato', `Risorsa non trovata: ${req.method} ${req.url.split('?')[0]}`))
   })
 
+  // Elenco delle rotte registrate: i test di sicurezza le provano tutte.
+  const rotte: { metodo: string; url: string }[] = []
+  app.addHook('onRoute', (r) => {
+    for (const m of [r.method].flat()) if (m !== 'HEAD') rotte.push({ metodo: m, url: r.url })
+  })
+  app.decorate('rotte', rotte)
   app.addContentTypeParser([...TIPI_FOTO], { parseAs: 'buffer', bodyLimit: LIMITE_BYTE_FOTO }, (_req, corpo, fatto) => fatto(null, corpo))
   if (ingresso !== 'lan') {
     registraAutenticazione(app, ctx, ingresso)

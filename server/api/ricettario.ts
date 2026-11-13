@@ -56,11 +56,14 @@ export function rotteRicettario(app: FastifyInstance, ctx: Contesto): void {
 
   // Condivisione delle ricette (in sola lettura) e copia nel proprio ricettario.
   app.get<ConId>(`${P}/piatti/:id/condivisioni`, async (req) => condivisione.condivisioniPiatto(db, chi(req), req.params.id))
-  app.put<ConId>(`${P}/piatti/:id/condivisioni`, async (req) =>
-    condivisione.impostaCondivisioniPiatto(db, chi(req), req.params.id, valida(SchemaImpostaCondivisioniPiatto, req.body).utenti),
-  )
+  app.put<ConId>(`${P}/piatti/:id/condivisioni`, async (req) => {
+    const u = chi(req)
+    richiediPiatto(db, u, req.params.id, 'proprietario')
+    return condivisione.impostaCondivisioniPiatto(db, u, req.params.id, valida(SchemaImpostaCondivisioniPiatto, req.body).utenti)
+  })
   app.post<ConId>(`${P}/piatti/:id/copia`, async (req, reply) => {
     const u = chi(req)
+    richiediPiatto(db, u, req.params.id, 'lettura')
     const id = condivisione.copiaPiatto(db, ctx.config.cartellaFoto, u, req.params.id, valida(SchemaCopiaPiatto, req.body).id)
     return reply.code(201).send(r.leggiPiatto(db, id, u.id))
   })

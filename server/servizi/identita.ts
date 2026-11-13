@@ -36,7 +36,13 @@ export function codiceVerifica(): string {
   return `${c.slice(0, 3)}-${c.slice(3)}`
 }
 
-const testoBreve = (s: string, max: number) => s.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, max)
+/** Testo libero dal browser (nome del dispositivo, user agent): niente caratteri di controllo. */
+const testoBreve = (s: string, max: number) =>
+  [...s]
+    .map((c) => (c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127 ? ' ' : c))
+    .join('')
+    .trim()
+    .slice(0, max)
 
 // ── Utenti ───────────────────────────────────────────────────
 
