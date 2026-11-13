@@ -17,7 +17,7 @@ export function CondividiRicetta({ piatto }: { piatto: DettaglioPiatto }) {
   return (
     <>
       <Button variante="contorno" misura="piccolo" disabled={!connesso} onClick={() => setAperta(true)}>
-        <Share2 /> {piatto.condivisaCon.length ? `Condivisa (${piatto.condivisaCon.length})` : 'Condividi'}
+        <Share2 /> {piatto.condivisaCon.length ? `Condivisa con ${piatto.condivisaCon.length}` : 'Condividi con…'}
       </Button>
       {aperta ? <FinestraCondivisione piatto={piatto} onChiudi={() => setAperta(false)} /> : null}
     </>

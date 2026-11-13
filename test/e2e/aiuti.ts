@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { type APIRequestContext, expect, type Page } from '@playwright/test'
 
 export const ORIGINE = 'http://127.0.0.1:4174'
@@ -28,4 +29,32 @@ export async function riattaccaServer(page: Page) {
 /** Clic sulla barra di navigazione, che su telefono e su desktop è diversa. */
 export async function vaiA(page: Page, sezione: 'Eventi' | 'Ricettario' | 'Ingredienti' | 'Impostazioni') {
   await page.getByRole('navigation', { name: 'Sezioni' }).filter({ visible: true }).getByRole('link', { name: sezione }).click()
+}
+
+const DATI_E2E = 'test-results/dati-e2e'
+
+/** Console di amministrazione sul database del server di prova (come dal terminale del server). */
+export function console_(...argomenti: string[]): string {
+  return execFileSync(process.execPath, ['server/amministrazione.ts', ...argomenti], {
+    env: { ...process.env, MENUAPP_DATI: DATI_E2E, MENUAPP_URL_PRIVATO: ORIGINE },
+    encoding: 'utf8',
+  })
+}
+
+/** Link d'invito creato dalla console per un utente. */
+export function invitoDaConsole(utente?: string): string {
+  const uscita = console_('invito', ...(utente ? [utente] : []))
+  const link = /https?:\/\/\S+\/#\/attiva\/\S+/.exec(uscita)?.[0]
+  if (!link) throw new Error(`Nessun link nell'uscita della console: ${uscita}`)
+  return link
+}
+
+/** Da un link d'invito: richiesta dal browser, poi restituisce il codice mostrato. */
+export async function chiediAccesso(page: Page, link: string, dispositivo: string): Promise<string> {
+  await page.goto(link)
+  await page.getByLabel('Nome del dispositivo').fill(dispositivo)
+  await page.getByRole('button', { name: 'Richiedi l\'accesso' }).click()
+  const codice = (await page.getByTestId('codice-attivazione').textContent())?.trim() ?? ''
+  expect(codice).toMatch(/^[A-Z2-9]{3}-[A-Z2-9]{3}$/)
+  return codice
 }

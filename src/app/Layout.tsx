@@ -26,6 +26,8 @@ export function Layout() {
   useEffect(
     () =>
       quandoSessionePersa(() => {
+        // Solo se questo dispositivo era autorizzato: la sessione è stata revocata o è scaduta.
+        if (!client.getQueryData(chiaviAccesso.sessione)) return
         // Via tutti i dati in memoria: il dispositivo non deve più mostrarli.
         setRevocata(true)
         client.clear()
