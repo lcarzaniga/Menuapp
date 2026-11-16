@@ -68,3 +68,36 @@ export const SchemaRiepilogoEvento = z.object({
   archiviato: z.boolean(),
 })
 export type RiepilogoOrganizzativo = z.infer<typeof SchemaRiepilogoEvento>
+
+// ── Confronto fra edizioni (SPEC §27) ───────────────────────
+
+const SchemaValutazione = z.object({ media: z.number(), numero: z.number().int() }).nullable()
+const SchemaPiattoConfronto = z.object({ nome: z.string(), portata: z.string(), porzioni: z.number(), valutazione: SchemaValutazione })
+const SchemaLatoConfronto = z.object({
+  id: Id,
+  nome: z.string(),
+  data: DataISO,
+  archiviato: z.boolean(),
+  coperti: z.object({ equivalenti: z.number(), adulti: z.number().int(), bambini: z.number().int(), automatici: z.boolean() }),
+  /** Persone confermate (null: l'evento non aveva l'elenco dei partecipanti). */
+  partecipanti: z.object({ confermati: z.number().int(), inAttesa: z.number().int(), assenti: z.number().int() }).nullable(),
+  portate: z.array(z.string()),
+})
+
+export const SchemaConfronto = z.object({
+  ora: SchemaLatoConfronto,
+  prima: SchemaLatoConfronto,
+  mantenuti: z.array(
+    z.object({
+      ora: SchemaPiattoConfronto,
+      prima: SchemaPiattoConfronto,
+      /** certa: stessa ricetta (anche copia); incerta: solo lo stesso nome. */
+      corrispondenza: z.enum(['certa', 'incerta']),
+    }),
+  ),
+  /** omonimo: un piatto con lo stesso nome c'era (o c'è) ma è una ricetta diversa. */
+  aggiunti: z.array(SchemaPiattoConfronto.extend({ omonimo: z.boolean() })),
+  nonRiproposti: z.array(SchemaPiattoConfronto.extend({ omonimo: z.boolean() })),
+  portate: z.object({ aggiunte: z.array(z.string()), tolte: z.array(z.string()) }),
+})
+export type Confronto = z.infer<typeof SchemaConfronto>

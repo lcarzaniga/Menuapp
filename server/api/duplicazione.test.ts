@@ -181,8 +181,8 @@ describe('edizioni di una ricorrenza', () => {
   })
 })
 
-describe('migrazione 0011', () => {
-  it('eventi esistenti senza serie, nessun collegamento dedotto dai nomi', async () => {
+describe('migrazioni 0011 e 0012', () => {
+  it('eventi esistenti senza serie, nessun collegamento dedotto dai nomi; voci senza origine', async () => {
     const cartella = mkdtempSync(join(tmpdir(), 'menuapp-0011-'))
     try {
       const db = apriDatabase(join(cartella, 'menuapp.db'))
@@ -192,6 +192,7 @@ describe('migrazione 0011', () => {
       }
       await applicaMigrazioni(db, { cartellaBackup: null })
       expect(tutti(db, 'SELECT id, serie_id FROM eventi ORDER BY id')).toEqual([{ id: 'a', serie_id: null }, { id: 'b', serie_id: null }])
+      expect(tutti(db, "SELECT name FROM pragma_table_info('voci_menu') WHERE name = 'voce_origine_id'")).toHaveLength(1)
       expect(uno(db, 'SELECT count(*) AS n FROM pragma_foreign_key_check')).toEqual({ n: 0 })
       chiudiDatabase(db)
     } finally {

@@ -153,6 +153,11 @@ export function PannelloEdizioni({ evento: e }: { evento: Evento }) {
           <p className="text-sm text-testo-tenue">Nessuna altra edizione collegata. Duplicando l&apos;evento la copia diventa la prossima edizione.</p>
         )}
         <div className="flex flex-wrap gap-2">
+          {d.edizioni.length || d.altriEventi.length ? (
+            <Button variante="contorno" misura="piccolo" asChild>
+              <Link to={`/eventi/${e.id}/confronto`}>Confronta con l&apos;anno scorso</Link>
+            </Button>
+          ) : null}
           {d.puoCollegare && d.altriEventi.length ? (
             <Button variante="contorno" misura="piccolo" disabled={!puoScrivere} onClick={() => setCollega(true)}>
               <Link2 /> Collega a un&apos;edizione

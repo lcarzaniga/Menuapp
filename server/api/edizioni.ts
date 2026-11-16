@@ -3,6 +3,8 @@
 import type { FastifyInstance } from 'fastify'
 import { PREFISSO_API } from '../../src/contratto/comune.ts'
 import { SchemaDuplica, SchemaSerie } from '../../src/contratto/edizioni.ts'
+import { z } from 'zod'
+import { confronta } from '../servizi/confronto.ts'
 import * as duplicazione from '../servizi/duplicazione.ts'
 import { riepilogo } from '../servizi/riepilogo.ts'
 import { richiediEvento } from '../servizi/permessi.ts'
@@ -18,6 +20,11 @@ export function rotteEdizioni(app: FastifyInstance, ctx: Contesto): void {
     const u = chi(req)
     richiediEvento(db, u, req.params.id, 'lettura')
     return reply.code(201).send(duplicazione.duplica(db, config.cartellaFoto, u, req.params.id, valida(SchemaDuplica, req.body)))
+  })
+  app.get<ConId>(`${P}/eventi/:id/confronto`, async (req) => {
+    const u = chi(req)
+    richiediEvento(db, u, req.params.id, 'lettura')
+    return confronta(db, u, req.params.id, valida(z.object({ con: z.string().min(1).max(100) }), req.query).con)
   })
   app.get<ConId>(`${P}/eventi/:id/riepilogo`, async (req) => riepilogo(db, chi(req), req.params.id))
   app.get<ConId>(`${P}/eventi/:id/edizioni`, async (req) => duplicazione.edizioni(db, chi(req), req.params.id))

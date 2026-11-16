@@ -311,6 +311,10 @@ export const togliValutazione = (db: Db, voceId: string, utenteId: string) => es
 export const valutazioniEvento = (db: Db, eventoId: string) =>
   tutti<{ voce_id: string; utente_id: string; stelle: number }>(db, 'SELECT voce_id, utente_id, stelle FROM valutazioni WHERE evento_id = ?', eventoId)
 
+/** Ricetta d'origine fotografata al voto, per voce (una sola per voce). */
+export const originiValutate = (db: Db, eventoId: string) =>
+  tutti<{ voce_id: string; ricetta_origine_id: string }>(db, 'SELECT voce_id, max(ricetta_origine_id) AS ricetta_origine_id FROM valutazioni WHERE evento_id = ? AND ricetta_origine_id IS NOT NULL GROUP BY voce_id', eventoId)
+
 /** Valutazioni degli eventi visibili all'utente (suoi o condivisi con lui). */
 export const valutazioniVisibili = (db: Db, utenteId: string) =>
   tutti<{ evento_id: string; voce_id: string; stelle: number; nome_piatto: string; portata: string; ricetta_origine_id: string | null; data: string; aggiornato_il: number; gruppo_id: string | null }>(

@@ -2096,6 +2096,98 @@ ricettario e nella scelta di un piatto per il menù (inserimento rapido e «Coll
   ingredienti: prima ricerca ~0,4 s, poi ~16 ms; dal server con 2000 ricette ~150 ms.
 - Test: `src/domain/ricerca.test.ts`, `server/api/ricerca.test.ts`, e2e `test/e2e/ricerca.spec.ts`.
 
+## 24. Partecipanti, conferme e accompagnatori
+
+Richiesta di Loris (16/11/2026, «Evoluzione organizzazione eventi», M1). Migrazione
+`0010_partecipanti.sql`. Scheda «Partecipanti» dell'evento.
+
+- **Facoltativo**: senza elenco l'evento funziona come prima (adulti e bambini scritti a mano).
+  Gli eventi esistenti restano in manuale; nessun partecipante è creato dai numeri.
+- **Partecipante** (`partecipanti`): nome visualizzato, adulto o bambino, stato (in attesa,
+  confermato, non partecipa), note; collegamento facoltativo a un utente (membri della Famiglia
+  dell'evento o persone dell'evento) o alla rubrica «Senza app». Un nome già noto diventa quella
+  persona; la stessa persona (utente, rubrica o nome) compare una volta sola. Il collegamento
+  non dà accesso all'evento né appartenenza alla Famiglia; l'accesso non implica la partecipazione.
+- **Invito e accompagnatori (+N)**: il titolare (`invito_id` NULL) può avere accompagnatori
+  nominativi (righe con `invito_id`, ciascuna con categoria e stato propri) e senza nome
+  (quantità sul titolare per adulti/bambini e confermati/in attesa). Stati indipendenti: se il
+  titolare non viene, i suoi accompagnatori restano come sono. «Invito a parte» rende autonomo
+  un accompagnatore: è la stessa riga, quindi nessun doppio conteggio. Un solo livello (vincoli
+  nel database); togliere un invito toglie i suoi accompagnatori nominativi.
+- **Chi risponde**: chi organizza (proprietario o in modifica) gestisce tutto e registra le
+  conferme di chi non ha l'app. Un utente collegato al proprio invito, se vede l'evento,
+  conferma o rifiuta per sé e gestisce i propri accompagnatori entro il limite dell'evento
+  (`max_accompagnatori`, null = nessun limite); non cambia gli altri inviti né la propria
+  categoria. Nessun link pubblico, email o SMS.
+- **Coperti** (`eventi.coperti_automatici`): «Coperti manuali» (predefinito) o «Calcolati dai
+  partecipanti» (confermati, accompagnatori compresi; in attesa e assenti esclusi). Un'unica
+  funzione (`copertiEffettivi`, `src/domain/partecipanti.ts`) decide adulti e bambini effettivi,
+  applicata in `leggiEvento`: menù, porzioni, spesa, stampa, riepilogo e archivio leggono gli
+  stessi numeri. I numeri manuali restano salvati (`copertiManuali`). Cambio esplicito con il
+  confronto fra i due conteggi e la conferma se i coperti cambiano; tornando al manuale si
+  propongono i calcolati. Porzioni personalizzate e quantità degli incarichi non cambiano.
+- **Chi porta**: in «Affida» si può scegliere un partecipante (la sua persona collegata, o il
+  nome se non vede l'evento). Se il responsabile non partecipa compare un avviso; l'incarico
+  resta.
+- **Archivio**: lo snapshot conserva modalità, conteggi, inviti, accompagnatori, stati e nomi;
+  l'evento archiviato mostra l'elenco com'era (anche dopo cambi di rubrica). Esportazione e
+  ripristino comprendono i partecipanti (titolari prima degli accompagnatori).
+- Test: `src/domain/partecipanti.test.ts`, `server/api/partecipanti.test.ts`, e2e `partecipanti.spec.ts`.
+
+## 25. Duplicazione degli eventi ed edizioni
+
+M2. Migrazioni `0011_edizioni.sql` (`eventi.serie_id`) e `0012_origine_voci.sql`
+(`voci_menu.voce_origine_id`). «Duplica evento» in Panoramica, anche da eventi archiviati.
+
+- Si sceglie nome (l'anno nel nome segue la data), data, Famiglia (solo le proprie) e se copiare
+  i partecipanti. Chi può leggere l'evento può duplicarlo: il nuovo evento è suo.
+- Si copiano: portate, voci (nome, ricetta, porzioni personalizzate, note; tornano in spesa le
+  voci uscite per un incarico), stile di stampa, note dell'evento, coperti effettivi come numeri
+  manuali, limite degli accompagnatori, piano spostato sulla nuova data e tutto da fare.
+- Non si copiano: conferme, incarichi e cose da portare, voti, sondaggi, bacheca, notifiche,
+  stato della spesa, archiviazione, condivisioni.
+- **Ricette** con le regole di sempre (§19.4, §21.3): del nuovo proprietario restano collegate,
+  altrimenti una copia privata (riusata se esiste già). Ricetta non disponibile: voce senza
+  ricetta con avviso. Da un archiviato, se la ricetta non esiste più, si ricrea dall'archivio
+  come ricetta privata (avviso); l'archivio originale non cambia.
+- **Partecipanti** (a richiesta): stessa composizione, tutti in attesa, accompagnatori senza
+  nome in attesa; collegamenti alla rubrica solo se della Famiglia di destinazione.
+- **Edizioni**: la copia può diventare un'edizione della stessa ricorrenza (stessa `serie_id`,
+  solo nella stessa Famiglia: vincolo nel database). Collegare e scollegare a mano da «Altre
+  edizioni»; nessun collegamento automatico per nome; spostare un evento in un'altra Famiglia
+  lo toglie dalla serie. Ogni voce copiata ricorda la voce d'origine (identità per §27).
+- Test: `server/api/duplicazione.test.ts`, e2e `edizioni.spec.ts`.
+
+## 26. Riepilogo «A che punto siamo?»
+
+M3. In cima alla Panoramica; `GET /eventi/:id/riepilogo` aggrega dati esistenti in una sola
+richiesta. Ogni indicatore apre la sua sezione; quelli delle funzioni non usate non compaiono.
+
+- Sempre: coperti e modalità. Con l'elenco: confermati e in attesa; «Conferma la tua presenza»
+  se il proprio invito è in attesa.
+- «Chi porta», solo se usato (un piatto affidato o una cosa da portare): cose da portare senza
+  nessuno e incarichi di chi non partecipa (attenzione), incarichi da completare, piatti non
+  affidati (solo informazione: li può preparare chi organizza).
+- Piano (da fare, in ritardo), proposte da decidere, sondaggi aperti, spesa (da comprare, da
+  verificare). Nessuna nuova scadenza o obbligo. Evento archiviato: niente cose da fare.
+- Test: `server/api/riepilogo.test.ts`, `src/features/eventi/Riepilogo.test.tsx`, e2e `edizioni.spec.ts`.
+
+## 27. Confronto fra edizioni
+
+M4. «Confronta con l'anno scorso» (da «Altre edizioni») apre `#/eventi/:id/confronto`:
+propone l'edizione precedente della serie, oppure un evento della stessa Famiglia scelto a mano.
+
+- Mostra coperti, persone e partecipanti delle due edizioni, portate nuove o tolte, piatti in
+  entrambe (con le porzioni se cambiano), nuovi e non riproposti.
+- **Identità**: la voce copiata da quella dell'altra edizione, oppure la stessa ricetta
+  d'origine (copie comprese; per una ricetta eliminata quella registrata con i voti). Solo lo
+  stesso nome, con almeno una voce senza ricetta: «stesso nome, ricetta non verificabile».
+  Stesso nome ma ricette diverse: due piatti distinti, segnalati.
+- **Valutazioni** delle preparazioni effettive di ciascuna edizione, mai trasferite.
+- Eventi archiviati letti dall'archivio. Solo eventi visibili all'utente e della stessa
+  Famiglia (404 / 422 altrimenti).
+- Test: `src/domain/confronto.test.ts`, `server/api/confronto.test.ts`, e2e `edizioni.spec.ts`.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2116,3 +2208,4 @@ ricettario e nella scelta di un piatto per il menù (inserimento rapido e «Coll
 | 16/11/2026 | 5.0 — **Più Famiglie per persona** (§21): Famiglie con inviti ad aderire, uscita, rimozione e passaggio dell'amministrazione; Famiglia attiva con selettore solo da due Famiglie; eventi associati a una Famiglia; ricette condivise con una o più Famiglie (copie private); classifiche e notifiche per Famiglia; migrazione `0008_famiglie.sql` |
 | 16/11/2026 | 5.1 — **Persone senza account** negli incarichi (§22): rubrica per Famiglia, incarichi affidati a utenti, persone della rubrica o nomi liberi senza doppioni, note, quantità e unità delle cose da portare; migrazione `0009_persone_esterne.sql` |
 | 16/11/2026 | 5.2 — **Ricerca per ingredienti** (§23): nome, ingredienti, catalogo e sinonimi, più termini, ordine per pertinenza nel ricettario e nel menù |
+| 16/11/2026 | 6.0 — **Organizzazione degli eventi** (§24–§27): partecipanti con conferme e accompagnatori, coperti manuali o calcolati; duplicazione ed edizioni; «A che punto siamo?»; confronto fra edizioni; migrazioni 0010–0012 |

@@ -219,9 +219,27 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   servizio riparte; in caso di fallimento finale si mostra l'errore.
 - Test: `npm run check` 314 verdi, `npm run test:e2e` 37 verdi. Nessuna migrazione.
 
-## Ricerca delle ricette per ingredienti (16/11/2026, ramo `ricerca-ingredienti`, da rilasciare)
+## Ricerca delle ricette per ingredienti (16/11/2026, in produzione: `20261116-1456-1c8b196`)
 
 - SPEC 5.2 / §23: ricerca per nome e ingredienti (catalogo e sinonimi), più termini, senza
   accenti e maiuscole, ordine per pertinenza; ricettario e scelta dei piatti nel menù.
 - Nessuna migrazione. Test: `npm run check` 324 verdi, `npm run test:e2e` 38 verdi.
-- Rilascio: `! scripts/rilascia.sh ricerca-ingredienti`.
+- Rilasciato il 16/11 alle 14:56; verificati salute (privato e Funnel), 401 senza sessione, altri servizi attivi.
+
+## Organizzazione degli eventi (16/11/2026, ramo `organizzazione-eventi`, da rilasciare)
+
+- SPEC 6.0 / §24–§27, quattro commit (M1–M4):
+  - M1 Partecipanti: elenco facoltativo, conferme, accompagnatori con e senza nome, coperti
+    manuali o calcolati, «Conferma presenza» per chi usa l'app, partecipanti in «Chi porta».
+  - M2 Duplica evento (anche archiviato) ed edizioni di una ricorrenza.
+  - M3 «A che punto siamo?» in Panoramica.
+  - M4 Confronto fra edizioni.
+- Migrazioni `0010_partecipanti.sql`, `0011_edizioni.sql`, `0012_origine_voci.sql` provate su una
+  copia del database di produzione: conteggi, spesa, menù e coperti, incarichi e archivi
+  identici; nessun partecipante creato, tutti gli eventi in manuale, nessuna serie; chiavi
+  esterne e integrità ok.
+- Limitazioni: niente link pubblici, email o SMS per le risposte; le cose da portare non si
+  copiano duplicando; i voti di un'edizione non passano alla successiva (per scelta).
+- Test: `npm run check` 357 verdi, `npm run test:e2e` 41 verdi (nuovi `partecipanti.spec.ts`,
+  `edizioni.spec.ts`). Nessun intervento manuale oltre al rilascio.
+- Rilascio: `! scripts/rilascia.sh organizzazione-eventi`.

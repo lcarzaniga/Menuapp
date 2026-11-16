@@ -40,6 +40,20 @@ test('duplica Natale come nuova edizione, con i partecipanti da riconfermare', a
   const ugo = page.getByTestId('invito').filter({ hasText: 'Zio Ugo' })
   await expect(ugo.getByRole('button', { name: 'In attesa' })).toHaveAttribute('aria-pressed', 'true')
   await foto(page, '02-nuova-edizione')
+
+  // ── Confronta con l'anno scorso: un piatto nuovo, uno tolto, quelli rimasti
+  const id = /eventi\/([^/]+)/.exec(page.url())![1]!
+  const menu = await apiLeggi<{ portate: { id: string; nome: string; voci: { id: string; nome: string; versione: number }[] }[] }>(request, `/eventi/${id}/menu`)
+  const cappone = menu.portate.flatMap((p) => p.voci).find((v) => v.nome === 'Cappone ripieno')!
+  await apiScrivi(request, 'delete', `/voci/${cappone.id}?versione=${cappone.versione}`)
+  await apiScrivi(request, 'post', `/eventi/${id}/voci`, { voci: [{ id: 'ed-v3', portataId: menu.portate[2]!.id, nome: 'Arrosto di tacchino' }] })
+  await page.getByRole('navigation', { name: 'Schede dell\'evento' }).getByRole('link', { name: 'Panoramica' }).click()
+  await page.getByRole('link', { name: 'Confronta con l\'anno scorso' }).click()
+  await expect(page.getByLabel('Confronta con')).toHaveValue('ed-2026')
+  await expect(page.getByRole('list', { name: 'In entrambe' })).toContainText('Tortellini in brodo')
+  await expect(page.getByRole('list', { name: 'Nuovi' })).toContainText('Arrosto di tacchino')
+  await expect(page.getByRole('list', { name: 'Non riproposti' })).toContainText('Cappone ripieno')
+  await foto(page, '04-confronto')
 })
 
 test('a che punto siamo: indicatori aggiornati e collegamenti alle sezioni', async ({ page, request }, info) => {

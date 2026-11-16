@@ -112,6 +112,8 @@ export function duplica(db: Db, cartellaFoto: string, u: UtenteCorrente, origine
         adesso,
       )
     }
+    // Da quale voce viene ciascuna: identità per il confronto fra edizioni.
+    for (const [origine, nuova] of idVoci) repo.impostaOrigineVoce(db, nuova, origine)
 
     if (stile) repoStampa.inserisciStile(db, d.id, JSON.stringify(stile), adesso)
 

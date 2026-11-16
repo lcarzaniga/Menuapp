@@ -224,3 +224,14 @@ export function impostaSerie(db: Db, eventoId: string, serieId: string | null): 
 
 export const eventiDellaSerie = (db: Db, serieId: string) =>
   tutti<{ id: string }>(db, 'SELECT id FROM eventi WHERE serie_id = ? ORDER BY data, ora_servizio, nome', serieId).map((r) => r.id)
+
+/** Voce d'origine delle voci copiate duplicando l'evento (SPEC §27). */
+export function originiVoci(db: Db, eventoId: string): Map<string, string> {
+  return new Map(
+    tutti<{ id: string; voce_origine_id: string }>(db, 'SELECT id, voce_origine_id FROM voci_menu WHERE evento_id = ? AND voce_origine_id IS NOT NULL', eventoId).map((r) => [r.id, r.voce_origine_id]),
+  )
+}
+
+export function impostaOrigineVoce(db: Db, voceId: string, origineId: string): void {
+  esegui(db, 'UPDATE voci_menu SET voce_origine_id = ? WHERE id = ?', origineId, voceId)
+}
