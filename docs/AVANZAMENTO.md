@@ -177,7 +177,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   condivisioni e passaggi di proprietà verso chi è fuori dalla Famiglia, Famiglia di un nuovo
   utente. Condivisioni esistenti invariate. SPEC §20.1 aggiornata; 4 test nuovi.
 
-## Più Famiglie per persona (16/11/2026, ramo `multi-famiglia`, da rilasciare)
+## Più Famiglie per persona (16/11/2026, in produzione: `20261116-1215-3460a66`, schema v8)
 
 - SPEC 5.0 / §21: Famiglie create da chiunque, inviti ad aderire (distinti dagli inviti
   all'account), uscita, rimozione, passaggio dell'amministrazione; Famiglia attiva (filtro sul
@@ -191,4 +191,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   da prendere sui dati attuali.
 - Test: `npm run check` 308 verdi (nuovo `famiglie.test.ts`, 9), `npm run test:e2e` 36 verdi
   (nuovo `multi-famiglia.spec.ts`; e2e esistenti resi indipendenti dal numero di Famiglie).
-- Rilascio: `! scripts/rilascia.sh multi-famiglia`.
+- Rilasciato il 16/11 alle 12:15 (backup `pre-migrazione-20261116-121540-v7.db`); verificati
+  file del rilascio completi, salute su 9870 e Funnel, 401 senza sessione anche sulle rotte
+  nuove, 404 dell'amministrazione dall'esterno, 9880 senza dati, conteggi invariati, 3 eventi
+  e 73 ricette nella «Famiglia», chiavi esterne ok, altri servizi e serve invariati.
