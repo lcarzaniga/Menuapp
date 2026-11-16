@@ -184,6 +184,8 @@ test('telefono e desktop: pagina intera visibile, niente scorrimento orizzontale
   // Proporzioni A4.
   expect(foglio!.height / foglio!.width).toBeCloseTo(297 / 210, 1)
 
+  // Il messaggio «App installata» (primo avvio) copre per qualche secondo la parte alta dello schermo.
+  await expect(page.getByText('App installata')).toHaveCount(0, { timeout: 10_000 })
   await page.getByRole('button', { name: 'Ingrandisci l\'anteprima' }).click()
   const finestraIngrandita = page.getByRole('dialog', { name: 'Anteprima ingrandita' })
   await expect(finestraIngrandita).toBeVisible()

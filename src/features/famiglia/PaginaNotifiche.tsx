@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { NOMI_NOTIFICA, type Notifica, TIPI_NOTIFICA, type TipoNotifica } from '@/contratto/famiglia.ts'
 import { cn } from '@/lib/utils'
 import { chiaviFamiglia, quando, useNotifiche, usePreferenzeNotifiche } from './api'
+import { useFamigliaAttiva } from './attiva'
 
 export function PaginaNotifiche() {
   const n = useNotifiche()
@@ -27,6 +28,8 @@ export function PaginaNotifiche() {
     naviga(x.collegamento)
   }
   const nonLette = n.data?.filter((x) => !x.letta).length ?? 0
+  // Con più Famiglie ogni notifica dice da quale viene.
+  const { multiple } = useFamigliaAttiva()
   return (
     <Pagina
       titolo="Notifiche"
@@ -57,7 +60,10 @@ export function PaginaNotifiche() {
               >
                 <span className={cn('mt-1.5 size-2.5 shrink-0 rounded-full', x.letta ? 'bg-transparent' : 'bg-primario')} aria-label={x.letta ? undefined : 'da leggere'} />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-semibold uppercase tracking-wide text-testo-tenue">{x.titolo}</span>
+                  <span className="block text-xs font-semibold uppercase tracking-wide text-testo-tenue">
+                    {multiple && x.famiglia && x.famiglia !== x.titolo ? `${x.famiglia} · ` : ''}
+                    {x.titolo}
+                  </span>
                   <span className={cn('block break-words', !x.letta && 'font-semibold')}>
                     {x.attore && x.tipo !== 'incarico' ? `${x.attore}: ` : ''}
                     {x.testo}

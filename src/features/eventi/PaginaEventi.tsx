@@ -11,6 +11,7 @@ import { formattaCoperti } from '@/domain/porzioni.ts'
 import { daConcludere } from '@/domain/regole/evento.ts'
 import { dataLunga, differenzaGiorni, oggiISO } from '@/domain/tempo.ts'
 import { plurale } from '@/lib/formato'
+import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 
 function quando(data: string): string {
   const giorni = differenzaGiorni(oggiISO(), data)
@@ -101,8 +102,9 @@ function Prossimo({ e }: { e: RiepilogoEvento }) {
 }
 
 export function PaginaEventi() {
-  const tuttiAttivi = useEventi('attivo')
-  const conclusi = useEventi('concluso')
+  const { attiva } = useFamigliaAttiva()
+  const tuttiAttivi = useEventi('attivo', attiva?.id)
+  const conclusi = useEventi('concluso', attiva?.id)
   // Prima i propri eventi; quelli condivisi con me in una sezione a parte.
   const attivi = { ...tuttiAttivi, data: tuttiAttivi.data?.filter((e) => e.permesso === 'proprietario') ?? [] }
   const condivisi = tuttiAttivi.data?.filter((e) => e.permesso !== 'proprietario') ?? []
@@ -168,7 +170,8 @@ export function PaginaEventi() {
 }
 
 export function PaginaArchivio() {
-  const archiviati = useEventi('archiviato')
+  const { attiva } = useFamigliaAttiva()
+  const archiviati = useEventi('archiviato', attiva?.id)
   return (
     <Pagina titolo="Archivio" indietro="/">
       {archiviati.isPending ? (

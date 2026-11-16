@@ -9,32 +9,58 @@ import { Casella } from '@/components/ui/campi'
 import { Finestra } from '@/components/ui/dialog'
 import type { DettaglioPiatto } from '@/contratto/ricettario.ts'
 import { useStatoConnessione } from '@/connessione/stato'
+import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 import { usePersone } from './sessione'
 
 /**
- * Visibilità per il proprietario: di famiglia (tutti la vedono) o privata; una privata si può
- * condividere con persone scelte.
+ * Con chi è condivisa la ricetta (per il proprietario): una o più delle sue Famiglie, oppure
+ * nessuna (privata). Una privata si può condividere con persone scelte.
  */
 export function VisibilitaRicetta({ piatto }: { piatto: DettaglioPiatto }) {
   const connesso = useStatoConnessione() === 'connesso'
-  const cambia = useScrittura((visibilita: 'famiglia' | 'privata') => api.modifica<DettaglioPiatto>(`/piatti/${piatto.id}/visibilita`, { visibilita }), {
-    successo: (p) => (p.visibilita === 'privata' ? 'Ricetta privata: la vedi solo tu' : 'Ricetta visibile a tutta la famiglia'),
+  const { famiglie } = useFamigliaAttiva()
+  const imposta = useScrittura((gruppi: string[]) => api.modifica<DettaglioPiatto>(`/piatti/${piatto.id}/famiglie`, { gruppi }), {
+    successo: (p) => (p.famiglie.length ? `Condivisa con ${p.famiglie.map((f) => f.nome).join(', ')}` : 'Ricetta privata: la vedi solo tu'),
   })
-  const privata = piatto.visibilita === 'privata'
+  const condivisa = new Set(piatto.famiglie.map((f) => f.id))
+  const privata = condivisa.size === 0
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-bordo/70 bg-carta px-3 py-2 text-sm" data-testid="visibilita-ricetta">
-      {privata ? <Lock className="size-4 text-testo-tenue" /> : <UsersRound className="size-4 text-primario" />}
-      <span className="flex-1">
-        {privata
-          ? piatto.condivisaCon.length
-            ? `Privata, condivisa con ${piatto.condivisaCon.map((p) => p.nome).join(', ')}`
-            : 'Privata: la vedi solo tu'
-          : 'Nel ricettario di famiglia: tutti la vedono e possono copiarla'}
-      </span>
-      {privata ? <CondividiRicetta piatto={piatto} /> : null}
-      <Button variante="fantasma" misura="piccolo" disabled={!connesso || cambia.inCorso} onClick={() => void cambia.esegui(privata ? 'famiglia' : 'privata')}>
-        {privata ? 'Rendi visibile a tutti' : 'Rendi privata'}
-      </Button>
+    <div className="flex flex-col gap-2 rounded-2xl border border-bordo/70 bg-carta px-3 py-2 text-sm" data-testid="visibilita-ricetta">
+      <div className="flex flex-wrap items-center gap-2">
+        {privata ? <Lock className="size-4 text-testo-tenue" /> : <UsersRound className="size-4 text-primario" />}
+        <span className="flex-1">
+          {privata
+            ? piatto.condivisaCon.length
+              ? `Privata, condivisa con ${piatto.condivisaCon.map((p) => p.nome).join(', ')}`
+              : 'Privata: la vedi solo tu'
+            : `Condivisa con ${piatto.famiglie.map((f) => f.nome).join(', ')}: la vedono e possono copiarla`}
+        </span>
+        {privata ? <CondividiRicetta piatto={piatto} /> : null}
+        {famiglie.length === 1 ? (
+          <Button variante="fantasma" misura="piccolo" disabled={!connesso || imposta.inCorso} onClick={() => void imposta.esegui(privata ? [famiglie[0]!.id] : [])}>
+            {privata ? `Condividi con ${famiglie[0]!.nome}` : 'Rendi privata'}
+          </Button>
+        ) : null}
+      </div>
+      {famiglie.length >= 2 ? (
+        <div role="group" aria-label="Famiglie con cui è condivisa" className="flex flex-wrap gap-x-4">
+          {famiglie.map((f) => (
+            <label key={f.id} className="flex min-h-10 items-center gap-2">
+              <Casella
+                checked={condivisa.has(f.id)}
+                disabled={!connesso || imposta.inCorso}
+                onChange={(e) => {
+                  const n = new Set(condivisa)
+                  if (e.target.checked) n.add(f.id)
+                  else n.delete(f.id)
+                  void imposta.esegui([...n])
+                }}
+              />
+              {f.nome}
+            </label>
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }

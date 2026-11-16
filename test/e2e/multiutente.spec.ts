@@ -116,19 +116,26 @@ test('invito, approvazione, condivisione e revoca fra due persone', async ({ pag
 
   // ── Loris rende privata la ricetta: Anna non vede più l'originale, la sua copia resta
   await page.goto('/#/ricettario/p-cotechino')
-  await expect(page.getByTestId('visibilita-ricetta')).toContainText('ricettario di famiglia')
-  await page.getByRole('button', { name: 'Rendi privata' }).click()
+  await expect(page.getByTestId('visibilita-ricetta')).toContainText('Condivisa con Famiglia')
+  // Con una Famiglia c'è «Rendi privata»; con più Famiglie si tolgono le spunte.
+  const rendiPrivata = page.getByRole('button', { name: 'Rendi privata' })
+  if (await rendiPrivata.count()) await rendiPrivata.click()
+  else {
+    const spuntate = page.getByRole('group', { name: 'Famiglie con cui è condivisa' }).getByRole('checkbox', { checked: true })
+    for (let n = await spuntate.count(); n > 0; n--) {
+      // La casella cambia quando il server ha salvato.
+      await spuntate.first().click()
+      await expect(spuntate).toHaveCount(n - 1)
+    }
+  }
   await expect(page.getByTestId('visibilita-ricetta')).toContainText('la vedi solo tu')
   await foto(page, '10-ricetta-privata')
   await anna.page.goto('/#/ricettario')
   await expect(anna.page.getByRole('link', { name: /Cotechino con lenticchie/ })).toHaveCount(1)
   await expect(anna.page.getByRole('link', { name: /Cotechino con lenticchie/ })).not.toContainText('di Loris')
-  // Loris vede la sua (privata) e la copia di Anna, che è nel ricettario di famiglia come ricetta di Anna.
+  // Loris vede solo la sua (privata): la copia di Anna nasce privata.
   const diLoris = await apiLeggi<{ nome: string; mio: boolean; visibilita: string; proprietario: { nome: string } }[]>(request, '/piatti?q=cotechino')
-  expect(diLoris.map((p) => [p.proprietario.nome, p.mio, p.visibilita]).sort()).toEqual([
-    ['Anna', false, 'famiglia'],
-    ['Loris', true, 'privata'],
-  ])
+  expect(diLoris.map((p) => [p.proprietario.nome, p.mio, p.visibilita])).toEqual([['Loris', true, 'privata']])
 
   // ── Revoca del dispositivo di Anna
   await page.goto('/#/impostazioni/utenti')

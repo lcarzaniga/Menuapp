@@ -36,7 +36,9 @@ export function useUtenteCorrente() {
   }
 }
 
-export const usePersone = () => useQuery({ queryKey: chiaviAccesso.persone, queryFn: () => api.leggi<Persona[]>('/persone'), staleTime: 60_000 })
+/** Persone con cui condividere: della Famiglia indicata, o di tutte le proprie. */
+export const usePersone = (gruppo?: string | null) =>
+  useQuery({ queryKey: [...chiaviAccesso.persone, gruppo ?? ''], queryFn: () => api.leggi<Persona[]>(gruppo ? `/persone?gruppo=${gruppo}` : '/persone'), staleTime: 60_000 })
 
 export const useAccessoEvento = (id: string) =>
   useQuery({ queryKey: chiaviAccesso.evento(id), queryFn: () => api.leggi<AccessoEvento>(`/eventi/${id}/accesso`), enabled: Boolean(id) })

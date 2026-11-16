@@ -25,14 +25,18 @@ export const useStatoBackup = () => useQuery({ queryKey: chiavi.backup, queryFn:
 // ── Eventi e menù ───────────────────────────────────────────
 
 export const chiaviEventi = {
-  elenco: (stato?: StatoEvento) => ['eventi', stato ?? 'tutti'] as const,
+  elenco: (stato?: StatoEvento, gruppo?: string) => ['eventi', stato ?? 'tutti', gruppo ?? ''] as const,
   evento: (id: string) => ['evento', id] as const,
   menu: (id: string) => ['menu', id] as const,
   stampa: (id: string) => ['stampa', id] as const,
 }
 
-export const useEventi = (stato?: StatoEvento) =>
-  useQuery({ queryKey: chiaviEventi.elenco(stato), queryFn: () => api.leggi<RiepilogoEvento[]>(stato ? `/eventi?stato=${stato}` : '/eventi') })
+/** Eventi visibili; con `gruppo` (Famiglia attiva) quelli della Famiglia più i personali. */
+export const useEventi = (stato?: StatoEvento, gruppo?: string) =>
+  useQuery({
+    queryKey: chiaviEventi.elenco(stato, gruppo),
+    queryFn: () => api.leggi<RiepilogoEvento[]>(`/eventi?${new URLSearchParams({ ...(stato ? { stato } : {}), ...(gruppo ? { gruppo } : {}) })}`),
+  })
 export const useEvento = (id: string) => useQuery({ queryKey: chiaviEventi.evento(id), queryFn: () => api.leggi<Evento>(`/eventi/${id}`) })
 export const useMenu = (id: string) => useQuery({ queryKey: chiaviEventi.menu(id), queryFn: () => api.leggi<Menu>(`/eventi/${id}/menu`) })
 export const useStileStampa = (id: string) =>

@@ -14,7 +14,7 @@ export const chiaviFamiglia = {
   preferenze: ['notifiche', 'preferenze'] as const,
   incarichi: (eventoId: string) => ['incarichi', eventoId] as const,
   valutazioni: (eventoId: string) => ['valutazioni', eventoId] as const,
-  classifica: (portata: string, anno: string) => ['classifica', portata, anno] as const,
+  classifica: (portata: string, anno: string, gruppo: string) => ['classifica', portata, anno, gruppo] as const,
 }
 
 export const useGruppi = () => useQuery({ queryKey: chiaviFamiglia.gruppi, queryFn: () => api.leggi<Gruppo[]>('/gruppi'), staleTime: 60_000 })
@@ -28,10 +28,11 @@ export const usePreferenzeNotifiche = () => useQuery({ queryKey: chiaviFamiglia.
 export const useIncarichi = (eventoId: string) => useQuery({ queryKey: chiaviFamiglia.incarichi(eventoId), queryFn: () => api.leggi<Incarichi>(`/eventi/${eventoId}/incarichi`) })
 export const useValutazioni = (eventoId: string) =>
   useQuery({ queryKey: chiaviFamiglia.valutazioni(eventoId), queryFn: () => api.leggi<ValutazioniEvento>(`/eventi/${eventoId}/valutazioni`) })
-export const useClassifica = (portata: string, anno: string) =>
+/** Classifica della Famiglia indicata (separata per Famiglia). */
+export const useClassifica = (portata: string, anno: string, gruppo: string) =>
   useQuery({
-    queryKey: chiaviFamiglia.classifica(portata, anno),
-    queryFn: () => api.leggi<VoceClassifica[]>(`/classifica?${new URLSearchParams({ ...(portata ? { portata } : {}), ...(anno ? { anno } : {}) })}`),
+    queryKey: chiaviFamiglia.classifica(portata, anno, gruppo),
+    queryFn: () => api.leggi<VoceClassifica[]>(`/classifica?${new URLSearchParams({ gruppo, ...(portata ? { portata } : {}), ...(anno ? { anno } : {}) })}`),
   })
 
 /** «3 min fa», «ieri alle 20:15», «12 dic». */

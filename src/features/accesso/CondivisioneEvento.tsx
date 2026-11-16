@@ -11,6 +11,7 @@ import { Conferma, Finestra } from '@/components/ui/dialog'
 import type { AccessoEvento, PermessoCondivisione } from '@/contratto/accesso.ts'
 import { useStatoConnessione } from '@/connessione/stato'
 import type { Evento } from '@/domain/tipi.ts'
+import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 import { useAccessoEvento, usePersone, useUtenteCorrente } from './sessione'
 
 const NOMI_PERMESSO: Record<PermessoCondivisione, string> = { lettura: 'Sola lettura', modifica: 'Può modificare' }
@@ -65,7 +66,8 @@ function PerInvitato({ evento, accesso }: { evento: Evento; accesso: AccessoEven
 }
 
 function PerProprietario({ evento, accesso }: { evento: Evento; accesso: AccessoEvento }) {
-  const persone = usePersone()
+  // Si invitano le persone della Famiglia dell'evento.
+  const persone = usePersone(accesso.gruppo?.id)
   const connesso = useStatoConnessione() === 'connesso'
   const [chi, setChi] = useState('')
   const [permesso, setPermesso] = useState<PermessoCondivisione>('modifica')
@@ -90,6 +92,7 @@ function PerProprietario({ evento, accesso }: { evento: Evento; accesso: Accesso
         <CardTitle>Condivisione</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
+        <FamigliaEvento evento={evento} accesso={accesso} />
         {accesso.condivisioni.length === 0 ? (
           <p className="text-sm text-testo-tenue">L&apos;evento è privato: lo vedi solo tu.</p>
         ) : (
@@ -173,8 +176,29 @@ function PerProprietario({ evento, accesso }: { evento: Evento; accesso: Accesso
   )
 }
 
+/** Famiglia dell'evento: il proprietario con più Famiglie (o con un evento senza) la sceglie. */
+function FamigliaEvento({ evento, accesso }: { evento: Evento; accesso: AccessoEvento }) {
+  const { famiglie } = useFamigliaAttiva()
+  const connesso = useStatoConnessione() === 'connesso'
+  const sposta = useScrittura((gruppoId: string | null) => api.modifica(`/eventi/${evento.id}/famiglia`, { gruppoId }), { successo: 'Famiglia dell\'evento aggiornata' })
+  if (famiglie.length < 2 && accesso.gruppo) return null
+  if (famiglie.length === 0) return null
+  return (
+    <Campo etichetta="Famiglia dell'evento" htmlFor="famiglia-evento" aiuto="Si possono invitare le persone di questa Famiglia.">
+      <Select id="famiglia-evento" value={accesso.gruppo?.id ?? ''} disabled={!connesso || sposta.inCorso} onChange={(e) => void sposta.esegui(e.target.value || null)}>
+        <option value="">Nessuna (evento personale)</option>
+        {famiglie.map((f) => (
+          <option key={f.id} value={f.id}>
+            {f.nome}
+          </option>
+        ))}
+      </Select>
+    </Campo>
+  )
+}
+
 function PassaProprieta({ evento, onChiudi }: { evento: Evento; onChiudi: () => void }) {
-  const persone = usePersone()
+  const persone = usePersone(useAccessoEvento(evento.id).data?.gruppo?.id)
   const [a, setA] = useState('')
   const trasferisci = useScrittura(() => api.crea(`/eventi/${evento.id}/trasferisci`, { utenteId: a, versione: evento.versione }), {
     oggetto: 'L\'evento',

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { api, nuovoId } from '@/api/client'
 import { useImpostazioni } from '@/api/query'
 import { useScrittura } from '@/api/scrittura'
+import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 import { Caricamento, Pagina } from '@/components/Pagina'
 import { aggiungiGiorni, oggiISO } from '@/domain/tempo.ts'
 import type { Evento } from '@/domain/tipi.ts'
@@ -13,7 +14,9 @@ export function PaginaNuovoEvento() {
   const naviga = useNavigate()
   const [id] = useState(nuovoId)
   const [errori, setErrori] = useState<Record<string, string>>({})
-  const crea = useScrittura((d: DatiModuloEvento) => api.crea<Evento>('/eventi', { id, ...d }), {
+  // L'evento nasce nella Famiglia attiva (il server verifica che l'utente ne faccia parte).
+  const { attiva } = useFamigliaAttiva()
+  const crea = useScrittura((d: DatiModuloEvento) => api.crea<Evento>('/eventi', { id, ...d, ...(attiva ? { gruppoId: attiva.id } : {}) }), {
     successo: 'Evento creato',
     dopo: (e) => naviga(`/eventi/${e.id}/menu`, { replace: true }),
     dopoErrore: (e) => setErrori(Object.fromEntries(e.campi.map((c) => [c.campo, c.messaggio]))),

@@ -7,6 +7,7 @@ import { quandoSessionePersa } from '@/connessione/stato'
 import { PaginaAccesso } from '@/features/accesso/Attivazione'
 import { chiaviAccesso, useSessione } from '@/features/accesso/sessione'
 import { useConteggioNotifiche } from '@/features/famiglia/api'
+import { SelettoreFamiglia } from '@/features/famiglia/attiva'
 import { controllaRevisione } from '@/connessione/sorveglianza'
 import { BannerConnessione } from '@/connessione/BannerConnessione'
 import { cn } from '@/lib/utils'
@@ -75,6 +76,7 @@ function Guscio({ nome }: { nome: string }) {
           <span className="titolo text-center text-2xl font-semibold leading-tight text-primario">Ricette di famiglia &amp; Co.</span>
           <span className="filetto mt-1 w-24" />
         </div>
+        <SelettoreFamiglia className="mb-3" />
         {SEZIONI.map((s) => (
           <NavLink
             key={s.a}
@@ -93,6 +95,10 @@ function Guscio({ nome }: { nome: string }) {
         </NavLink>
       </nav>
       <main>
+        {/* Su telefono, chi ha più Famiglie vede in cima quella attiva e la cambia da lì. */}
+        <div className="non-stampare mx-auto max-w-3xl px-4 pt-3 md:hidden [&:empty]:hidden">
+          <SelettoreFamiglia />
+        </div>
         <Outlet />
       </main>
       <nav

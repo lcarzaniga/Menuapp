@@ -73,7 +73,9 @@ test('famiglia: bacheca e sondaggio, evento con proposta, chi porta cosa, stelle
   await expect(sondaggio.getByText('2 votanti')).toBeVisible()
 
   // ── Evento di Loris condiviso con Lucia in sola lettura (partecipa)
-  const ev = (await apiScrivi(request, 'post', '/eventi', { id: 'ev-famiglia', nome: 'Pranzo di famiglia', data: oggi(), oraServizio: '13:00', tipo: 'pranzo', occasione: '', adulti: 8, bambini: 0, note: '' })).corpo
+  // L'evento è della Famiglia (le classifiche sono per Famiglia).
+  const famiglia = (await apiLeggi<{ id: string; nome: string }[]>(request, '/gruppi')).find((g) => g.nome === 'Famiglia')!
+  const ev = (await apiScrivi(request, 'post', '/eventi', { id: 'ev-famiglia', nome: 'Pranzo di famiglia', data: oggi(), oraServizio: '13:00', tipo: 'pranzo', occasione: '', adulti: 8, bambini: 0, note: '', gruppoId: famiglia.id })).corpo
   await apiScrivi(request, 'post', '/piatti', {
     id: 'p-tiramisu-e2e',
     nome: 'Tiramisù della festa',

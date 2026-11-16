@@ -13,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Conferma } from '@/components/ui/dialog'
 import { SolaLettura, usePuoScrivere } from '@/connessione/stato'
 import { CopiaRicetta, VisibilitaRicetta } from '@/features/accesso/CondivisioneRicetta'
+import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 import type { DettaglioPiatto } from '@/contratto/ricettario.ts'
 import { formattaCoperti } from '@/domain/porzioni.ts'
 import { dataBreve } from '@/domain/tempo.ts'
@@ -388,7 +389,9 @@ export function PaginaNuovoPiatto() {
   const [id] = useState(nuovoId)
   const [nome, setNome] = useState('')
   const puoScrivere = usePuoScrivere()
-  const crea = useScrittura((n: string) => api.crea<DettaglioPiatto>('/piatti', { id, nome: n }), {
+  // Una ricetta nuova si condivide con la Famiglia attiva (si può rendere privata dopo).
+  const { attiva } = useFamigliaAttiva()
+  const crea = useScrittura((n: string) => api.crea<DettaglioPiatto>('/piatti', { id, nome: n, famiglie: attiva ? [attiva.id] : [] }), {
     successo: null,
     dopo: (p) => naviga(`/ricettario/${p.id}?modifica=1`, { replace: true }),
   })

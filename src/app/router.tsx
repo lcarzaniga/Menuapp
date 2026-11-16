@@ -57,6 +57,7 @@ export const router = createHashRouter([
       { path: '/impostazioni/dati', element: pigra(() => import('@/features/impostazioni/PaginaDati'), (m) => m.PaginaDati) },
       { path: '/impostazioni/utenti', element: pigra(() => import('@/features/accesso/PaginaUtenti'), (m) => m.PaginaUtenti) },
       { path: '/famiglia', element: pigra(() => import('@/features/famiglia/PaginaFamiglia'), (m) => m.PaginaFamiglia) },
+      { path: '/unisciti/:token', element: pigra(() => import('@/features/famiglia/PaginaFamiglia'), (m) => m.PaginaUnisciti) },
       { path: '/notifiche', element: pigra(() => import('@/features/famiglia/PaginaNotifiche'), (m) => m.PaginaNotifiche) },
       { path: '/account', element: pigra(() => import('@/features/accesso/PaginaAccount'), (m) => m.PaginaAccount) },
       { path: '*', element: <NonTrovata /> },
