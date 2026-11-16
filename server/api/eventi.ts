@@ -15,6 +15,8 @@ import { STATI_EVENTO } from '../../src/domain/tipi.ts'
 import * as archivio from '../servizi/archivio.ts'
 import * as condivisione from '../servizi/condivisione.ts'
 import * as eventi from '../servizi/eventi.ts'
+import { fileAllegatiEvento, togliFile } from '../servizi/bacheca.ts'
+import { avvisa, personeEvento } from '../servizi/notifiche.ts'
 import { richiediEvento, richiediVoce, type UtenteCorrente } from '../servizi/permessi.ts'
 import { chi, type Contesto, valida } from './aiuti.ts'
 
@@ -27,6 +29,9 @@ export function rotteEventi(app: FastifyInstance, ctx: Contesto): void {
   const P = PREFISSO_API
   const risolvi = (u: UtenteCorrente, eventoId: string) => (piattoId: string) =>
     condivisione.piattoPerEvento(db, ctx.config.cartellaFoto, u, eventoId, piattoId)
+  /** Modifiche importanti al menù: una notifica raggruppata per evento. */
+  const menuCambiato = (u: UtenteCorrente, eventoId: string, testo: string) =>
+    avvisa(db, { tipo: 'menu', attoreId: u.id, destinatari: personeEvento(db, eventoId), chiave: `menu:${eventoId}`, eventoId, testo })
 
   app.get(`${P}/eventi`, async (req) => eventi.elencaEventi(db, chi(req).id, valida(SchemaQueryStato, req.query).stato))
 
@@ -41,13 +46,22 @@ export function rotteEventi(app: FastifyInstance, ctx: Contesto): void {
   })
 
   app.put<ConId>(`${P}/eventi/:id`, async (req) => {
-    richiediEvento(db, chi(req), req.params.id, 'modifica')
-    return eventi.aggiornaEvento(db, req.params.id, valida(SchemaAggiornaEvento, req.body))
+    const u = chi(req)
+    richiediEvento(db, u, req.params.id, 'modifica')
+    const prima = eventi.leggiEvento(db, req.params.id)
+    const dopo = eventi.aggiornaEvento(db, req.params.id, valida(SchemaAggiornaEvento, req.body))
+    if (prima.data !== dopo.data || prima.oraServizio !== dopo.oraServizio) {
+      menuCambiato(u, dopo.id, `Nuova data: ${dopo.data}${dopo.oraServizio ? ` alle ${dopo.oraServizio}` : ''}`)
+    }
+    return dopo
   })
 
   app.delete<ConId>(`${P}/eventi/:id`, async (req, reply) => {
     richiediEvento(db, chi(req), req.params.id, 'proprietario')
+    // Le foto della bacheca dell'evento spariscono con lui.
+    const file = fileAllegatiEvento(db, req.params.id)
     eventi.eliminaEvento(db, req.params.id, valida(SchemaQueryVersione, req.query).versione)
+    await togliFile(ctx.config.cartellaFoto, file)
     return reply.code(204).send()
   })
 
@@ -74,6 +88,7 @@ export function rotteEventi(app: FastifyInstance, ctx: Contesto): void {
     const u = chi(req)
     richiediEvento(db, u, req.params.id, 'modifica')
     const voci = eventi.creaVoci(db, req.params.id, valida(SchemaNuoveVoci, req.body).voci, risolvi(u, req.params.id))
+    menuCambiato(u, req.params.id, voci.length === 1 ? `Aggiunto «${voci[0]!.nome}» al menù` : `Aggiunti ${voci.length} piatti al menù`)
     return reply.code(201).send(voci)
   })
 
@@ -94,8 +109,11 @@ export function rotteEventi(app: FastifyInstance, ctx: Contesto): void {
   })
 
   app.delete<ConId>(`${P}/voci/:id`, async (req, reply) => {
-    richiediVoce(db, chi(req), req.params.id, 'modifica')
+    const u = chi(req)
+    const eventoId = richiediVoce(db, u, req.params.id, 'modifica')
+    const nome = eventi.leggiVoce(db, req.params.id).nome
     eventi.eliminaVoce(db, req.params.id, valida(SchemaQueryVersione, req.query).versione)
+    menuCambiato(u, eventoId, `Tolto «${nome}» dal menù`)
     return reply.code(204).send()
   })
 
@@ -106,7 +124,8 @@ export function rotteEventi(app: FastifyInstance, ctx: Contesto): void {
   app.put<{ Params: { id: string; utenteId: string } }>(`${P}/eventi/:id/condivisioni/:utenteId`, async (req) => {
     const u = chi(req)
     richiediEvento(db, u, req.params.id, 'proprietario')
-    return condivisione.condividiEvento(db, u, req.params.id, req.params.utenteId, valida(SchemaImpostaCondivisione, req.body).permesso)
+    const d = valida(SchemaImpostaCondivisione, req.body)
+    return condivisione.condividiEvento(db, u, req.params.id, req.params.utenteId, d.permesso, Date.now(), d.partecipa)
   })
 
   app.delete<{ Params: { id: string; utenteId: string } }>(`${P}/eventi/:id/condivisioni/:utenteId`, async (req, reply) => {

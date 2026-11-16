@@ -195,13 +195,14 @@ export function revocaSessioniUtente(db: Db, utenteId: string, adesso: number): 
 export interface AccessoRiga {
   proprietario_id: string
   permesso: 'lettura' | 'modifica' | null
+  partecipa: number | null
 }
 
 /** Proprietario dell'evento e condivisione dell'utente (se c'è). */
 export const accessoEvento = (db: Db, eventoId: string, utenteId: string) =>
   uno<AccessoRiga>(
     db,
-    `SELECT e.proprietario_id, c.permesso FROM eventi e
+    `SELECT e.proprietario_id, c.permesso, c.partecipa FROM eventi e
      LEFT JOIN condivisioni_evento c ON c.evento_id = e.id AND c.utente_id = ?
      WHERE e.id = ?`,
     utenteId,
@@ -225,7 +226,7 @@ export function piattoLeggibileDaAltri(db: Db, piattoId: string, utenteId: strin
   return (
     uno(
       db,
-      `SELECT 1 FROM piatti WHERE id = ? AND visibilita = 'famiglia'
+      `SELECT 1 FROM piatti p WHERE p.id = ? AND p.visibilita = 'famiglia' AND ${STESSO_GRUPPO}
        UNION ALL
        SELECT 1 FROM condivisioni_piatto WHERE piatto_id = ? AND utente_id = ?
        UNION ALL
@@ -233,6 +234,8 @@ export function piattoLeggibileDaAltri(db: Db, piattoId: string, utenteId: strin
        WHERE v.piatto_id = ? AND (e.proprietario_id = ? OR EXISTS (SELECT 1 FROM condivisioni_evento c WHERE c.evento_id = e.id AND c.utente_id = ?))
        LIMIT 1`,
       piattoId,
+      utenteId,
+      utenteId,
       piattoId,
       utenteId,
       piattoId,
@@ -242,28 +245,78 @@ export function piattoLeggibileDaAltri(db: Db, piattoId: string, utenteId: strin
   )
 }
 
+/**
+ * Condizione SQL «il proprietario del piatto `p` e l'utente (parametro) stanno in uno stesso
+ * gruppo familiare»: il ricettario di famiglia è visibile solo dentro il gruppo.
+ */
+export const STESSO_GRUPPO =
+  '(p.proprietario_id = ? OR EXISTS (SELECT 1 FROM membri_gruppo a JOIN membri_gruppo b ON b.gruppo_id = a.gruppo_id WHERE a.utente_id = p.proprietario_id AND b.utente_id = ?))'
+
+// ── Gruppi ──────────────────────────────────────────────────
+
+export const ruoloNelGruppo = (db: Db, gruppoId: string, utenteId: string) =>
+  uno<{ ruolo: 'amministratore' | 'membro' }>(db, 'SELECT ruolo FROM membri_gruppo WHERE gruppo_id = ? AND utente_id = ?', gruppoId, utenteId)?.ruolo
+
+export const gruppiDiUtente = (db: Db, utenteId: string) =>
+  tutti<{ id: string; nome: string; ruolo: 'amministratore' | 'membro' }>(
+    db,
+    'SELECT g.id, g.nome, m.ruolo FROM gruppi g JOIN membri_gruppo m ON m.gruppo_id = g.id WHERE m.utente_id = ? ORDER BY g.nome',
+    utenteId,
+  )
+
+export const membriGruppo = (db: Db, gruppoId: string) =>
+  tutti<{ utente_id: string; nome: string; ruolo: 'amministratore' | 'membro' }>(
+    db,
+    "SELECT m.utente_id, u.nome, m.ruolo FROM membri_gruppo m JOIN utenti u ON u.id = m.utente_id WHERE m.gruppo_id = ? AND u.stato = 'attivo' ORDER BY u.nome_norm",
+    gruppoId,
+  )
+
+export const elencaGruppi = (db: Db) => tutti<{ id: string; nome: string }>(db, 'SELECT id, nome FROM gruppi ORDER BY nome')
+
+export function aggiungiMembro(db: Db, gruppoId: string, utenteId: string, ruolo: 'amministratore' | 'membro', adesso: number): void {
+  esegui(
+    db,
+    'INSERT INTO membri_gruppo (gruppo_id, utente_id, ruolo, creato_il) VALUES (?, ?, ?, ?) ON CONFLICT (gruppo_id, utente_id) DO UPDATE SET ruolo = excluded.ruolo',
+    gruppoId,
+    utenteId,
+    ruolo,
+    adesso,
+  )
+}
+export const togliMembro = (db: Db, gruppoId: string, utenteId: string) => esegui(db, 'DELETE FROM membri_gruppo WHERE gruppo_id = ? AND utente_id = ?', gruppoId, utenteId)
+
 /** Condizione SQL «evento visibile all'utente» su un alias `e` (parametro: id utente due volte). */
 export const EVENTO_VISIBILE = '(e.proprietario_id = ? OR EXISTS (SELECT 1 FROM condivisioni_evento c WHERE c.evento_id = e.id AND c.utente_id = ?))'
 
 // ── Condivisioni ─────────────────────────────────────────────
 
 export const condivisioniEvento = (db: Db, eventoId: string) =>
-  tutti<{ utente_id: string; nome: string; permesso: 'lettura' | 'modifica' }>(
+  tutti<{ utente_id: string; nome: string; permesso: 'lettura' | 'modifica'; partecipa: number }>(
     db,
-    'SELECT c.utente_id, u.nome, c.permesso FROM condivisioni_evento c JOIN utenti u ON u.id = c.utente_id WHERE c.evento_id = ? ORDER BY u.nome_norm',
+    'SELECT c.utente_id, u.nome, c.permesso, c.partecipa FROM condivisioni_evento c JOIN utenti u ON u.id = c.utente_id WHERE c.evento_id = ? ORDER BY u.nome_norm',
     eventoId,
   )
 
-export function impostaCondivisioneEvento(db: Db, eventoId: string, utenteId: string, permesso: string, adesso: number): void {
+export function impostaCondivisioneEvento(db: Db, eventoId: string, utenteId: string, permesso: string, adesso: number, partecipa = true): void {
   esegui(
     db,
-    'INSERT INTO condivisioni_evento (evento_id, utente_id, permesso, creato_il) VALUES (?, ?, ?, ?) ON CONFLICT (evento_id, utente_id) DO UPDATE SET permesso = excluded.permesso',
+    'INSERT INTO condivisioni_evento (evento_id, utente_id, permesso, partecipa, creato_il) VALUES (?, ?, ?, ?, ?) ON CONFLICT (evento_id, utente_id) DO UPDATE SET permesso = excluded.permesso, partecipa = excluded.partecipa',
     eventoId,
     utenteId,
     permesso,
+    partecipa ? 1 : 0,
     adesso,
   )
 }
+
+/** Utenti con accesso all'evento: proprietario e invitati (per le notifiche). */
+export const personeEvento = (db: Db, eventoId: string) =>
+  tutti<{ utente_id: string }>(
+    db,
+    'SELECT proprietario_id AS utente_id FROM eventi WHERE id = ? UNION SELECT utente_id FROM condivisioni_evento WHERE evento_id = ?',
+    eventoId,
+    eventoId,
+  ).map((r) => r.utente_id)
 
 export const togliCondivisioneEvento = (db: Db, eventoId: string, utenteId: string) =>
   esegui(db, 'DELETE FROM condivisioni_evento WHERE evento_id = ? AND utente_id = ?', eventoId, utenteId)

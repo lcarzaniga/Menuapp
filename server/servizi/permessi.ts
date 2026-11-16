@@ -14,7 +14,8 @@ export interface UtenteCorrente {
   ingresso: Ingresso
 }
 
-export type LivelloEvento = 'lettura' | 'modifica' | 'proprietario'
+/** `partecipa`: scrivere in bacheca, votare, proporre, offrirsi; non modifica il menù. */
+export type LivelloEvento = 'lettura' | 'partecipa' | 'modifica' | 'proprietario'
 
 export function permessoEvento(db: Db, u: UtenteCorrente, eventoId: string): PermessoEvento | null {
   const a = repo.accessoEvento(db, eventoId, u.id)
@@ -23,16 +24,27 @@ export function permessoEvento(db: Db, u: UtenteCorrente, eventoId: string): Per
   return a.permesso
 }
 
-const SUFFICIENTE: Record<LivelloEvento, PermessoEvento[]> = {
+const SUFFICIENTE: Record<Exclude<LivelloEvento, 'partecipa'>, PermessoEvento[]> = {
   lettura: ['lettura', 'modifica', 'proprietario'],
   modifica: ['modifica', 'proprietario'],
   proprietario: ['proprietario'],
+}
+
+/** Può partecipare (bacheca, sondaggi, proposte, incarichi): chi modifica, o chi legge se il proprietario non l'ha escluso. */
+export function puoPartecipare(db: Db, u: UtenteCorrente, eventoId: string): boolean {
+  const a = repo.accessoEvento(db, eventoId, u.id)
+  if (!a) return false
+  return a.proprietario_id === u.id || a.permesso === 'modifica' || (a.permesso === 'lettura' && a.partecipa === 1)
 }
 
 /** Verifica l'accesso all'evento; `cosa` è il nome della risorsa da citare nel 404. */
 export function richiediEvento(db: Db, u: UtenteCorrente, eventoId: string, livello: LivelloEvento, cosa = 'Evento'): PermessoEvento {
   const p = permessoEvento(db, u, eventoId)
   if (!p) throw nonTrovato(cosa)
+  if (livello === 'partecipa') {
+    if (!puoPartecipare(db, u, eventoId)) throw accessoNegato('Il proprietario non ti ha abilitato a partecipare alla bacheca di questo evento')
+    return p
+  }
   if (!SUFFICIENTE[livello].includes(p)) {
     throw accessoNegato(livello === 'proprietario' ? 'Solo il proprietario dell\'evento può farlo' : 'Questo evento è condiviso con te in sola lettura')
   }
@@ -82,6 +94,13 @@ export function richiediFoto(db: Db, u: UtenteCorrente, id: string, livello: Liv
   if (!piatto) throw nonTrovato('Foto')
   richiediPiatto(db, u, piatto, livello, 'Foto')
   return piatto
+}
+
+/** Membro del gruppo familiare: altrimenti il gruppo «non esiste». */
+export function richiediGruppo(db: Db, u: UtenteCorrente, gruppoId: string, livello: 'membro' | 'amministratore' = 'membro'): void {
+  const ruolo = repo.ruoloNelGruppo(db, gruppoId, u.id)
+  if (!ruolo) throw nonTrovato('Gruppo')
+  if (livello === 'amministratore' && ruolo !== 'amministratore') throw accessoNegato('Solo chi amministra la famiglia può farlo')
 }
 
 export function richiediAmministratore(u: UtenteCorrente): void {

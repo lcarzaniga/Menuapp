@@ -72,6 +72,17 @@ const richiesta = (c: ClientDiProva, metodo: string, url: string) =>
     payload: metodo === 'GET' || metodo === 'DELETE' ? undefined : '{}',
   })
 
+/** Rotte di partecipazione: aperte anche a chi ha l'evento in sola lettura. */
+const PARTECIPAZIONE = [
+  `POST ${P}/eventi/:id/messaggi`,
+  `POST ${P}/eventi/:id/cose`,
+  `POST ${P}/voci/:id/prendi`,
+  `POST ${P}/voci/:id/rinuncia`,
+  `POST ${P}/voci/:id/completa`,
+  `PUT ${P}/voci/:id/valutazione`,
+  `DELETE ${P}/voci/:id/valutazione`,
+]
+
 describe('accesso diretto a ogni rotta con id', () => {
   const RISORSE = /\/(eventi|voci|attivita|spesa\/manuali|snapshot|piatti|foto)\/:id/
 
@@ -92,10 +103,12 @@ describe('accesso diretto a ogni rotta con id', () => {
       const res = await richiesta(bruno, r.metodo, percorsoReale(r.url))
       // Con chi è condivisa una ricetta lo vede solo il proprietario.
       const soloProprietarioRicetta = r.url.endsWith('/piatti/:id/condivisioni')
-      const lettura = (r.metodo === 'GET' && !soloProprietarioRicetta) || r.url.endsWith('/copia-piatto') || r.url.endsWith('/piatti/:id/copia')
+      // Partecipare (bacheca, chi porta cosa, valutazioni) è permesso anche a chi legge, salvo esclusione.
+      const partecipazione = PARTECIPAZIONE.includes(`${r.metodo} ${r.url}`)
+      const lettura = (r.metodo === 'GET' && !soloProprietarioRicetta) || r.url.endsWith('/copia-piatto') || r.url.endsWith('/piatti/:id/copia') || partecipazione
       const piattoAltrui = (/\/(piatti|foto)\/:id/.test(r.url) && r.metodo !== 'GET' && !r.url.endsWith('/copia')) || soloProprietarioRicetta
       const lasciaEvento = r.metodo === 'DELETE' && r.url.endsWith('/condivisioni/:utenteId')
-      if (lettura) expect([200, 201, 400], `${r.metodo} ${r.url} → ${res.body}`).toContain(res.statusCode)
+      if (lettura) expect([200, 201, 400, 409, 422], `${r.metodo} ${r.url} → ${res.body}`).toContain(res.statusCode)
       else if (piattoAltrui || !lasciaEvento) expect(res.statusCode, `${r.metodo} ${r.url} → ${res.body}`).toBe(403)
     }
   })

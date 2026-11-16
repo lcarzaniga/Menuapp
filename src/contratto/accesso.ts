@@ -98,7 +98,13 @@ export type StatoAttivazione = z.infer<typeof SchemaStatoAttivazione>
 
 // ── Amministrazione ─────────────────────────────────────────
 
-export const SchemaNuovoUtente = z.object({ id: Id, nome: NomeObbligatorio.max(60), ruolo: z.enum(RUOLI).default('utente') })
+export const SchemaNuovoUtente = z.object({
+  id: Id,
+  nome: NomeObbligatorio.max(60),
+  ruolo: z.enum(RUOLI).default('utente'),
+  /** Entra subito nel gruppo familiare (bacheca e ricettario di famiglia). */
+  famiglia: z.boolean().default(true),
+})
 export type NuovoUtente = z.infer<typeof SchemaNuovoUtente>
 
 export const SchemaAggiornaUtente = z.object({
@@ -111,18 +117,26 @@ export type AggiornaUtente = z.infer<typeof SchemaAggiornaUtente>
 
 // ── Condivisioni ────────────────────────────────────────────
 
-export const SchemaCondivisioneEvento = z.object({ utenteId: Id, utenteNome: z.string(), permesso: z.enum(PERMESSI_EVENTO) })
+export const SchemaCondivisioneEvento = z.object({
+  utenteId: Id,
+  utenteNome: z.string(),
+  permesso: z.enum(PERMESSI_EVENTO),
+  /** Può scrivere in bacheca, votare, proporre e offrirsi (anche con la sola lettura). */
+  partecipa: z.boolean(),
+})
 export type CondivisioneEvento = z.infer<typeof SchemaCondivisioneEvento>
 
 /** Accesso dell'utente corrente a un evento; le condivisioni solo per il proprietario. */
 export const SchemaAccessoEvento = z.object({
   permesso: z.enum(['proprietario', 'modifica', 'lettura']),
+  /** L'utente corrente può partecipare (bacheca, sondaggi, proposte, chi porta cosa). */
+  partecipa: z.boolean(),
   proprietario: SchemaPersona,
   condivisioni: z.array(SchemaCondivisioneEvento),
 })
 export type AccessoEvento = z.infer<typeof SchemaAccessoEvento>
 
-export const SchemaImpostaCondivisione = z.object({ permesso: z.enum(PERMESSI_EVENTO) })
+export const SchemaImpostaCondivisione = z.object({ permesso: z.enum(PERMESSI_EVENTO), partecipa: z.boolean().default(true) })
 export const SchemaTrasferisci = z.object({ utenteId: Id, versione: Versione })
 
 export const SchemaCondivisioniPiatto = z.object({ utenti: z.array(SchemaPersona) })

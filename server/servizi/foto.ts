@@ -147,7 +147,7 @@ export async function eliminaFoto(db: Db, cartella: string, id: string, versione
   await rm(join(cartella, nomeFile(f)), { force: true })
 }
 
-export async function leggiFile(cartella: string, f: Foto): Promise<Buffer> {
+export async function leggiFile(cartella: string, f: Pick<Foto, 'id' | 'tipo'>): Promise<Buffer> {
   try {
     return await readFile(join(cartella, nomeFile(f)))
   } catch {
@@ -194,8 +194,10 @@ export async function sincronizzaFotoNelBackup(cartellaFoto: string, cartellaBac
 export async function recuperaFotoMancanti(db: Db, cartellaFoto: string, cartellaBackup: string): Promise<string[]> {
   await mkdir(cartellaFoto, { recursive: true })
   const mancanti: string[] = []
-  for (const r of tutti<Riga>(db, 'SELECT * FROM foto_piatti')) {
-    const nome = nomeFile(daRiga(r))
+  // Foto dei piatti e allegati delle bacheche condividono cartella e backup.
+  const righe = tutti<{ id: string; tipo: TipoFoto }>(db, 'SELECT id, tipo FROM foto_piatti UNION ALL SELECT id, tipo FROM allegati')
+  for (const r of righe) {
+    const nome = nomeFile(r)
     if (existsSync(join(cartellaFoto, nome))) continue
     const copia = join(cartellaBackup, 'foto', nome)
     if (existsSync(copia)) await copyFile(copia, join(cartellaFoto, nome))

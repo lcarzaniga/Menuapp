@@ -77,6 +77,9 @@ export function creaUtente(db: Db, d: NuovoUtente, adesso = Date.now()): Utente 
     if (repo.leggiUtente(db, d.id)) throw new ErroreApi(409, 'id_esistente', 'Esiste già un utente con questo identificativo')
     if (repo.utentePerNome(db, norm(nome))) throw regolaViolata('nome_utente_duplicato', 'Esiste già un utente con questo nome')
     repo.inserisciUtente(db, { id: d.id, nome, nome_norm: norm(nome), ruolo: d.ruolo }, adesso)
+    // Un solo gruppo per ora: la famiglia (il modello ne ammette altri).
+    const famiglia = repo.elencaGruppi(db)[0]
+    if (d.famiglia !== false && famiglia) repo.aggiungiMembro(db, famiglia.id, d.id, d.ruolo === 'amministratore' ? 'amministratore' : 'membro', adesso)
     incrementaRevisione(db)
     return leggiUtente(db, d.id)
   })

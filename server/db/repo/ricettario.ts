@@ -2,6 +2,7 @@
 import { norm } from '../../../src/domain/testo.ts'
 import type { CodiceUnita, Ingrediente, IngredientePiatto, Piatto, Scalatura, StatoParsing } from '../../../src/domain/tipi.ts'
 import { type Db, esegui, tutti, uno } from '../connessione.ts'
+import { STESSO_GRUPPO } from './accesso.ts'
 
 interface RigaPiatto {
   id: string
@@ -117,9 +118,11 @@ export function elencaPiatti(db: Db, utenteId: string, ricerca?: string) {
        EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id) AS condiviso
      FROM piatti p JOIN utenti u ON u.id = p.proprietario_id
      WHERE p.nome_norm LIKE ?
-       AND (p.proprietario_id = ? OR p.visibilita = 'famiglia' OR EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id AND c.utente_id = ?))
+       AND (p.proprietario_id = ? OR (p.visibilita = 'famiglia' AND ${STESSO_GRUPPO}) OR EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id AND c.utente_id = ?))
      ORDER BY p.nome_norm`,
     filtro,
+    utenteId,
+    utenteId,
     utenteId,
     utenteId,
   ).map((r) => ({

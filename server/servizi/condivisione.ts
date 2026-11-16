@@ -8,7 +8,8 @@ import { incrementaRevisione } from '../db/repo/meta.ts'
 import * as repoRic from '../db/repo/ricettario.ts'
 import { accessoNegato, conflittoVersione, nonTrovato, regolaViolata } from './errori.ts'
 import { copiaFotoPiatto } from './foto.ts'
-import { richiediEvento, richiediPiatto, type UtenteCorrente } from './permessi.ts'
+import { avvisa } from './notifiche.ts'
+import { puoPartecipare, richiediEvento, richiediPiatto, type UtenteCorrente } from './permessi.ts'
 
 function personaAttiva(db: Db, id: string): repo.RigaUtente {
   const u = repo.leggiUtente(db, id)
@@ -23,20 +24,34 @@ export function accessoEvento(db: Db, u: UtenteCorrente, eventoId: string): Acce
   const proprietarioId = repo.proprietarioEvento(db, eventoId)!
   return {
     permesso,
+    partecipa: puoPartecipare(db, u, eventoId),
     proprietario: { id: proprietarioId, nome: repo.leggiUtente(db, proprietarioId)?.nome ?? '' },
     condivisioni:
       permesso === 'proprietario'
-        ? repo.condivisioniEvento(db, eventoId).map((c) => ({ utenteId: c.utente_id, utenteNome: c.nome, permesso: c.permesso }))
+        ? repo.condivisioniEvento(db, eventoId).map((c) => ({ utenteId: c.utente_id, utenteNome: c.nome, permesso: c.permesso, partecipa: c.partecipa === 1 }))
         : [],
   }
 }
 
-export function condividiEvento(db: Db, u: UtenteCorrente, eventoId: string, utenteId: string, permesso: PermessoCondivisione, adesso = Date.now()): AccessoEvento {
+export function condividiEvento(
+  db: Db,
+  u: UtenteCorrente,
+  eventoId: string,
+  utenteId: string,
+  permesso: PermessoCondivisione,
+  adesso = Date.now(),
+  partecipa = true,
+): AccessoEvento {
   return transazione(db, () => {
     richiediEvento(db, u, eventoId, 'proprietario')
     if (utenteId === u.id) throw regolaViolata('condividi_con_te', 'L\'evento è già tuo')
     personaAttiva(db, utenteId)
-    repo.impostaCondivisioneEvento(db, eventoId, utenteId, permesso, adesso)
+    const nuova = !repo.condivisioniEvento(db, eventoId).some((c) => c.utente_id === utenteId)
+    repo.impostaCondivisioneEvento(db, eventoId, utenteId, permesso, adesso, partecipa)
+    if (nuova) {
+      const evento = repoEventi.leggiEvento(db, eventoId)!
+      avvisa(db, { tipo: 'condivisione', attoreId: u.id, destinatari: [utenteId], chiave: `condivisione-evento:${eventoId}`, eventoId, testo: `Condiviso con te: «${evento.nome}»` }, adesso)
+    }
     incrementaRevisione(db)
     return accessoEvento(db, u, eventoId)
   })
@@ -102,7 +117,10 @@ export function impostaCondivisioniPiatto(db: Db, u: UtenteCorrente, piattoId: s
     richiediPiatto(db, u, piattoId, 'proprietario')
     const unici = [...new Set(utenti)].filter((id) => id !== u.id)
     for (const id of unici) personaAttiva(db, id)
+    const prima = new Set(repo.condivisioniPiatto(db, piattoId).map((c) => c.utente_id))
     repo.sostituisciCondivisioniPiatto(db, piattoId, unici, adesso)
+    const nome = repoRic.leggiPiatto(db, piattoId)?.nome ?? 'una ricetta'
+    avvisa(db, { tipo: 'condivisione', attoreId: u.id, destinatari: unici.filter((id) => !prima.has(id)), chiave: `condivisione-piatto:${piattoId}`, piattoId, testo: `Ricetta condivisa con te: «${nome}»` }, adesso)
     incrementaRevisione(db)
     return condivisioniPiatto(db, u, piattoId)
   })

@@ -10,7 +10,7 @@ import type { Ingresso } from '../src/contratto/accesso.ts'
 import { ErroreApi } from './servizi/errori.ts'
 import { LIMITE_BYTE_FOTO, TIPI_FOTO } from '../src/contratto/foto.ts'
 
-const RE_ROTTE_FOTO = /^\/api\/v1\/(piatti\/[^/]+\/foto|foto\/[^/]+\/file)$/
+const RE_ROTTE_FOTO = /^\/api\/v1\/(piatti\/[^/]+\/foto|foto\/[^/]+\/file|messaggi\/[^/]+\/allegati)$/
 
 const METODI_SCRITTURA = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 const LIMITE_CORPO = 1024 * 1024

@@ -64,7 +64,7 @@ export interface AppDiProva extends DbDiProva, ClientDiProva {
   /** Client senza sessione. */
   anonimo: ClientDiProva
   /** Nuovo utente con un dispositivo autorizzato (o client di un utente esistente). */
-  utente: (nome: string, ruolo?: 'utente' | 'amministratore') => ClientDiProva & { id: string }
+  utente: (nome: string, ruolo?: 'utente' | 'amministratore', famiglia?: boolean) => ClientDiProva & { id: string }
   /** Client con una nuova sessione per un utente esistente. */
   sessione: (utenteId: string) => ClientDiProva
 }
@@ -120,9 +120,9 @@ export async function appDiProva(opzioni: { statici?: string; lan?: boolean; ing
     anonimo: client(null),
     // Richiesta libera: con la sessione dell'amministratore, salvo cookie indicato.
     inietta: async (o) => app.inject({ ...o, headers: { cookie: amministratore.cookie!, ...(o.headers as Record<string, string> | undefined) } }),
-    utente: (nome, ruolo = 'utente') => {
+    utente: (nome, ruolo = 'utente', famiglia = true) => {
       const esistente = identita.elencaUtenti(p.db).find((u) => u.nome === nome)
-      const id = esistente?.id ?? identita.creaUtente(p.db, { id: `utente-${nome.toLowerCase()}`, nome, ruolo }).id
+      const id = esistente?.id ?? identita.creaUtente(p.db, { id: `utente-${nome.toLowerCase()}`, nome, ruolo, famiglia }).id
       return { ...client(nuovaSessione(p.db, id)), id }
     },
     sessione: (utenteId) => client(nuovaSessione(p.db, utenteId)),

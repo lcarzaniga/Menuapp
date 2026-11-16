@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import type { Ingresso } from '../../src/contratto/accesso.ts'
 import type { Contesto } from './aiuti.ts'
 import { rotteSessione } from './sessione.ts'
+import { rotteFamiglia } from './famiglia.ts'
 import { rotteBackup } from './backup.ts'
 import { rotteEventi } from './eventi.ts'
 import { rotteRicettario } from './ricettario.ts'
@@ -20,4 +21,5 @@ export function registraRotte(app: FastifyInstance, ctx: Contesto, ingresso: Ing
   rotteSpesa(app, ctx)
   rotteFoto(app, ctx)
   rotteStampa(app, ctx)
+  rotteFamiglia(app, ctx)
 }
