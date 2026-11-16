@@ -1,6 +1,7 @@
 // Contratto API: snapshot degli eventi archiviati e attività (SPEC §7.3–7.4, §7.7).
 import { z } from 'zod'
 import type { Menu } from './eventi.ts'
+import type { Invito } from './partecipanti.ts'
 import type { RispostaSpesa } from './spesa.ts'
 import type { OpzioniStampa } from '../domain/stampa.ts'
 import type { Attivita, Evento, Piatto } from '../domain/tipi.ts'
@@ -22,6 +23,8 @@ export interface ContenutoSnapshot {
   attivita: Omit<Attivita, 'versione' | 'creatoIl' | 'aggiornatoIl'>[]
   /** Stile del menù stampato all'archiviazione (assente negli snapshot precedenti). */
   stampa?: OpzioniStampa | null
+  /** Partecipanti, accompagnatori e stati finali (assenti negli snapshot precedenti, SPEC §24). */
+  partecipanti?: Invito[]
 }
 
 export interface Snapshot {

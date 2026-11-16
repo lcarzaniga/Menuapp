@@ -91,8 +91,9 @@ export function aggiornaEvento(db: Db, id: string, d: AggiornaEvento, adesso = D
         ora_servizio: d.oraServizio,
         tipo: d.tipo,
         occasione: pulisci(d.occasione),
-        adulti: d.adulti,
-        bambini: d.bambini,
+        // Con i coperti calcolati dai partecipanti i numeri manuali restano quelli salvati.
+        adulti: attuale.copertiAutomatici ? attuale.copertiManuali.adulti : d.adulti,
+        bambini: attuale.copertiAutomatici ? attuale.copertiManuali.bambini : d.bambini,
         coefficiente_bambini: d.coefficienteBambini,
         note: d.note,
       },

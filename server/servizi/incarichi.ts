@@ -12,9 +12,11 @@
 import { randomUUID } from 'node:crypto'
 import type { Assegnazione, Incarichi, Incarico } from '../../src/contratto/famiglia.ts'
 import { norm, pulisci } from '../../src/domain/testo.ts'
+import { stessaPersona } from '../../src/domain/partecipanti.ts'
 import { type Db, lettura, transazione } from '../db/connessione.ts'
 import * as repoAccesso from '../db/repo/accesso.ts'
 import * as repo from '../db/repo/famiglia.ts'
+import * as repoPartecipanti from '../db/repo/partecipanti.ts'
 import { incrementaRevisione } from '../db/repo/meta.ts'
 import { accessoNegato, conflittoVersione, nonTrovato, regolaViolata } from './errori.ts'
 import { leggiEvento, richiediModificabile } from './eventi.ts'
@@ -42,6 +44,10 @@ export function elenca(db: Db, u: UtenteCorrente, eventoId: string): Incarichi {
     const partecipa = puoPartecipare(db, u, eventoId) && !archiviato
     const gestisce = (permesso === 'proprietario' || permesso === 'modifica') && !archiviato
     const famigliaId = repoAccesso.gruppoEvento(db, eventoId)
+    const presenti = repoPartecipanti.partecipantiEvento(db, eventoId)
+    const assenti = presenti.filter((p) => p.stato === 'assente').map((p) => ({ utenteId: p.utente_id, esternoId: p.esterno_id, nomeNorm: p.nome_norm }))
+    const assente = (incaricato: string, incaricatoId: string | null, esternoId: string | null) =>
+      assenti.some((p) => stessaPersona({ incaricatoId, esternoId, nomeNorm: norm(incaricato) }, p))
     const flags = (incaricato: string, incaricatoId: string | null, creatoDa: string | null) => ({
       puoPrendere: partecipa && !incaricato,
       puoRinunciare: Boolean(incaricato) && ((partecipa && incaricatoId === u.id) || gestisce),
@@ -67,6 +73,7 @@ export function elenca(db: Db, u: UtenteCorrente, eventoId: string): Incarichi {
       versione: v.versione,
       ...flags(v.incaricato, v.incaricato_id, null),
       puoGestire: gestisce,
+      responsabileAssente: assente(v.incaricato, v.incaricato_id, v.incaricato_esterno_id),
     }))
     const cose: Incarico[] = repo.coseEvento(db, eventoId).map((c) => ({
       tipo: 'cosa',
@@ -86,6 +93,7 @@ export function elenca(db: Db, u: UtenteCorrente, eventoId: string): Incarichi {
       spesaToltaDaIncarico: false,
       versione: c.versione,
       ...flags(c.incaricato, c.incaricato_id, c.creato_da),
+      responsabileAssente: assente(c.incaricato, c.incaricato_id, c.incaricato_esterno_id),
     }))
     return {
       incarichi: [...voci, ...cose],
@@ -95,6 +103,7 @@ export function elenca(db: Db, u: UtenteCorrente, eventoId: string): Incarichi {
       // La rubrica della Famiglia la vede chi organizza e ne fa parte.
       rubrica: gestisce && famigliaId && repoAccesso.ruoloNelGruppo(db, famigliaId, u.id) ? repo.rubrica(db, famigliaId).map((e) => ({ id: e.id, nome: e.nome })) : [],
       famigliaId,
+      partecipanti: gestisce ? presenti.map((p) => ({ id: p.id, nome: p.nome, assente: p.stato === 'assente' })) : [],
     }
   })
 }
@@ -217,6 +226,14 @@ function risolviResponsabile(db: Db, u: UtenteCorrente, eventoId: string, a: Ass
     if (!personeEvento(db, eventoId).includes(a.utenteId)) throw nonTrovato('Persona')
     const p = repoAccesso.leggiUtente(db, a.utenteId)!
     return { incaricato: p.nome, incaricatoId: p.id, esternoId: null, utente: true }
+  }
+  if (a.partecipanteId) {
+    // Un partecipante: la sua persona collegata se c'è, altrimenti il suo nome così com'è (anche
+    // chi usa l'app ma non vede l'evento: partecipare non dà accesso).
+    const p = repoPartecipanti.leggiPartecipante(db, a.partecipanteId)
+    if (!p || p.evento_id !== eventoId) throw nonTrovato('Partecipante')
+    if (p.utente_id && personeEvento(db, eventoId).includes(p.utente_id)) return { incaricato: p.nome, incaricatoId: p.utente_id, esternoId: null, utente: true }
+    return { incaricato: p.nome, incaricatoId: null, esternoId: p.esterno_id, utente: false }
   }
   if (a.esternoId) {
     const e = repo.leggiEsterno(db, a.esternoId)

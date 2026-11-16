@@ -7,6 +7,7 @@ import { norm, pulisci } from '../../src/domain/testo.ts'
 import { type Db, transazione } from '../db/connessione.ts'
 import * as repoAccesso from '../db/repo/accesso.ts'
 import * as repo from '../db/repo/famiglia.ts'
+import * as repoPartecipanti from '../db/repo/partecipanti.ts'
 import { incrementaRevisione } from '../db/repo/meta.ts'
 import { conflittoVersione, nonTrovato, regolaViolata } from './errori.ts'
 import { richiediGruppo, type UtenteCorrente } from './permessi.ts'
@@ -57,7 +58,10 @@ export function aggiorna(db: Db, u: UtenteCorrente, id: string, d: { nome: strin
     const nome = pulisci(d.nome)
     controllaNome(db, e.gruppo_id, nome, id)
     if (repo.aggiornaEsterno(db, id, d.versione, { nome, nomeNorm: norm(nome), note: pulisci(d.note) }, adesso) !== 1) throw conflittoVersione(daRiga(e))
-    if (nome !== e.nome) repo.rinominaInIncarichi(db, id, nome)
+    if (nome !== e.nome) {
+      repo.rinominaInIncarichi(db, id, nome)
+      repoPartecipanti.rinominaEsterno(db, id, nome, norm(nome), Date.now())
+    }
     incrementaRevisione(db)
     return daRiga(repo.leggiEsterno(db, id)!)
   })

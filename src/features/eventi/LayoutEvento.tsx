@@ -24,6 +24,7 @@ export function ConPermessoEvento({ children }: { children: React.ReactNode }) {
 
 const SCHEDE = [
   { a: '', etichetta: 'Panoramica', fine: true },
+  { a: 'partecipanti', etichetta: 'Partecipanti' },
   { a: 'menu', etichetta: 'Menù' },
   { a: 'spesa', etichetta: 'Spesa' },
   { a: 'piano', etichetta: 'Piano' },

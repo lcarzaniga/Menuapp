@@ -36,6 +36,7 @@ export const router = createHashRouter([
         element: <LayoutEvento />,
         children: [
           { index: true, element: <PaginaPanoramica /> },
+          { path: 'partecipanti', element: pigra(() => import('@/features/partecipanti/PaginaPartecipanti'), (m) => m.PaginaPartecipanti) },
           { path: 'menu', element: <PaginaMenu /> },
           { path: 'spesa', element: pigra(() => import('@/features/spesa/PaginaSpesa'), (m) => m.PaginaSpesa) },
           { path: 'piano', element: pigra(() => import('@/features/piano/PaginaPiano'), (m) => m.PaginaPiano) },

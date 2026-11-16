@@ -37,6 +37,7 @@ export const TABELLE_CONTENUTO = [
   'voti_sondaggio',
   'proposte',
   'cose_da_portare',
+  'partecipanti',
   'valutazioni',
   'notifiche',
   'preferenze_notifiche',
@@ -66,7 +67,9 @@ function ordinePk(db: Db, tabella: string, schema = 'main'): string {
 export function leggiContenuto(db: Db, schema = 'main'): Record<string, RigaGenerica[]> {
   const dati: Record<string, RigaGenerica[]> = {}
   for (const t of TABELLE_CONTENUTO) {
-    let righe = tutti<RigaGenerica>(db, `SELECT * FROM ${schema}."${t}" ORDER BY ${ordinePk(db, t, schema)}`)
+    // Partecipanti: i titolari prima dei loro accompagnatori (vincolo di invito al ripristino).
+    const ordine = t === 'partecipanti' ? `invito_id IS NOT NULL, ${ordinePk(db, t, schema)}` : ordinePk(db, t, schema)
+    let righe = tutti<RigaGenerica>(db, `SELECT * FROM ${schema}."${t}" ORDER BY ${ordine}`)
     if (t === 'meta') righe = righe.filter((r) => !META_DI_SERVIZIO.includes(String(r.chiave)))
     dati[t] = righe.map((r) => ({ ...r }))
   }

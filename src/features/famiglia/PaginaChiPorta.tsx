@@ -1,6 +1,6 @@
 // Chi porta cosa (SPEC §20.5): piatti del menù e cose da portare, chi se ne occupa, stato.
 // La responsabilità di un piatto è la stessa «A cura di» del menù.
-import { CheckCircle2, Circle, HandHeart, Plus, ShoppingBasket, Undo2, UserRound } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Circle, HandHeart, Plus, ShoppingBasket, Undo2, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import { api, nuovoId } from '@/api/client'
 import { useScrittura } from '@/api/scrittura'
@@ -109,6 +109,11 @@ function Riga({ i, d }: { i: Incarico; d: Incarichi }) {
               <Badge variante="avviso">da assegnare</Badge>
             )}
             {i.stato === 'completato' ? <Badge variante="successo">fatto</Badge> : null}
+            {i.responsabileAssente ? (
+              <Badge variante="avviso" role="note">
+                <AlertTriangle className="size-3" /> non partecipa
+              </Badge>
+            ) : null}
             {i.tipo === 'voce' && i.inSpesa === false ? (
               <span className="flex items-center gap-1">
                 <ShoppingBasket className="size-3" /> fuori dalla spesa
@@ -190,7 +195,14 @@ function Affida({ i, d, onChiudi }: { i: Incarico; d: Incarichi; onChiudi: () =>
   const [togli, setTogli] = useState(i.tipo === 'voce' && i.spesaToltaDaIncarico)
   const affida = useScrittura(
     () => {
-      const chi = scelta === ALTRO ? { nome: nome.trim(), salvaInRubrica: salva } : scelta.startsWith('u:') ? { utenteId: scelta.slice(2) } : { esternoId: scelta.slice(2) }
+      const chi =
+        scelta === ALTRO
+          ? { nome: nome.trim(), salvaInRubrica: salva }
+          : scelta.startsWith('u:')
+            ? { utenteId: scelta.slice(2) }
+            : scelta.startsWith('p:')
+              ? { partecipanteId: scelta.slice(2) }
+              : { esternoId: scelta.slice(2) }
       return api.crea<Incarico>(`${percorso(i)}/assegna`, { versione: i.versione, ...chi, note, togliDallaSpesa: togli })
     },
     { oggetto: `«${i.nome}»`, successo: (x) => `Affidato a ${x.incaricato}`, dopo: onChiudi },
@@ -212,6 +224,16 @@ function Affida({ i, d, onChiudi }: { i: Incarico; d: Incarichi; onChiudi: () =>
         <Campo etichetta="Persona" htmlFor="affida-chi">
           <Select id="affida-chi" value={scelta} onChange={(e) => setScelta(e.target.value)}>
             <option value="">Scegli…</option>
+            {d.partecipanti.length ? (
+              <optgroup label="Partecipanti">
+                {d.partecipanti.map((p) => (
+                  <option key={p.id} value={`p:${p.id}`}>
+                    {p.nome}
+                    {p.assente ? ' (non partecipa)' : ''}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
             {d.persone.length ? (
               <optgroup label="Con l'app">
                 {d.persone.map((p) => (

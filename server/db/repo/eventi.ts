@@ -1,6 +1,8 @@
 // SQL di eventi, portate e voci di menù.
 import type { Evento, Portata, StatoEvento, TipoEvento, VoceMenu } from '../../../src/domain/tipi.ts'
+import { copertiEffettivi } from '../../../src/domain/partecipanti.ts'
 import { type Db, esegui, tutti, uno } from '../connessione.ts'
+import { presenzeEvento } from './partecipanti.ts'
 
 interface RigaEvento {
   id: string
@@ -12,6 +14,8 @@ interface RigaEvento {
   adulti: number
   bambini: number
   coefficiente_bambini: number
+  coperti_automatici: number
+  max_accompagnatori: number | null
   note: string
   stato: string
   concluso_il: number | null
@@ -21,7 +25,9 @@ interface RigaEvento {
   aggiornato_il: number
 }
 
-function daRigaEvento(r: RigaEvento, portate: Portata[]): Evento {
+function daRigaEvento(db: Db, r: RigaEvento, portate: Portata[]): Evento {
+  const automatici = r.coperti_automatici === 1
+  const effettivi = copertiEffettivi({ adulti: r.adulti, bambini: r.bambini, copertiAutomatici: automatici }, automatici ? presenzeEvento(db, r.id) : [])
   return {
     id: r.id,
     nome: r.nome,
@@ -29,9 +35,12 @@ function daRigaEvento(r: RigaEvento, portate: Portata[]): Evento {
     oraServizio: r.ora_servizio,
     tipo: r.tipo as TipoEvento,
     occasione: r.occasione,
-    adulti: r.adulti,
-    bambini: r.bambini,
+    adulti: effettivi.adulti,
+    bambini: effettivi.bambini,
     coefficienteBambini: r.coefficiente_bambini,
+    copertiAutomatici: automatici,
+    copertiManuali: { adulti: r.adulti, bambini: r.bambini },
+    maxAccompagnatori: r.max_accompagnatori,
     note: r.note,
     stato: r.stato as StatoEvento,
     conclusoIl: r.concluso_il,
@@ -51,7 +60,7 @@ export function portateEvento(db: Db, eventoId: string): Portata[] {
 
 export function leggiEvento(db: Db, id: string): Evento | undefined {
   const r = uno<RigaEvento>(db, 'SELECT * FROM eventi WHERE id = ?', id)
-  return r ? daRigaEvento(r, portateEvento(db, id)) : undefined
+  return r ? daRigaEvento(db, r, portateEvento(db, id)) : undefined
 }
 
 /** Eventi visibili all'utente (suoi e condivisi), con il suo permesso e il proprietario. */
@@ -81,7 +90,7 @@ export function elencaEventi(db: Db, utenteId: string, stato?: StatoEvento, grup
     utenteId,
   )
   return righe.map((r) => ({
-    ...daRigaEvento(r, portateEvento(db, r.id)),
+    ...daRigaEvento(db, r, portateEvento(db, r.id)),
     numeroVoci: r.numero_voci,
     proprietario: { id: r.proprietario_id, nome: r.proprietario_nome },
     permesso: (r.proprietario_id === utenteId ? 'proprietario' : r.permesso) as 'proprietario' | 'modifica' | 'lettura',
@@ -97,7 +106,7 @@ export function collegaPiatto(db: Db, voceId: string, piattoId: string | null, a
   esegui(db, 'UPDATE voci_menu SET piatto_id = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ?', piattoId, adesso, voceId)
 }
 
-export function inserisciEvento(db: Db, e: Omit<Evento, 'versione' | 'portate'>, proprietarioId: string, gruppoId: string | null = null): void {
+export function inserisciEvento(db: Db, e: Omit<Evento, 'versione' | 'portate' | 'copertiAutomatici' | 'copertiManuali' | 'maxAccompagnatori'>, proprietarioId: string, gruppoId: string | null = null): void {
   esegui(
     db,
     `INSERT INTO eventi (id, nome, data, ora_servizio, tipo, occasione, adulti, bambini, coefficiente_bambini, note, stato,

@@ -88,8 +88,13 @@ export function PaginaPanoramica() {
                 {e.bambini > 0 ? <span className="text-testo-tenue"> (contano {new Intl.NumberFormat('it-IT').format(e.coefficienteBambini)})</span> : null}
               </dd>
               <dt className="text-testo-tenue">Coperti</dt>
-              <dd className="flex items-center gap-1.5 font-semibold text-primario">
-                <Users className="size-4" /> {formattaCoperti(coperti)} equivalenti
+              <dd className="flex flex-wrap items-center gap-1.5">
+                <span className="flex items-center gap-1.5 font-semibold text-primario">
+                  <Users className="size-4" /> {formattaCoperti(coperti)} equivalenti
+                </span>
+                <Link to={`/eventi/${e.id}/partecipanti`} className="text-xs text-testo-tenue underline-offset-2 hover:underline">
+                  {e.copertiAutomatici ? 'calcolati dai partecipanti' : 'manuali'}
+                </Link>
               </dd>
               <dt className="text-testo-tenue">Menù</dt>
               <dd>
@@ -156,6 +161,7 @@ export function PaginaPanoramica() {
             note: e.note,
           }}
           etichetta="Salva"
+          copertiAutomatici={e.copertiAutomatici}
           inCorso={salva.inCorso}
           onSalva={(d) => void salva.esegui({ ...d, versione: e.versione })}
         />

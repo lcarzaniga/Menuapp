@@ -29,8 +29,11 @@ export function ModuloEvento({
   inCorso,
   etichetta,
   errori = {},
+  copertiAutomatici = false,
 }: {
   iniziale: DatiModuloEvento
+  /** Coperti calcolati dai partecipanti: adulti e bambini non si scrivono qui. */
+  copertiAutomatici?: boolean
   onSalva: (d: DatiModuloEvento) => void
   inCorso: boolean
   etichetta: string
@@ -100,12 +103,20 @@ export function ModuloEvento({
         </Campo>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
-        <Campo etichetta="Adulti" htmlFor="ev-adulti">
-          <Contatore id="ev-adulti" etichetta="adulti" valore={d.adulti} onCambia={(n) => cambia('adulti', n)} />
-        </Campo>
-        <Campo etichetta="Bambini" htmlFor="ev-bambini">
-          <Contatore id="ev-bambini" etichetta="bambini" valore={d.bambini} onCambia={(n) => cambia('bambini', n)} />
-        </Campo>
+        {copertiAutomatici ? (
+          <p className="text-sm text-testo-tenue sm:col-span-2">
+            Adulti e bambini sono calcolati dai partecipanti confermati ({d.adulti} + {d.bambini}): si cambiano dalla scheda Partecipanti.
+          </p>
+        ) : (
+          <>
+            <Campo etichetta="Adulti" htmlFor="ev-adulti">
+              <Contatore id="ev-adulti" etichetta="adulti" valore={d.adulti} onCambia={(n) => cambia('adulti', n)} />
+            </Campo>
+            <Campo etichetta="Bambini" htmlFor="ev-bambini">
+              <Contatore id="ev-bambini" etichetta="bambini" valore={d.bambini} onCambia={(n) => cambia('bambini', n)} />
+            </Campo>
+          </>
+        )}
         <Campo etichetta="Un bambino conta come" htmlFor="ev-coeff" aiuto="Frazione di porzione adulta">
           <Select id="ev-coeff" value={String(d.coefficienteBambini)} onChange={(e) => cambia('coefficienteBambini', Number(e.target.value))}>
             {COEFFICIENTI.map((c) => (

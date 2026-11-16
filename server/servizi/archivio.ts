@@ -15,6 +15,7 @@ import { elencaAttivita } from './attivita.ts'
 import { nonTrovato, regolaViolata } from './errori.ts'
 import { leggiEvento, leggiMenu } from './eventi.ts'
 import { elencaReparti } from './impostazioni.ts'
+import { perArchivio } from './partecipanti.ts'
 import { creaPiatto } from './ricettario.ts'
 import { calcolaPerEvento, ordineReparti } from './spesa.ts'
 import { controllaVersione } from './versioni.ts'
@@ -89,6 +90,7 @@ export function costruisciSnapshot(db: Db, eventoId: string): ContenutoSnapshot 
     reparti: reparti.map((r) => ({ id: r.id, nome: r.nome })),
     attivita: elencaAttivita(db, eventoId).map(({ versione: _x, creatoIl: _y, aggiornatoIl: _z, ...a }) => a),
     stampa: stile ? (JSON.parse(stile.opzioni) as ContenutoSnapshot['stampa']) : null,
+    partecipanti: perArchivio(db, eventoId),
   }
 }
 
@@ -169,10 +171,15 @@ export function spesaDaSnapshot(db: Db, eventoId: string): RispostaSpesa {
   return { ...richiediSnapshot(db, eventoId).contenuto.spesa, solaLettura: true }
 }
 
+/** Gli snapshot precedenti ai partecipanti (§24) non hanno la modalità dei coperti: erano manuali. */
+export function eventoDaSnapshot(e: ContenutoSnapshot['evento']): ContenutoSnapshot['evento'] {
+  return { ...e, copertiAutomatici: e.copertiAutomatici ?? false, copertiManuali: e.copertiManuali ?? { adulti: e.adulti, bambini: e.bambini }, maxAccompagnatori: e.maxAccompagnatori ?? null }
+}
+
 export function menuDaSnapshot(db: Db, eventoId: string): Menu {
   const s = richiediSnapshot(db, eventoId)
   const vivo = leggiEvento(db, eventoId)
-  return { evento: { ...s.contenuto.evento, versione: vivo.versione, creatoIl: vivo.creatoIl, aggiornatoIl: vivo.aggiornatoIl }, copertiEquivalenti: s.contenuto.copertiEquivalenti, portate: s.contenuto.menu }
+  return { evento: { ...eventoDaSnapshot(s.contenuto.evento), versione: vivo.versione, creatoIl: vivo.creatoIl, aggiornatoIl: vivo.aggiornatoIl }, copertiEquivalenti: s.contenuto.copertiEquivalenti, portate: s.contenuto.menu }
 }
 
 export function attivitaDaSnapshot(db: Db, eventoId: string): Attivita[] {

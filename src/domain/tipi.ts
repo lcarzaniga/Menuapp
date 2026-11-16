@@ -33,9 +33,16 @@ export interface Evento extends Versionato {
   oraServizio: Ora | null
   tipo: TipoEvento
   occasione: string
+  /** Adulti e bambini effettivi: manuali, o i confermati se `copertiAutomatici` (SPEC §24). */
   adulti: number
   bambini: number
   coefficienteBambini: number
+  /** Coperti calcolati dai partecipanti confermati invece che dai numeri scritti a mano. */
+  copertiAutomatici: boolean
+  /** Numeri scritti a mano, conservati anche quando i coperti sono automatici. */
+  copertiManuali: { adulti: number; bambini: number }
+  /** Accompagnatori che chi usa l'app può aggiungere da sé al proprio invito (null: nessun limite). */
+  maxAccompagnatori: number | null
   note: string
   stato: StatoEvento
   conclusoIl: Epoch | null

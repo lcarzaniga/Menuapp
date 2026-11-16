@@ -181,6 +181,8 @@ export const SchemaIncarico = z.object({
   puoRinunciare: z.boolean(),
   puoCompletare: z.boolean(),
   puoGestire: z.boolean(),
+  /** Il responsabile è fra i partecipanti e ha detto che non viene (SPEC §24.5): solo un avviso. */
+  responsabileAssente: z.boolean(),
 })
 export type Incarico = z.infer<typeof SchemaIncarico>
 
@@ -193,6 +195,8 @@ export const SchemaIncarichi = z.object({
   /** Rubrica delle persone senza account della Famiglia dell'evento (solo per chi organizza). */
   rubrica: z.array(SchemaPersona),
   famigliaId: Id.nullable(),
+  /** Partecipanti dell'evento (con o senza app), da scegliere come responsabili (solo per chi organizza). */
+  partecipanti: z.array(SchemaPersona.extend({ assente: z.boolean() })),
 })
 export type Incarichi = z.infer<typeof SchemaIncarichi>
 
@@ -226,12 +230,14 @@ export const SchemaAssegna = z
     versione: Versione,
     utenteId: Id.nullable().optional(),
     esternoId: Id.optional(),
+    /** Un partecipante dell'evento: diventa il suo utente, la sua persona della rubrica o il suo nome. */
+    partecipanteId: Id.optional(),
     nome: z.string().trim().min(1).max(80).optional(),
     salvaInRubrica: z.boolean().default(false),
     togliDallaSpesa: z.boolean().default(false),
     note: TestoBreve.optional(),
   })
-  .refine((d) => [d.utenteId !== undefined, d.esternoId !== undefined, d.nome !== undefined].filter(Boolean).length === 1, {
+  .refine((d) => [d.utenteId !== undefined, d.esternoId !== undefined, d.partecipanteId !== undefined, d.nome !== undefined].filter(Boolean).length === 1, {
     message: 'Indica una persona: con l\'app, dalla rubrica o un nome',
   })
 export type Assegnazione = z.infer<typeof SchemaAssegna>
