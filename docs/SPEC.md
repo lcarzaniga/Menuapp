@@ -2040,6 +2040,38 @@ Famiglia, classifiche separate, rimozione dalla Famiglia attiva, migrazione 0008
 database v7) ed e2e `test/e2e/multi-famiglia.spec.ts` (una Famiglia senza selettore, due con
 selettore e contenuti separati, persona senza Famiglie che entra con un invito).
 
+## 22. Persone senza account negli incarichi
+
+Richiesta di Loris (16/11/2026): affidare piatti e cose da portare anche a chi non usa l'app
+(«Zio Marco porta 4 bottiglie di vino», «Nonna Maria porta il dolce»). Migrazione
+`0009_persone_esterne.sql`.
+
+- **Già presente prima**: «A cura di» (`voci_menu.incaricato`) è un testo libero, quindi un nome
+  scritto a mano nel menù era già possibile; le cose da portare avevano una quantità solo
+  testuale; nessun elenco dei partecipanti (i coperti sono i numeri adulti/bambini).
+- **Rubrica per Famiglia** (`persone_esterne`): nome e nota; la gestiscono i membri della
+  Famiglia (`#/famiglia?scheda=membri`, «Senza app»), nessun'altra Famiglia la vede. Niente
+  doppioni: nome già in rubrica o di un membro della Famiglia → rifiutato. Sono solo nomi:
+  nessun account, sessione, permesso o notifica.
+- **Responsabile di un incarico**: un utente con l'app invitato all'evento, una persona della
+  rubrica della Famiglia dell'evento o un nome libero (occasionale o salvato in rubrica). Un
+  nome scritto che coincide con un invitato diventa quell'utente, con una persona della rubrica
+  diventa quella; con un membro della Famiglia non invitato chiede di invitarlo. Al massimo un
+  responsabile (`incaricato_id` o `incaricato_esterno_id`, vincolo nel database); il nome resta
+  sempre in «A cura di», quindi menù, spesa e stampa non cambiano. Rinominare in rubrica
+  aggiorna gli incarichi; togliere dalla rubrica lascia il nome scritto.
+- Affidare spetta a chi organizza («Affida» / «Cambia»), con **nota** dell'incarico
+  (`note_incarico` per i piatti) e, per un piatto, «lo porta già pronto: togli dalla spesa»
+  (stesse regole di §20.5). Stato: chi organizza segna fatto / non ancora / libera anche per le
+  persone senza app.
+- **Quantità e unità** delle cose da portare (`quantita_numero`, `unita` libera: «4
+  bottiglie»); per i piatti la quantità sono le porzioni della voce («per 10»). La vecchia
+  quantità testuale resta e si mostra se manca quella strutturata.
+- **Proposta (non implementata)**: un elenco di partecipanti dell'evento (con l'app e senza,
+  adulti e bambini) da cui calcolare i coperti, con conferma di presenza; oggi i coperti restano
+  i due numeri dell'evento, indipendenti dagli incarichi.
+- Test: `server/api/esterni.test.ts`, e2e `test/e2e/esterni.spec.ts`.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2058,3 +2090,4 @@ selettore e contenuti separati, persona senza Famiglie che entra con un invito).
 | 13/11/2026 | 3.1 — **Ricettario di famiglia** (decisione di Loris): le ricette sono visibili a tutti gli utenti per impostazione predefinita e il proprietario può renderle private (condivisibili con persone scelte); modifica sempre solo del proprietario, uso negli eventi altrui per copia; migrazione `0006_visibilita_piatti.sql` (tutte le ricette esistenti di famiglia); filtro «Solo le mie»; «Utenti e dispositivi» anche in Impostazioni |
 | 16/11/2026 | 4.0 — **Spazio della famiglia** e nuovo nome «Ricette di famiglia & Co.» (§20): gruppi familiari, bacheche della famiglia e degli eventi con commenti, reazioni e foto, sondaggi, proposte di piatti, chi porta cosa integrato con «A cura di» e spesa, centro notifiche, valutazioni e classifica; permesso di partecipazione distinto dalla modifica; migrazione `0007_famiglia.sql`; navigazione Eventi · Ricettario · Famiglia · Notifiche · Impostazioni (Ingredienti da Ricettario e Impostazioni) |
 | 16/11/2026 | 5.0 — **Più Famiglie per persona** (§21): Famiglie con inviti ad aderire, uscita, rimozione e passaggio dell'amministrazione; Famiglia attiva con selettore solo da due Famiglie; eventi associati a una Famiglia; ricette condivise con una o più Famiglie (copie private); classifiche e notifiche per Famiglia; migrazione `0008_famiglie.sql` |
+| 16/11/2026 | 5.1 — **Persone senza account** negli incarichi (§22): rubrica per Famiglia, incarichi affidati a utenti, persone della rubrica o nomi liberi senza doppioni, note, quantità e unità delle cose da portare; migrazione `0009_persone_esterne.sql` |

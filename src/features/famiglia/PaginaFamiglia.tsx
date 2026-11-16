@@ -13,7 +13,7 @@ import { Campo, Input, Select } from '@/components/ui/campi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Conferma, Finestra } from '@/components/ui/dialog'
 import { MenuAzioni } from '@/components/ui/menu'
-import type { AnteprimaInvito, Gruppo, InvitoFamigliaCreato } from '@/contratto/famiglia.ts'
+import type { AnteprimaInvito, Esterno, Gruppo, InvitoFamigliaCreato } from '@/contratto/famiglia.ts'
 import { useStatoConnessione } from '@/connessione/stato'
 import { useUtenteCorrente } from '@/features/accesso/sessione'
 import { cn } from '@/lib/utils'
@@ -163,6 +163,8 @@ function Membri({ famiglia }: { famiglia: Gruppo }) {
         </CardContent>
       </Card>
 
+      <RubricaFamiglia famiglia={famiglia} />
+
       {admin ? (
         <Card>
           <CardHeader>
@@ -202,6 +204,98 @@ function Membri({ famiglia }: { famiglia: Gruppo }) {
         }}
       />
     </div>
+  )
+}
+
+/** Parenti e amici senza l'app: nomi riutilizzabili negli incarichi degli eventi (SPEC §22). */
+function RubricaFamiglia({ famiglia }: { famiglia: Gruppo }) {
+  const connesso = useStatoConnessione() === 'connesso'
+  const elenco = useQuery({ queryKey: ['rubrica', famiglia.id], queryFn: () => api.leggi<Esterno[]>(`/famiglie/${famiglia.id}/rubrica`) })
+  const [nome, setNome] = useState('')
+  const [note, setNote] = useState('')
+  const [modifica, setModifica] = useState<Esterno | null>(null)
+  const aggiungi = useScrittura(() => api.crea<Esterno>(`/famiglie/${famiglia.id}/rubrica`, { id: nuovoId(), nome: nome.trim(), note }), {
+    successo: (e) => `${e.nome} aggiunto alla rubrica`,
+    dopo: () => {
+      setNome('')
+      setNote('')
+    },
+  })
+  const togli = useScrittura((e: Esterno) => api.elimina(`/rubrica/${e.id}`), { successo: 'Tolto dalla rubrica' })
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Senza app</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <p className="text-sm text-testo-tenue">Chi non usa l&apos;app (nonni, zii, amici): li puoi indicare in «Chi porta» degli eventi. Sono solo nomi, senza accesso.</p>
+        {elenco.data?.length ? (
+          <ul className="flex flex-col divide-y divide-bordo/60" aria-label="Rubrica senza app">
+            {elenco.data.map((e) => (
+              <li key={e.id} className="flex items-center gap-2 py-2">
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium">{e.nome}</span>
+                  {e.note ? <span className="text-sm text-testo-tenue"> · {e.note}</span> : null}
+                </span>
+                <MenuAzioni
+                  etichetta={`Azioni per ${e.nome}`}
+                  voci={[
+                    { etichetta: 'Modifica', onSelect: () => setModifica(e), disabilitata: !connesso },
+                    { etichetta: 'Togli dalla rubrica', onSelect: () => void togli.esegui(e), pericolosa: true, disabilitata: !connesso },
+                  ]}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <form
+          className="flex flex-wrap items-end gap-2"
+          onSubmit={(ev) => {
+            ev.preventDefault()
+            if (nome.trim()) void aggiungi.esegui(undefined)
+          }}
+        >
+          <Campo etichetta="Nome" htmlFor="rubrica-nome" className="min-w-36 flex-1">
+            <Input id="rubrica-nome" value={nome} maxLength={80} placeholder="Es. Nonna Maria" onChange={(ev) => setNome(ev.target.value)} />
+          </Campo>
+          <Campo etichetta="Nota (facoltativa)" htmlFor="rubrica-note" className="min-w-36 flex-1">
+            <Input id="rubrica-note" value={note} maxLength={200} onChange={(ev) => setNote(ev.target.value)} />
+          </Campo>
+          <Button type="submit" variante="contorno" disabled={!nome.trim() || !connesso || aggiungi.inCorso}>
+            <Plus /> Aggiungi
+          </Button>
+        </form>
+      </CardContent>
+      {modifica ? <ModificaEsterno e={modifica} onChiudi={() => setModifica(null)} /> : null}
+    </Card>
+  )
+}
+
+function ModificaEsterno({ e, onChiudi }: { e: Esterno; onChiudi: () => void }) {
+  const [nome, setNome] = useState(e.nome)
+  const [note, setNote] = useState(e.note)
+  const salva = useScrittura(() => api.modifica<Esterno>(`/rubrica/${e.id}`, { nome: nome.trim(), note, versione: e.versione }), { oggetto: e.nome, successo: 'Salvato', dopo: onChiudi })
+  return (
+    <Finestra
+      aperta
+      onCambia={(a) => !a && onChiudi()}
+      titolo={`Modifica ${e.nome}`}
+      descrizione="Il nome nuovo compare anche negli incarichi già affidati."
+      piede={
+        <Button disabled={!nome.trim() || salva.inCorso} onClick={() => void salva.esegui(undefined)}>
+          Salva
+        </Button>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        <Campo etichetta="Nome" htmlFor="mod-esterno-nome">
+          <Input id="mod-esterno-nome" value={nome} maxLength={80} onChange={(ev) => setNome(ev.target.value)} />
+        </Campo>
+        <Campo etichetta="Nota" htmlFor="mod-esterno-note">
+          <Input id="mod-esterno-note" value={note} maxLength={200} onChange={(ev) => setNote(ev.target.value)} />
+        </Campo>
+      </div>
+    </Finestra>
   )
 }
 

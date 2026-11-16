@@ -195,3 +195,15 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   file del rilascio completi, salute su 9870 e Funnel, 401 senza sessione anche sulle rotte
   nuove, 404 dell'amministrazione dall'esterno, 9880 senza dati, conteggi invariati, 3 eventi
   e 73 ricette nella «Famiglia», chiavi esterne ok, altri servizi e serve invariati.
+
+## Persone senza account negli incarichi (16/11/2026, ramo `esterni`, da rilasciare)
+
+- SPEC 5.1 / §22: rubrica «Senza app» per Famiglia; «Affida» in «Chi porta» a chi usa l'app,
+  a una persona della rubrica o a un nome (anche salvato in rubrica), con nota e uscita dalla
+  spesa; quantità e unità delle cose da portare; nessuna identità per le persone esterne.
+- Migrazione `0009_persone_esterne.sql` provata su una copia del database di produzione:
+  conteggi invariati, spesa identica, voci e incarichi identici, chiavi esterne e integrità ok.
+- Test: `npm run check` 314 verdi (nuovo `esterni.test.ts`, 6), `npm run test:e2e` 37 verdi
+  (nuovo `esterni.spec.ts`).
+- Proposta aperta: elenco dei partecipanti collegato ai coperti (vedi SPEC §22).
+- Rilascio: `! scripts/rilascia.sh esterni`.

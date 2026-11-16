@@ -27,7 +27,7 @@ test('una Famiglia senza selettore, poi due Famiglie con selettore e contenuti s
   // ── Loris crea una seconda Famiglia: compare il selettore, attiva la nuova
   await page.getByRole('button', { name: 'Membri' }).click()
   await page.getByRole('button', { name: 'Crea un\'altra Famiglia' }).click()
-  await page.getByLabel('Nome', { exact: true }).fill('Famiglia Bianchi')
+  await page.getByRole('dialog').getByLabel('Nome', { exact: true }).fill('Famiglia Bianchi')
   await page.getByRole('button', { name: 'Crea', exact: true }).click()
   await expect(selettore(page)).toHaveValue(/.+/)
   await expect(page.getByRole('heading', { name: 'Famiglia Bianchi' })).toBeVisible()
