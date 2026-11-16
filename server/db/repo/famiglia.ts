@@ -172,18 +172,23 @@ export interface RigaVoceIncarico {
   spesa_tolta_da_incarico: number
   in_spesa: number
   versione: number
+  incaricato_esterno_id: string | null
+  note_incarico: string
+  porzioni: number | null
 }
 export const vociIncarichi = (db: Db, eventoId: string) =>
   tutti<RigaVoceIncarico>(
     db,
-    `SELECT v.id, v.nome, p.nome AS portata, v.incaricato, v.incaricato_id, v.incarico_completato, v.spesa_tolta_da_incarico, v.in_spesa, v.versione
+    `SELECT v.id, v.nome, p.nome AS portata, v.incaricato, v.incaricato_id, v.incarico_completato, v.spesa_tolta_da_incarico, v.in_spesa, v.versione,
+       v.incaricato_esterno_id, v.note_incarico, v.porzioni
      FROM voci_menu v JOIN portate_evento p ON p.id = v.portata_id WHERE v.evento_id = ? ORDER BY p.ordine, v.ordine`,
     eventoId,
   )
 export const leggiVoceIncarico = (db: Db, id: string) =>
   uno<RigaVoceIncarico & { evento_id: string }>(
     db,
-    `SELECT v.id, v.evento_id, v.nome, p.nome AS portata, v.incaricato, v.incaricato_id, v.incarico_completato, v.spesa_tolta_da_incarico, v.in_spesa, v.versione
+    `SELECT v.id, v.evento_id, v.nome, p.nome AS portata, v.incaricato, v.incaricato_id, v.incarico_completato, v.spesa_tolta_da_incarico, v.in_spesa, v.versione,
+       v.incaricato_esterno_id, v.note_incarico, v.porzioni
      FROM voci_menu v JOIN portate_evento p ON p.id = v.portata_id WHERE v.id = ?`,
     id,
   )
@@ -192,14 +197,14 @@ export function scriviIncaricoVoce(
   db: Db,
   id: string,
   versione: number,
-  c: { incaricato: string; incaricatoId: string | null; completato: boolean; inSpesa: boolean; spesaTolta: boolean },
+  c: { incaricato: string; incaricatoId: string | null; esternoId: string | null; note: string; completato: boolean; inSpesa: boolean; spesaTolta: boolean },
   adesso: number,
 ): number {
   return esegui(
     db,
-    `UPDATE voci_menu SET incaricato = ?, incaricato_id = ?, incarico_completato = ?, in_spesa = ?, spesa_tolta_da_incarico = ?,
-       versione = versione + 1, aggiornato_il = ? WHERE id = ? AND versione = ?`,
-    c.incaricato, c.incaricatoId, c.completato, c.inSpesa, c.spesaTolta, adesso, id, versione,
+    `UPDATE voci_menu SET incaricato = ?, incaricato_id = ?, incaricato_esterno_id = ?, note_incarico = ?, incarico_completato = ?, in_spesa = ?,
+       spesa_tolta_da_incarico = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ? AND versione = ?`,
+    c.incaricato, c.incaricatoId, c.esternoId, c.note, c.completato, c.inSpesa, c.spesaTolta, adesso, id, versione,
   )
 }
 
@@ -214,26 +219,77 @@ export interface RigaCosa {
   completato: number
   creato_da: string | null
   versione: number
+  incaricato_esterno_id: string | null
+  quantita_numero: number | null
+  unita: string
 }
 export const coseEvento = (db: Db, eventoId: string) => tutti<RigaCosa>(db, 'SELECT * FROM cose_da_portare WHERE evento_id = ? ORDER BY ordine, creato_il', eventoId)
 export const leggiCosa = (db: Db, id: string) => uno<RigaCosa>(db, 'SELECT * FROM cose_da_portare WHERE id = ?', id)
-export function inserisciCosa(db: Db, c: { id: string; eventoId: string; nome: string; quantita: string; note: string; creatoDa: string }, adesso: number): void {
+export interface DatiCosa {
+  nome: string
+  quantita: string
+  quantitaNumero: number | null
+  unita: string
+  note: string
+}
+export function inserisciCosa(db: Db, c: DatiCosa & { id: string; eventoId: string; creatoDa: string }, adesso: number): void {
   const ordine = (uno<{ m: number | null }>(db, 'SELECT max(ordine) AS m FROM cose_da_portare WHERE evento_id = ?', c.eventoId)?.m ?? -1) + 1
   esegui(
     db,
-    'INSERT INTO cose_da_portare (id, evento_id, nome, quantita, note, creato_da, ordine, creato_il, aggiornato_il) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    c.id, c.eventoId, c.nome, c.quantita, c.note, c.creatoDa, ordine, adesso, adesso,
+    `INSERT INTO cose_da_portare (id, evento_id, nome, quantita, quantita_numero, unita, note, creato_da, ordine, creato_il, aggiornato_il)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    c.id, c.eventoId, c.nome, c.quantita, c.quantitaNumero, c.unita, c.note, c.creatoDa, ordine, adesso, adesso,
   )
 }
-export const aggiornaCosa = (db: Db, id: string, versione: number, c: { nome: string; quantita: string; note: string }, adesso: number) =>
-  esegui(db, 'UPDATE cose_da_portare SET nome = ?, quantita = ?, note = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ? AND versione = ?', c.nome, c.quantita, c.note, adesso, id, versione)
-export function scriviIncaricoCosa(db: Db, id: string, versione: number, c: { incaricato: string; incaricatoId: string | null; completato: boolean }, adesso: number): number {
+export const aggiornaCosa = (db: Db, id: string, versione: number, c: DatiCosa, adesso: number) =>
+  esegui(
+    db,
+    'UPDATE cose_da_portare SET nome = ?, quantita = ?, quantita_numero = ?, unita = ?, note = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ? AND versione = ?',
+    c.nome, c.quantita, c.quantitaNumero, c.unita, c.note, adesso, id, versione,
+  )
+export function scriviIncaricoCosa(
+  db: Db,
+  id: string,
+  versione: number,
+  c: { incaricato: string; incaricatoId: string | null; esternoId: string | null; completato: boolean },
+  adesso: number,
+): number {
   return esegui(
     db,
-    'UPDATE cose_da_portare SET incaricato = ?, incaricato_id = ?, completato = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ? AND versione = ?',
-    c.incaricato, c.incaricatoId, c.completato, adesso, id, versione,
+    'UPDATE cose_da_portare SET incaricato = ?, incaricato_id = ?, incaricato_esterno_id = ?, completato = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ? AND versione = ?',
+    c.incaricato, c.incaricatoId, c.esternoId, c.completato, adesso, id, versione,
   )
 }
+
+// ── Rubrica delle persone senza account (per Famiglia) ──────
+
+export interface RigaEsterno {
+  id: string
+  gruppo_id: string
+  nome: string
+  nome_norm: string
+  note: string
+  creato_da: string | null
+  versione: number
+}
+export const rubrica = (db: Db, gruppoId: string) => tutti<RigaEsterno>(db, 'SELECT * FROM persone_esterne WHERE gruppo_id = ? ORDER BY nome_norm', gruppoId)
+export const leggiEsterno = (db: Db, id: string) => uno<RigaEsterno>(db, 'SELECT * FROM persone_esterne WHERE id = ?', id)
+export const esternoPerNome = (db: Db, gruppoId: string, nomeNorm: string) => uno<RigaEsterno>(db, 'SELECT * FROM persone_esterne WHERE gruppo_id = ? AND nome_norm = ?', gruppoId, nomeNorm)
+export function inserisciEsterno(db: Db, e: { id: string; gruppoId: string; nome: string; nomeNorm: string; note: string; creatoDa: string }, adesso: number): void {
+  esegui(
+    db,
+    'INSERT INTO persone_esterne (id, gruppo_id, nome, nome_norm, note, creato_da, creato_il, aggiornato_il) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    e.id, e.gruppoId, e.nome, e.nomeNorm, e.note, e.creatoDa, adesso, adesso,
+  )
+}
+export const aggiornaEsterno = (db: Db, id: string, versione: number, e: { nome: string; nomeNorm: string; note: string }, adesso: number) =>
+  esegui(db, 'UPDATE persone_esterne SET nome = ?, nome_norm = ?, note = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ? AND versione = ?', e.nome, e.nomeNorm, e.note, adesso, id, versione)
+/** Il nome nuovo segue negli incarichi ancora assegnati alla persona. */
+export function rinominaInIncarichi(db: Db, id: string, nome: string): void {
+  esegui(db, 'UPDATE voci_menu SET incaricato = ?, versione = versione + 1 WHERE incaricato_esterno_id = ?', nome, id)
+  esegui(db, 'UPDATE cose_da_portare SET incaricato = ?, versione = versione + 1 WHERE incaricato_esterno_id = ?', nome, id)
+}
+export const eliminaEsterno = (db: Db, id: string) => esegui(db, 'DELETE FROM persone_esterne WHERE id = ?', id)
 export const eliminaCosa = (db: Db, id: string, versione: number) => esegui(db, 'DELETE FROM cose_da_portare WHERE id = ? AND versione = ?', id, versione)
 
 // ── Valutazioni ─────────────────────────────────────────────
@@ -334,13 +390,19 @@ export function scriviPreferenze(db: Db, utenteId: string, disattivate: string[]
 }
 
 /**
- * Dopo una modifica a mano di «A cura di»: se il testo non è più il nome dell'utente
- * incaricato, la voce non è più sua (resta il testo scritto).
+ * Dopo una modifica a mano di «A cura di»: se il testo non è più il nome dell'utente (o della
+ * persona esterna) incaricato, il collegamento cade (resta il testo scritto).
  */
 export const allineaIncaricato = (db: Db, voceId: string) =>
   esegui(
     db,
     `UPDATE voci_menu SET incaricato_id = NULL, incarico_completato = CASE WHEN incaricato = '' THEN 0 ELSE incarico_completato END
      WHERE id = ? AND incaricato_id IS NOT NULL AND incaricato <> coalesce((SELECT nome FROM utenti WHERE id = voci_menu.incaricato_id), '')`,
+    voceId,
+  ) +
+  esegui(
+    db,
+    `UPDATE voci_menu SET incaricato_esterno_id = NULL, incarico_completato = CASE WHEN incaricato = '' THEN 0 ELSE incarico_completato END
+     WHERE id = ? AND incaricato_esterno_id IS NOT NULL AND incaricato <> coalesce((SELECT nome FROM persone_esterne WHERE id = voci_menu.incaricato_esterno_id), '')`,
     voceId,
   )

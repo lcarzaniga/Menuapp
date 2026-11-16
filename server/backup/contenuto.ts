@@ -11,6 +11,7 @@ export const TABELLE_CONTENUTO = [
   'utenti',
   'gruppi',
   'membri_gruppo',
+  'persone_esterne',
   // Le sessioni restano valide dopo un ripristino; inviti e richieste di attivazione no.
   'sessioni',
   'piatti',

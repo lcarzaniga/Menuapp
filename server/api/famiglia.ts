@@ -11,6 +11,8 @@ import {
   SchemaPassaAmministrazione,
   SchemaRinominaFamiglia,
   SchemaAggiornaCosa,
+  SchemaAggiornaEsterno,
+  SchemaNuovoEsterno,
   SchemaAssegna,
   SchemaCompleta,
   SchemaNuovaCosa,
@@ -31,6 +33,7 @@ import { leggiFile } from '../servizi/foto.ts'
 import * as famiglia from '../servizi/gruppi.ts'
 import * as incarichi from '../servizi/incarichi.ts'
 import * as notifiche from '../servizi/notifiche.ts'
+import * as rubrica from '../servizi/rubrica.ts'
 import * as valutazioni from '../servizi/valutazioni.ts'
 import { richiediAmministratore, richiediEvento, richiediGruppo, richiediVoce } from '../servizi/permessi.ts'
 import { richiestaNonValida } from '../servizi/errori.ts'
@@ -240,8 +243,7 @@ export function rotteFamiglia(app: FastifyInstance, ctx: Contesto): void {
       const u = chi(req)
       // Assegnare spetta a chi organizza: controllo prima di leggere il corpo.
       richiediEvento(db, u, incarichi.richiediIncarico(db, u, tipo, req.params.id), 'modifica')
-      const d = valida(SchemaAssegna, req.body)
-      return incarichi.assegna(db, u, tipo, req.params.id, d.versione, d.utenteId)
+      return incarichi.assegna(db, u, tipo, req.params.id, valida(SchemaAssegna, req.body))
     })
     app.post<ConId>(`${base}/completa`, async (req) => {
       const u = prima(req)
@@ -249,6 +251,23 @@ export function rotteFamiglia(app: FastifyInstance, ctx: Contesto): void {
       return incarichi.completa(db, u, tipo, req.params.id, d.versione, d.completato)
     })
   }
+
+  // ── Rubrica delle persone senza account (per Famiglia) ──
+  app.get<ConId>(`${P}/famiglie/:id/rubrica`, async (req) => rubrica.elenca(db, chi(req), req.params.id))
+  app.post<ConId>(`${P}/famiglie/:id/rubrica`, async (req, reply) => {
+    const u = chi(req)
+    richiediGruppo(db, u, req.params.id)
+    return reply.code(201).send(rubrica.crea(db, u, req.params.id, valida(SchemaNuovoEsterno, req.body)))
+  })
+  app.put<ConId>(`${P}/rubrica/:id`, async (req) => {
+    const u = chi(req)
+    rubrica.richiedi(db, u, req.params.id)
+    return rubrica.aggiorna(db, u, req.params.id, valida(SchemaAggiornaEsterno, req.body))
+  })
+  app.delete<ConId>(`${P}/rubrica/:id`, async (req, reply) => {
+    rubrica.elimina(db, chi(req), req.params.id)
+    return reply.code(204).send()
+  })
 
   // ── Valutazioni ──
   app.get<ConId>(`${P}/eventi/:id/valutazioni`, async (req) => valutazioni.dellEvento(db, chi(req), req.params.id))

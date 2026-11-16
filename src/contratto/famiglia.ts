@@ -163,8 +163,16 @@ export const SchemaIncarico = z.object({
   portata: z.string().nullable(),
   quantita: z.string(),
   note: z.string(),
+  /** Nome mostrato in «A cura di»: utente, persona della rubrica o nome scritto a mano. */
   incaricato: z.string(),
   incaricatoId: Id.nullable(),
+  /** Persona senza account della rubrica della Famiglia. */
+  incaricatoEsternoId: Id.nullable(),
+  /** Quantità strutturata (cose da portare) e unità libera: «4 bottiglie». */
+  quantitaNumero: z.number().nullable(),
+  unita: z.string(),
+  /** Porzioni della voce del menù («lasagne per 10»): la quantità di un piatto. */
+  porzioni: z.number().nullable(),
   stato: z.enum(STATI_INCARICO),
   inSpesa: z.boolean().nullable(),
   spesaToltaDaIncarico: z.boolean(),
@@ -176,13 +184,64 @@ export const SchemaIncarico = z.object({
 })
 export type Incarico = z.infer<typeof SchemaIncarico>
 
-export const SchemaIncarichi = z.object({ incarichi: z.array(SchemaIncarico), puoPartecipare: z.boolean(), puoAssegnare: z.boolean(), persone: z.array(SchemaPersona) })
+export const SchemaIncarichi = z.object({
+  incarichi: z.array(SchemaIncarico),
+  puoPartecipare: z.boolean(),
+  puoAssegnare: z.boolean(),
+  /** Persone con l'app invitate all'evento. */
+  persone: z.array(SchemaPersona),
+  /** Rubrica delle persone senza account della Famiglia dell'evento (solo per chi organizza). */
+  rubrica: z.array(SchemaPersona),
+  famigliaId: Id.nullable(),
+})
 export type Incarichi = z.infer<typeof SchemaIncarichi>
 
-export const SchemaNuovaCosa = z.object({ id: Id, nome: NomeObbligatorio, quantita: TestoBreve.default(''), note: TestoBreve.default(''), prendo: z.boolean().default(false) })
-export const SchemaAggiornaCosa = z.object({ nome: NomeObbligatorio, quantita: TestoBreve, note: TestoBreve, versione: Versione })
+const QuantitaNumero = z.number().positive('La quantità deve essere più di zero').max(100_000).nullable()
+const Unita = z.string().trim().max(30)
+export const SchemaNuovaCosa = z.object({
+  id: Id,
+  nome: NomeObbligatorio,
+  quantita: TestoBreve.default(''),
+  quantitaNumero: QuantitaNumero.default(null),
+  unita: Unita.default(''),
+  note: TestoBreve.default(''),
+  prendo: z.boolean().default(false),
+})
+export const SchemaAggiornaCosa = z.object({
+  nome: NomeObbligatorio,
+  quantita: TestoBreve.default(''),
+  quantitaNumero: QuantitaNumero.default(null),
+  unita: Unita.default(''),
+  note: TestoBreve,
+  versione: Versione,
+})
 export const SchemaPrendi = z.object({ versione: Versione, togliDallaSpesa: z.boolean().default(false) })
-export const SchemaAssegna = z.object({ versione: Versione, utenteId: Id.nullable() })
+/**
+ * Affidare un incarico (chi organizza): a una persona con l'app (`utenteId`), a una della
+ * rubrica (`esternoId`) o a un nome scritto (`nome`, eventualmente salvato in rubrica);
+ * `utenteId: null` libera l'incarico.
+ */
+export const SchemaAssegna = z
+  .object({
+    versione: Versione,
+    utenteId: Id.nullable().optional(),
+    esternoId: Id.optional(),
+    nome: z.string().trim().min(1).max(80).optional(),
+    salvaInRubrica: z.boolean().default(false),
+    togliDallaSpesa: z.boolean().default(false),
+    note: TestoBreve.optional(),
+  })
+  .refine((d) => [d.utenteId !== undefined, d.esternoId !== undefined, d.nome !== undefined].filter(Boolean).length === 1, {
+    message: 'Indica una persona: con l\'app, dalla rubrica o un nome',
+  })
+export type Assegnazione = z.infer<typeof SchemaAssegna>
+
+// ── Rubrica delle persone senza account ─────────────────────
+
+export const SchemaEsterno = z.object({ id: Id, nome: z.string(), note: z.string(), versione: Versione })
+export type Esterno = z.infer<typeof SchemaEsterno>
+export const SchemaNuovoEsterno = z.object({ id: Id, nome: NomeObbligatorio.max(80), note: TestoBreve.default('') })
+export const SchemaAggiornaEsterno = z.object({ nome: NomeObbligatorio.max(80), note: TestoBreve, versione: Versione })
 export const SchemaCompleta = z.object({ versione: Versione, completato: z.boolean() })
 
 // ── Notifiche ───────────────────────────────────────────────
