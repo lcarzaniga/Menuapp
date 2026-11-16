@@ -226,7 +226,8 @@ Da 768 px: barra laterale con le stesse voci. Il contenuto dell'evento usa sched
 | `#/eventi/:id/piano` | Evento — Piano | Attività per giorno, checklist |
 | `#/eventi/:id/stampa` | Stampa menù | Designer: modelli, opzioni, anteprima, stampa/PDF (F8) |
 | `#/eventi/:id/voci/:voceId/cucina` | Vista cucina | Ricetta alle porzioni della voce |
-| `#/famiglia` | Famiglia | Bacheca del gruppo; «I più apprezzati» (§20) |
+| `#/famiglia` | Famiglia | Famiglia attiva: bacheca, «I più apprezzati», membri e inviti (§20, §21); senza Famiglie: crea o entra con un invito |
+| `#/unisciti/:token` | Invito a una Famiglia | Anteprima e «Entra nella Famiglia» (§21.1) |
 | `#/notifiche` | Notifiche | Elenco, tutte lette, preferenze (§20.6) |
 | `#/eventi/:id/bacheca`, `#/eventi/:id/chi-porta` | Evento — Bacheca, Chi porta | Messaggi, sondaggi, proposte; incarichi (§20.2–20.5) |
 | `#/ricettario` | Ricettario | Ricerca; filtri per portata in testa (`?portata=…`, ricordato tornando dal piatto) e «senza ingredienti»; elenco alfabetico diviso per iniziale con rubrica laterale A–Z da toccare o trascinare (da 10 piatti) |
@@ -1968,6 +1969,77 @@ aggiornano da sole). Migrazione `0007_famiglia.sql`.
   genera notifica; i messaggi non entrano in «Esporta i miei dati»; l'esportazione completa ZIP
   contiene le foto dei piatti, non gli allegati (che sono comunque nei backup).
 
+## 21. Più Famiglie per persona
+
+Decisione di Loris (16/11/2026): una persona ha un solo account e può far parte di più
+Famiglie (la sua, quella del coniuge, quella di un figlio…), ognuna uno spazio distinto con
+bacheca, eventi, ricette condivise, sondaggi e classifiche. Niente sottogruppi né gerarchie.
+Il modello è pronto per un'apertura al pubblico (Famiglie isolate tra loro). Migrazione
+`0008_famiglie.sql`. Sostituisce la «Famiglia unica» di §20.1 dove diverge.
+
+### 21.1 Famiglie e appartenenza
+
+- Molti-a-molti `membri_gruppo` (§20.1). Ruoli: **amministratore** (membri, inviti, nome) e
+  **membro**. L'amministratore non vede per questo contenuti privati altrui; i permessi sugli
+  eventi restano separati (§19.3).
+- Chiunque crea una Famiglia (`POST /famiglie`) e ne diventa amministratore. Inviti ad aderire
+  (`inviti_famiglia`): link `#/unisciti/<token>`, monouso, 7 giorni, sul server solo
+  l'impronta; per chi ha già un account (l'account si crea con l'invito del dispositivo, §19.2:
+  sono due inviti distinti). Anteprima e accettazione con il token nel corpo della richiesta.
+- Uscita volontaria; rimozione da parte di un amministratore; nomina, revoca e passaggio
+  dell'amministrazione in un colpo solo. Resta sempre almeno un amministratore; chi è l'unico
+  membro non può uscire (la Famiglia sparirebbe con i suoi contenuti).
+
+### 21.2 Famiglia attiva e selettore
+
+- La Famiglia attiva è un filtro di navigazione ricordato sul dispositivo (`localStorage`), mai
+  un'autorizzazione: ogni rotta verifica l'appartenenza (`?gruppo=`, `gruppoId` mai creduti
+  sulla parola). Non è salvata nell'utente.
+- Una Famiglia: nessun selettore, nessun passaggio in più. Due o più: selettore discreto
+  (barra laterale su PC, in cima su telefono). Nessuna: schermata «Crea una Famiglia» o link
+  d'invito; ricette ed eventi personali restano disponibili. Se la Famiglia scelta non è più
+  valida (uscita, rimozione) si usa un'altra delle proprie, o la schermata iniziale.
+
+### 21.3 Ricette
+
+- Il ricettario personale non dipende dalla Famiglia attiva. Una ricetta è condivisa con zero
+  (privata), una o più Famiglie dell'autore (`condivisioni_piatto_gruppo`); la vedono i membri
+  di quelle Famiglie **finché l'autore ne fa parte**. Le ricette nuove dall'app si condividono
+  con la Famiglia attiva (si possono rendere private); la scheda mostra «Condividi con… / Rendi
+  privata» con una Famiglia e le caselle delle Famiglie con più d'una. Le condivisioni con
+  persone (§19.4) restano per le private.
+- Copie (copia nel mio ricettario, inserimento in un evento altrui, passaggio di proprietà,
+  copia da un evento archiviato): indipendenti e **private** finché l'autore della copia non le
+  condivide. Menù, spesa, valutazioni e archivi non dipendono mai da ricette di altri.
+- `piatti.visibilita` resta solo per compatibilità con il rilascio precedente.
+
+### 21.4 Eventi
+
+- Ogni evento ha una Famiglia (`eventi.gruppo_id`, scelta alla creazione: quella attiva,
+  verificata; se l'autore ha una sola Famiglia è quella) o nessuna (evento personale).
+  L'appartenenza alla Famiglia **non** dà accesso agli eventi: servono gli inviti individuali
+  con i loro permessi. Si invitano (e si passa la proprietà a) persone della Famiglia
+  dell'evento; le condivisioni già esistenti restano. Il proprietario può spostare l'evento in
+  un'altra delle sue Famiglie.
+- Elenco con la Famiglia attiva: i suoi eventi, quelli personali e quelli di Famiglie di cui
+  l'utente non fa parte ma a cui è stato invitato.
+- Migrazione: ogni evento esistente va alla Famiglia del proprietario se ne ha esattamente
+  una (oggi tutti); altrimenti resta personale, da assegnare a mano.
+
+### 21.5 Bacheche, notifiche, classifiche
+
+- Bacheca, sondaggi e moderazione per Famiglia (§20.1–20.3); bacheche degli eventi per invito.
+- Centro notifiche unico per l'account; con più Famiglie ogni notifica indica la Famiglia.
+- «I più apprezzati» per Famiglia: solo gli eventi di quella Famiglia (fra quelli visibili).
+
+### 21.6 Test
+
+`server/api/famiglie.test.ts` (zero Famiglie, inviti ad aderire, uscita, rimozione, passaggio
+dell'amministrazione, bacheche separate, ricette private/una/più Famiglie, eventi della
+Famiglia, classifiche separate, rimozione dalla Famiglia attiva, migrazione 0008 da un
+database v7) ed e2e `test/e2e/multi-famiglia.spec.ts` (una Famiglia senza selettore, due con
+selettore e contenuti separati, persona senza Famiglie che entra con un invito).
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -1985,3 +2057,4 @@ aggiornano da sole). Migrazione `0007_famiglia.sql`.
 | 13/11/2026 | 3.0 — **Multiutente** (§19, decisione di Loris): utenti, accesso su invito con approvazione del dispositivo e codice di verifica, sessioni lato server revocabili, eventi privati condivisibili in lettura o modifica, ricette condivisibili in lettura e usate per copia, trasferimento di proprietà, amministrazione dalla console e dall'ingresso privato, ingresso pubblico per Tailscale Funnel senza funzioni di sistema, rete di casa HTTP senza dati; migrazione `0005_utenti.sql` (tutti i dati all'amministratore); «Esporta i miei dati» |
 | 13/11/2026 | 3.1 — **Ricettario di famiglia** (decisione di Loris): le ricette sono visibili a tutti gli utenti per impostazione predefinita e il proprietario può renderle private (condivisibili con persone scelte); modifica sempre solo del proprietario, uso negli eventi altrui per copia; migrazione `0006_visibilita_piatti.sql` (tutte le ricette esistenti di famiglia); filtro «Solo le mie»; «Utenti e dispositivi» anche in Impostazioni |
 | 16/11/2026 | 4.0 — **Spazio della famiglia** e nuovo nome «Ricette di famiglia & Co.» (§20): gruppi familiari, bacheche della famiglia e degli eventi con commenti, reazioni e foto, sondaggi, proposte di piatti, chi porta cosa integrato con «A cura di» e spesa, centro notifiche, valutazioni e classifica; permesso di partecipazione distinto dalla modifica; migrazione `0007_famiglia.sql`; navigazione Eventi · Ricettario · Famiglia · Notifiche · Impostazioni (Ingredienti da Ricettario e Impostazioni) |
+| 16/11/2026 | 5.0 — **Più Famiglie per persona** (§21): Famiglie con inviti ad aderire, uscita, rimozione e passaggio dell'amministrazione; Famiglia attiva con selettore solo da due Famiglie; eventi associati a una Famiglia; ricette condivise con una o più Famiglie (copie private); classifiche e notifiche per Famiglia; migrazione `0008_famiglie.sql` |

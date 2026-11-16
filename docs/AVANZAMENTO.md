@@ -169,10 +169,26 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   amministrazione dall'esterno, manifest «Ricette & Co.», dati invariati, 4 utenti nella
   Famiglia, chiavi esterne ok, altri servizi attivi.
 
-## Famiglia allargata unica, isolata (16/11/2026, ramo `famiglia-unica`, da rilasciare)
+## Famiglia allargata unica, isolata (16/11/2026, in produzione: `20261116-1136-1f4db27`)
 
 - Precisazione di Loris: una sola grande Famiglia, nessun sottogruppo; eventi selettivi; in
   futuro più Famiglie isolate. Il modello esistente era già compatibile (nessuna migrazione).
   Chiusi tre punti che con più Famiglie non sarebbero stati isolati: elenco `/persone`, nuove
   condivisioni e passaggi di proprietà verso chi è fuori dalla Famiglia, Famiglia di un nuovo
   utente. Condivisioni esistenti invariate. SPEC §20.1 aggiornata; 4 test nuovi.
+
+## Più Famiglie per persona (16/11/2026, ramo `multi-famiglia`, da rilasciare)
+
+- SPEC 5.0 / §21: Famiglie create da chiunque, inviti ad aderire (distinti dagli inviti
+  all'account), uscita, rimozione, passaggio dell'amministrazione; Famiglia attiva (filtro sul
+  dispositivo, selettore solo da due Famiglie, schermata per chi non ne ha); eventi con la loro
+  Famiglia; ricette condivise con una o più Famiglie, copie private; classifiche e notifiche
+  per Famiglia.
+- Migrazione `0008_famiglie.sql` provata su una copia del database di produzione (16/11):
+  conteggi invariati in tutte le tabelle, spesa identica, ricette visibili ed eventi con
+  permessi identici per ognuno dei 4 utenti, 3 eventi assegnati a «Famiglia», 73 ricette
+  condivise con «Famiglia» (nessuna privata), chiavi esterne e integrità ok. Nessuna decisione
+  da prendere sui dati attuali.
+- Test: `npm run check` 308 verdi (nuovo `famiglie.test.ts`, 9), `npm run test:e2e` 36 verdi
+  (nuovo `multi-famiglia.spec.ts`; e2e esistenti resi indipendenti dal numero di Famiglie).
+- Rilascio: `! scripts/rilascia.sh multi-famiglia`.
