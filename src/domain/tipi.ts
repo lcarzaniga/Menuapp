@@ -43,6 +43,8 @@ export interface Evento extends Versionato {
   copertiManuali: { adulti: number; bambini: number }
   /** Accompagnatori che chi usa l'app può aggiungere da sé al proprio invito (null: nessun limite). */
   maxAccompagnatori: number | null
+  /** Edizioni della stessa ricorrenza («Natale 2026», «Natale 2027») condividono la serie. */
+  serieId: Id | null
   note: string
   stato: StatoEvento
   conclusoIl: Epoch | null

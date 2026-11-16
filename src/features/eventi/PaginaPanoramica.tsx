@@ -1,5 +1,5 @@
 // Evento — Panoramica: dati, coperti, stato e azioni (SPEC §5, F9).
-import { CalendarCheck, Pencil, Printer, RotateCcw, Trash2, Users } from 'lucide-react'
+import { CalendarCheck, Copy, Pencil, Printer, RotateCcw, Trash2, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { api } from '@/api/client'
@@ -18,6 +18,7 @@ import type { Evento } from '@/domain/tipi.ts'
 import { plurale } from '@/lib/formato'
 import { PannelloArchivio } from '@/features/archivio/PannelloArchivio'
 import { CorpoScheda, useEventoCorrente } from './LayoutEvento'
+import { DuplicaEvento, PannelloEdizioni } from './Edizioni'
 import { type DatiModuloEvento, ModuloEvento } from './ModuloEvento'
 
 const NOMI_TIPO = { pranzo: 'Pranzo', cena: 'Cena', aperitivo: 'Aperitivo', brunch: 'Brunch' } as const
@@ -29,6 +30,7 @@ export function PaginaPanoramica() {
   const puoScrivere = usePuoScrivere()
   const [modifica, setModifica] = useState(false)
   const [elimina, setElimina] = useState(false)
+  const [duplica, setDuplica] = useState(false)
   const [spostamento, setSpostamento] = useState(0)
   const attivita = useAttivita(e.id)
   const archiviato = e.stato === 'archiviato'
@@ -123,6 +125,9 @@ export function PaginaPanoramica() {
               <Printer /> Stampa menù
             </Link>
           </Button>
+          <Button variante="contorno" disabled={!puoScrivere} onClick={() => setDuplica(true)}>
+            <Copy /> Duplica evento
+          </Button>
           {e.stato === 'attivo' ? (
             <Button variante="contorno" disabled={!puoScrivere} onClick={() => void stato.esegui('concludi')}>
               <CalendarCheck /> Concludi
@@ -144,8 +149,10 @@ export function PaginaPanoramica() {
         <SolaLettura motivo={proprietario ? null : 'Solo il proprietario archivia l\'evento'}>
           <PannelloArchivio evento={e} />
         </SolaLettura>
+        <PannelloEdizioni evento={e} />
         <CondivisioneEvento evento={e} />
       </div>
+      {duplica ? <DuplicaEvento evento={e} onChiudi={() => setDuplica(false)} /> : null}
 
       <Finestra aperta={modifica} onCambia={setModifica} titolo="Modifica evento">
         <ModuloEvento

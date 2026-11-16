@@ -105,7 +105,7 @@ describe('accesso diretto a ogni rotta con id', () => {
       const soloProprietarioRicetta = r.url.endsWith('/piatti/:id/condivisioni')
       // Partecipare (bacheca, chi porta cosa, valutazioni) è permesso anche a chi legge, salvo esclusione.
       const partecipazione = PARTECIPAZIONE.includes(`${r.metodo} ${r.url}`)
-      const lettura = (r.metodo === 'GET' && !soloProprietarioRicetta) || r.url.endsWith('/copia-piatto') || r.url.endsWith('/piatti/:id/copia') || partecipazione
+      const lettura = (r.metodo === 'GET' && !soloProprietarioRicetta) || r.url.endsWith('/copia-piatto') || r.url.endsWith('/piatti/:id/copia') || r.url.endsWith('/eventi/:id/duplica') || partecipazione
       const piattoAltrui = (/\/(piatti|foto)\/:id/.test(r.url) && r.metodo !== 'GET' && !r.url.endsWith('/copia')) || soloProprietarioRicetta
       const lasciaEvento = r.metodo === 'DELETE' && r.url.endsWith('/condivisioni/:utenteId')
       if (lettura) expect([200, 201, 400, 409, 422], `${r.metodo} ${r.url} → ${res.body}`).toContain(res.statusCode)

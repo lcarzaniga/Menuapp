@@ -120,6 +120,8 @@ export function spostaInFamiglia(db: Db, u: UtenteCorrente, eventoId: string, gr
   return transazione(db, () => {
     richiediEvento(db, u, eventoId, 'proprietario')
     if (gruppoId && !repo.ruoloNelGruppo(db, gruppoId, u.id)) throw nonTrovato('Famiglia')
+    // Una serie resta dentro una Famiglia: cambiando Famiglia l'evento esce dalla sua serie.
+    if (repo.gruppoEvento(db, eventoId) !== gruppoId) repoEventi.impostaSerie(db, eventoId, null)
     repo.impostaGruppoEvento(db, eventoId, gruppoId, adesso)
     incrementaRevisione(db)
     return accessoEvento(db, u, eventoId)

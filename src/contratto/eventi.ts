@@ -22,6 +22,7 @@ export const SchemaEvento = z.object({
   copertiAutomatici: z.boolean(),
   copertiManuali: z.object({ adulti: z.number().int(), bambini: z.number().int() }),
   maxAccompagnatori: z.number().int().nullable(),
+  serieId: Id.nullable(),
   note: z.string(),
   stato: z.enum(STATI_EVENTO),
   conclusoIl: Epoch.nullable(),
