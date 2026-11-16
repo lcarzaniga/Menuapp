@@ -8,7 +8,13 @@ import { useScrittura } from '@/api/scrittura'
 import { Caricamento, Pagina, Vuoto } from '@/components/Pagina'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Campo, Input, Select } from '@/components/ui/campi'
+import { Campo, Casella, Input, Select } from '@/components/ui/campi'
+
+interface GruppoAdmin {
+  id: string
+  nome: string
+  membri: { id: string; nome: string; ruolo: 'amministratore' | 'membro' }[]
+}
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Finestra } from '@/components/ui/dialog'
 import type { Invito, InvitoCreato, Richiesta, Ruolo, Sessione, Utente } from '@/contratto/accesso.ts'
@@ -34,6 +40,13 @@ function Gestione() {
   const richieste = useQuery({ queryKey: ['admin', 'richieste'], queryFn: () => api.leggi<Richiesta[]>('/admin/richieste'), refetchInterval: 5000 })
   const sessioni = useQuery({ queryKey: ['admin', 'sessioni'], queryFn: () => api.leggi<Sessione[]>('/admin/sessioni') })
   const inviti = useQuery({ queryKey: ['admin', 'inviti'], queryFn: () => api.leggi<Invito[]>('/admin/inviti') })
+  const gruppi = useQuery({ queryKey: ['admin', 'gruppi'], queryFn: () => api.leggi<GruppoAdmin[]>('/admin/gruppi') })
+  const famiglia = gruppi.data?.[0]
+  const membro = useScrittura(
+    (d: { utenteId: string; dentro: boolean }) =>
+      d.dentro ? api.modifica(`/admin/gruppi/${famiglia!.id}/membri/${d.utenteId}`, { ruolo: 'membro' }) : api.elimina(`/admin/gruppi/${famiglia!.id}/membri/${d.utenteId}`),
+    { successo: (_r) => 'Famiglia aggiornata' },
+  )
   const [nuovo, setNuovo] = useState(false)
   const [modifica, setModifica] = useState<Utente | null>(null)
   const [invito, setInvito] = useState<InvitoCreato | null>(null)
@@ -76,6 +89,17 @@ function Gestione() {
                   <span className="font-medium">{u.nome}</span>
                   {u.ruolo === 'amministratore' ? <Badge variante="primario">amministratore</Badge> : null}
                   {u.stato === 'sospeso' ? <Badge variante="pericolo">sospeso</Badge> : null}
+                  {famiglia ? (
+                    <label className="flex items-center gap-1.5 text-xs text-testo-tenue" title="Vede la bacheca e il ricettario della famiglia">
+                      <Casella
+                        aria-label={`${u.nome} fa parte di ${famiglia.nome}`}
+                        checked={famiglia.membri.some((m) => m.id === u.id)}
+                        disabled={!puoScrivere || membro.inCorso}
+                        onChange={(e) => void membro.esegui({ utenteId: u.id, dentro: e.target.checked })}
+                      />
+                      {famiglia.nome}
+                    </label>
+                  ) : null}
                   <span className="ml-auto flex gap-2">
                     <Button misura="piccolo" variante="contorno" disabled={!puoScrivere || u.stato !== 'attivo'} onClick={() => void creaInvito.esegui(u)}>
                       <KeyRound /> Invito
@@ -128,7 +152,8 @@ function Gestione() {
 function NuovoUtente({ aperta, onCambia, onCreato }: { aperta: boolean; onCambia: (a: boolean) => void; onCreato: (u: Utente) => void }) {
   const [nome, setNome] = useState('')
   const [ruolo, setRuolo] = useState<Ruolo>('utente')
-  const crea = useScrittura((d: { nome: string; ruolo: Ruolo }) => api.crea<Utente>('/admin/utenti', { id: nuovoId(), ...d }), {
+  const [famiglia, setFamiglia] = useState(true)
+  const crea = useScrittura((d: { nome: string; ruolo: Ruolo }) => api.crea<Utente>('/admin/utenti', { id: nuovoId(), ...d, famiglia }), {
     successo: (u) => `${u.nome} aggiunto: ecco il suo invito`,
     dopo: (u) => {
       setNome('')
@@ -158,6 +183,9 @@ function NuovoUtente({ aperta, onCambia, onCreato }: { aperta: boolean; onCambia
             <option value="amministratore">Amministratore</option>
           </Select>
         </Campo>
+        <label className="flex min-h-11 items-center gap-3 text-sm">
+          <Casella checked={famiglia} onChange={(e) => setFamiglia(e.target.checked)} /> Fa parte della famiglia (bacheca e ricettario di famiglia)
+        </label>
       </div>
     </Finestra>
   )

@@ -66,7 +66,7 @@ describe('formato ricetta v1', () => {
     expect(validaRicetta(base).ok).toBe(true)
     expect(validaRicetta({ ...base, versione: 2 })).toMatchObject({ ok: false, errore: expect.stringMatching(/più recente/) })
     expect(validaRicetta({ ...base, foto: Array.from({ length: 11 }, (_, i) => ({ file: `foto/${i}.jpg` })) })).toMatchObject({ ok: false })
-    expect(validaRicetta({ formato: 'altro', versione: 1, nome: 'X' })).toMatchObject({ ok: false, errore: expect.stringMatching(/Menù & Co\./) })
+    expect(validaRicetta({ formato: 'altro', versione: 1, nome: 'X' })).toMatchObject({ ok: false, errore: expect.stringMatching(/Ricette di famiglia & Co\./) })
     expect(validaRicetta({ ...base, campoFuturo: 1, ingredienti: [{ testo: '2 uova', nome: 'uova', quantita: 2 }] }).ok).toBe(true)
   })
 })

@@ -51,9 +51,11 @@ export default defineConfig({
       },
       manifest: {
         id: '/',
-        name: 'Menù & Co.',
-        short_name: 'Menù & Co.',
-        description: 'Pranzi, cene e ricorrenze di famiglia: menù, ricette, spesa e preparazione.',
+        // Nome cambiato in «Ricette di famiglia & Co.»: id, start_url e scope restano uguali, così le
+        // installazioni esistenti si aggiornano senza reinstallare.
+        name: 'Ricette di famiglia & Co.',
+        short_name: 'Ricette & Co.',
+        description: 'Ricette, menù ed eventi della famiglia: bacheca, sondaggi, chi porta cosa, spesa e preparazione.',
         lang: 'it',
         start_url: '/',
         scope: '/',

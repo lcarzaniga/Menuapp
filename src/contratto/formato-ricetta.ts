@@ -9,7 +9,7 @@ const Quantita = z.number().min(0).max(1_000_000).nullable().optional()
 
 export const SchemaRicettaFormato = z
   .object({
-    formato: z.literal(FORMATO_RICETTA, { error: 'Non è una ricetta di Menù & Co.' }),
+    formato: z.literal(FORMATO_RICETTA, { error: 'Non è una ricetta di Ricette di famiglia & Co.' }),
     versione: z.number().int().min(1).max(VERSIONE_FORMATO_RICETTA, { error: 'Ricetta creata da una versione più recente dell\'app' }),
     nome: z.string().trim().min(1, 'Nome della ricetta mancante').max(200),
     portata: z.string().max(200).nullable().optional(),

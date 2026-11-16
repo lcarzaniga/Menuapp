@@ -1,5 +1,5 @@
 // Impostazioni: portate predefinite, coefficiente bambini, reparti, tema del dispositivo (SPEC §5).
-import { ArrowDown, ArrowUp, ChevronRight, CircleUserRound, Database, Plus, Trash2, UsersRound } from 'lucide-react'
+import { ArrowDown, ArrowUp, Carrot, ChevronRight, CircleUserRound, Database, Plus, Trash2, UsersRound } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { api, nuovoId } from '@/api/client'
@@ -66,6 +66,14 @@ export function PaginaImpostazioni() {
           <span className="flex-1">
             <span className="block font-medium">Il mio account · {utente?.nome}</span>
             <span className="text-sm text-testo-tenue">Dispositivi autorizzati, nuovo dispositivo, i miei dati</span>
+          </span>
+          <ChevronRight className="size-5 text-testo-tenue" />
+        </Link>
+        <Link to="/ingredienti" className="flex items-center gap-3 rounded-2xl border border-bordo bg-carta p-4 hover:bg-tenue/60">
+          <Carrot className="size-5 text-primario" />
+          <span className="flex-1">
+            <span className="block font-medium">Ingredienti</span>
+            <span className="text-sm text-testo-tenue">Catalogo comune: reparti, sinonimi, unità</span>
           </span>
           <ChevronRight className="size-5 text-testo-tenue" />
         </Link>

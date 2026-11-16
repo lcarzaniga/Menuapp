@@ -5,7 +5,7 @@ test.describe.configure({ mode: 'serial' })
 
 test('navigazione fra le sezioni e ricarica su una rotta profonda', async ({ page }) => {
   await page.goto('/')
-  for (const s of ['Ricettario', 'Ingredienti', 'Impostazioni', 'Eventi'] as const) {
+  for (const s of ['Ricettario', 'Famiglia', 'Notifiche', 'Impostazioni', 'Eventi'] as const) {
     await vaiA(page, s)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   }

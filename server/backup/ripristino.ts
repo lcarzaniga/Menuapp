@@ -94,7 +94,7 @@ export async function verificaRipristino(
       const r = SchemaEsportazione.safeParse(richiesta.contenuto)
       if (!r.success) {
         const formato = (richiesta.contenuto as { formato?: unknown } | null)?.formato
-        if (formato !== FORMATO_ESPORTAZIONE) throw richiestaNonValida('Il file non è un\'esportazione di Menù & Co.')
+        if (formato !== FORMATO_ESPORTAZIONE) throw richiestaNonValida('Il file non è un\'esportazione di Ricette di famiglia & Co.')
         throw richiestaNonValida(`Esportazione non valida: ${r.error.issues[0]?.path.join('.')} ${r.error.issues[0]?.message}`)
       }
       const e = r.data
@@ -118,7 +118,7 @@ export async function verificaRipristino(
         if (err instanceof ErroreApi) throw err
         throw regolaViolata('contenuto_non_valido', `Dati non validi nel file: ${(err as Error).message}`)
       }
-      origine = `File esportato da Menù & Co. ${e.versioneApp}`
+      origine = `File esportato da Ricette di famiglia & Co. ${e.versioneApp}`
       dataDati = e.esportatoAt
     } else {
       const sorgente = percorsoBackup(opzioni.cartellaBackup, richiesta.nome)

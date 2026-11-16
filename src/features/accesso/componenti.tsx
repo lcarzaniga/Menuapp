@@ -14,7 +14,7 @@ import { dataOra } from './sessione'
 /** Link d'invito appena creato: unico momento in cui è visibile. Copia o invio con WhatsApp. */
 export function LinkInvito({ invito, onChiudi }: { invito: InvitoCreato; onChiudi: () => void }) {
   const [copiato, setCopiato] = useState(false)
-  const testo = `Ciao ${invito.utenteNome}! Apri questo link per usare Menù & Co. su questo dispositivo (vale 24 ore, una sola volta):\n${invito.link}`
+  const testo = `Ciao ${invito.utenteNome}! Apri questo link per usare Ricette di famiglia & Co. su questo dispositivo (vale 24 ore, una sola volta):\n${invito.link}`
   const copia = async () => {
     try {
       await navigator.clipboard.writeText(invito.link)
@@ -112,7 +112,7 @@ export function ElencoDispositivi({ sessioni, percorsoRevoca, mostraUtente = fal
         aperta={daRevocare !== null}
         onCambia={(a) => !a && setDaRevocare(null)}
         titolo="Scollegare il dispositivo?"
-        descrizione={`«${daRevocare?.dispositivo || 'Dispositivo senza nome'}» non potrà più aprire Menù & Co. finché non viene autorizzato di nuovo con un invito.`}
+        descrizione={`«${daRevocare?.dispositivo || 'Dispositivo senza nome'}» non potrà più aprire Ricette di famiglia & Co. finché non viene autorizzato di nuovo con un invito.`}
         etichettaConferma="Scollega"
         pericolosa
         onConferma={() => {

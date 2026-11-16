@@ -23,7 +23,7 @@ export function Pagina({
   className?: string
 }) {
   useEffect(() => {
-    if (typeof titolo === 'string') document.title = `${titolo} · Menù & Co.`
+    if (typeof titolo === 'string') document.title = `${titolo} · Ricette & Co.`
   }, [titolo])
   return (
     <div className={cn('mx-auto w-full px-4 pb-28 pt-4 md:pb-12', larga ? 'max-w-5xl' : 'max-w-3xl', className)}>

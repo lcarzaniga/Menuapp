@@ -27,7 +27,7 @@ export async function riattaccaServer(page: Page) {
 }
 
 /** Clic sulla barra di navigazione, che su telefono e su desktop è diversa. */
-export async function vaiA(page: Page, sezione: 'Eventi' | 'Ricettario' | 'Ingredienti' | 'Impostazioni') {
+export async function vaiA(page: Page, sezione: 'Eventi' | 'Ricettario' | 'Famiglia' | 'Notifiche' | 'Impostazioni') {
   await page.getByRole('navigation', { name: 'Sezioni' }).filter({ visible: true }).getByRole('link', { name: sezione }).click()
 }
 

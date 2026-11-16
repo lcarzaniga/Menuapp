@@ -1,4 +1,4 @@
-// Formato ricetta di Menù & Co., versione 1 (docs/FORMATO-RICETTA.md). Funzioni pure.
+// Formato ricetta di Ricette di famiglia & Co., versione 1 (docs/FORMATO-RICETTA.md). Funzioni pure.
 import type { Piatto, Scalatura } from '../tipi.ts'
 import type { CodiceUnita } from '../unita.ts'
 

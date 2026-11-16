@@ -14,6 +14,7 @@ import { usePuoScrivere } from '@/connessione/stato'
 import type { Menu, VoceDelMenu } from '@/contratto/eventi.ts'
 import { formattaCoperti } from '@/domain/porzioni.ts'
 import type { Evento, VoceMenu } from '@/domain/tipi.ts'
+import { ValutaVoce } from '@/features/famiglia/ValutaVoce'
 import { CorpoScheda, useEventoCorrente } from '@/features/eventi/LayoutEvento'
 import { SuggerimentiPiatti } from '@/features/ricettario/SuggerimentiPiatti'
 import { cn } from '@/lib/utils'
@@ -213,7 +214,7 @@ function RigaVoce({
   const personalizzate = voce.porzioni !== null
   const altre = menu.portate.filter((p) => p.id !== portata.id)
   return (
-    <li className="flex items-center gap-1 rounded-xl border border-bordo/70 bg-carta pl-3 shadow-carta">
+    <li className="flex flex-wrap items-center gap-1 rounded-xl border border-bordo/70 bg-carta pl-3 shadow-carta">
       <button
         type="button"
         className="flex min-h-12 min-w-0 flex-1 flex-col items-start justify-center py-2 text-left"
@@ -254,6 +255,7 @@ function RigaVoce({
       ) : (
         <span className={cn('w-2')} />
       )}
+      <ValutaVoce eventoId={evento.id} voceId={voce.id} nome={voce.nome} />
     </li>
   )
 }

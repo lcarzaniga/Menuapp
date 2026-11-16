@@ -62,7 +62,7 @@ async function avvia(): Promise<void> {
     console.log(`Accesso dalla rete di casa: http://<indirizzo del server>:${config.portaLan}`)
   }
   console.log(
-    `Menù & Co. ${pacchetto.version} (${config.rilascio}) su http://${config.host}:${config.porta} — dati in ${config.cartellaDati}`,
+    `Ricette di famiglia & Co. ${pacchetto.version} (${config.rilascio}) su http://${config.host}:${config.porta} — dati in ${config.cartellaDati}`,
   )
 }
 

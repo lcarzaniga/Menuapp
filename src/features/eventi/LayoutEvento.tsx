@@ -27,6 +27,8 @@ const SCHEDE = [
   { a: 'menu', etichetta: 'Menù' },
   { a: 'spesa', etichetta: 'Spesa' },
   { a: 'piano', etichetta: 'Piano' },
+  { a: 'bacheca', etichetta: 'Bacheca' },
+  { a: 'chi-porta', etichetta: 'Chi porta' },
 ]
 
 export function useEventoCorrente(): Evento {

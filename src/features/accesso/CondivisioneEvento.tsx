@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router'
 import { api } from '@/api/client'
 import { useScrittura } from '@/api/scrittura'
 import { Button } from '@/components/ui/button'
-import { Campo, Select } from '@/components/ui/campi'
+import { Campo, Casella, Select } from '@/components/ui/campi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Conferma, Finestra } from '@/components/ui/dialog'
 import type { AccessoEvento, PermessoCondivisione } from '@/contratto/accesso.ts'
@@ -38,7 +38,11 @@ function PerInvitato({ evento, accesso }: { evento: Evento; accesso: AccessoEven
       <CardContent className="flex flex-col gap-3 text-sm">
         <p>
           Evento di <strong>{accesso.proprietario.nome}</strong>.{' '}
-          {accesso.permesso === 'modifica' ? 'Puoi modificare menù, spesa e piano.' : 'Puoi consultarlo ma non modificarlo.'}
+          {accesso.permesso === 'modifica'
+            ? 'Puoi modificare menù, spesa e piano.'
+            : accesso.partecipa
+              ? 'Puoi consultarlo e partecipare (bacheca, sondaggi, proposte, chi porta cosa), ma non modificare il menù.'
+              : 'Puoi consultarlo ma non modificarlo.'}
         </p>
         <Button variante="contorno" className="self-start" disabled={!connesso} onClick={() => setLascia(true)}>
           <LogOut /> Lascia l&apos;evento
@@ -67,10 +71,14 @@ function PerProprietario({ evento, accesso }: { evento: Evento; accesso: Accesso
   const [permesso, setPermesso] = useState<PermessoCondivisione>('modifica')
   const [revoca, setRevoca] = useState<string | null>(null)
   const [passa, setPassa] = useState(false)
-  const imposta = useScrittura((d: { utenteId: string; permesso: PermessoCondivisione }) => api.modifica(`/eventi/${evento.id}/condivisioni/${d.utenteId}`, { permesso: d.permesso }), {
-    successo: 'Condivisione aggiornata',
-    dopo: () => setChi(''),
-  })
+  const imposta = useScrittura(
+    (d: { utenteId: string; permesso: PermessoCondivisione; partecipa?: boolean }) =>
+      api.modifica(`/eventi/${evento.id}/condivisioni/${d.utenteId}`, { permesso: d.permesso, partecipa: d.partecipa ?? true }),
+    {
+      successo: 'Condivisione aggiornata',
+      dopo: () => setChi(''),
+    },
+  )
   const togli = useScrittura((utenteId: string) => api.elimina(`/eventi/${evento.id}/condivisioni/${utenteId}`), { successo: 'Condivisione revocata' })
   const giaCondiviso = new Set(accesso.condivisioni.map((c) => c.utenteId))
   const disponibili = (persone.data ?? []).filter((p) => !giaCondiviso.has(p.id))
@@ -87,14 +95,25 @@ function PerProprietario({ evento, accesso }: { evento: Evento; accesso: Accesso
         ) : (
           <ul className="flex flex-col divide-y divide-bordo/60" aria-label="Persone con accesso">
             {accesso.condivisioni.map((c) => (
-              <li key={c.utenteId} className="flex items-center gap-2 py-2">
+              <li key={c.utenteId} className="flex flex-wrap items-center gap-2 py-2">
                 <span className="min-w-0 flex-1 truncate font-medium">{c.utenteNome}</span>
+                {c.permesso === 'lettura' ? (
+                  <label className="flex items-center gap-1.5 text-xs text-testo-tenue" title="Scrive in bacheca, vota, propone piatti e si offre per portare qualcosa">
+                    <Casella
+                      aria-label={`${c.utenteNome} partecipa alla bacheca`}
+                      checked={c.partecipa}
+                      disabled={!connesso}
+                      onChange={(e) => void imposta.esegui({ utenteId: c.utenteId, permesso: c.permesso, partecipa: e.target.checked })}
+                    />
+                    partecipa
+                  </label>
+                ) : null}
                 <Select
                   aria-label={`Permesso di ${c.utenteNome}`}
                   className="h-9 w-auto"
                   value={c.permesso}
                   disabled={!connesso}
-                  onChange={(e) => void imposta.esegui({ utenteId: c.utenteId, permesso: e.target.value as PermessoCondivisione })}
+                  onChange={(e) => void imposta.esegui({ utenteId: c.utenteId, permesso: e.target.value as PermessoCondivisione, partecipa: c.partecipa })}
                 >
                   <option value="modifica">{NOMI_PERMESSO.modifica}</option>
                   <option value="lettura">{NOMI_PERMESSO.lettura}</option>

@@ -35,7 +35,7 @@ function Cornice({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-dvh items-center justify-center px-4 py-10">
       <main className="w-full max-w-md rounded-3xl border border-bordo/70 bg-carta p-6 text-center shadow-carta sm:p-8">
         <Tavola className="mx-auto mb-2 h-16 w-auto" />
-        <p className="titolo text-2xl font-semibold text-primario">Menù &amp; Co.</p>
+        <p className="titolo text-2xl font-semibold text-primario">Ricette di famiglia &amp; Co.</p>
         <span className="filetto mx-auto mb-5 mt-1 block w-24" />
         {children}
       </main>
@@ -72,7 +72,7 @@ function StatoRichiesta({ r }: { r: StatoAttivazione }) {
       <div className="flex flex-col items-center gap-2">
         <ShieldX className="size-10 text-pericolo" />
         <h1 className="titolo text-xl font-semibold">{r.stato === 'rifiutata' ? 'Richiesta non approvata' : 'Richiesta scaduta'}</h1>
-        <p className="text-sm text-testo-tenue">Chiedi un nuovo invito a chi gestisce Menù &amp; Co.</p>
+        <p className="text-sm text-testo-tenue">Chiedi un nuovo invito a chi gestisce Ricette &amp; Co.</p>
       </div>
     )
   }
@@ -118,7 +118,7 @@ export function PaginaAttivazione() {
         <h1 className="titolo mt-2 text-xl font-semibold">Questo dispositivo è già autorizzato</h1>
         <p className="mt-1 text-sm text-testo-tenue">Sei collegato come {sessione.data.utente.nome}. L&apos;invito non è stato usato.</p>
         <Button asChild className="mt-5">
-          <a href="#/">Apri Menù &amp; Co.</a>
+          <a href="#/">Apri Ricette &amp; Co.</a>
         </Button>
       </Cornice>
     )
@@ -173,7 +173,7 @@ export function PaginaAccesso({ revocata = false }: { revocata?: boolean }) {
           <p className="text-sm text-testo-tenue">
             {revocata
               ? 'L\'autorizzazione di questo dispositivo è stata revocata o è scaduta.'
-              : 'Menù & Co. si usa su invito.'}{' '}
+              : 'Ricette di famiglia & Co. si usa su invito.'}{' '}
             Per entrare apri il link d&apos;invito che hai ricevuto, oppure chiedine uno nuovo a chi gestisce l&apos;app.
           </p>
         </div>

@@ -1,5 +1,5 @@
 // Ricettario: ricerca ed elenco dei piatti (SPEC §5).
-import { ChevronRight, FileUp, Plus, Search } from 'lucide-react'
+import { Carrot, ChevronRight, FileUp, Plus, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useImpostazioni, usePiatti } from '@/api/query'
@@ -58,6 +58,11 @@ export function PaginaRicettario() {
       sottotitolo={tutti.length ? `${tutti.length} ${tutti.length === 1 ? 'piatto' : 'piatti'}` : undefined}
       azioni={
         <>
+          <Button variante="contorno" misura="icona" asChild>
+            <Link to="/ingredienti" aria-label="Ingredienti" title="Catalogo degli ingredienti">
+              <Carrot />
+            </Link>
+          </Button>
           <Button variante="contorno" onClick={() => setImporta(true)}>
             <FileUp /> Importa
           </Button>
