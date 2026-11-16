@@ -19,6 +19,7 @@ import { plurale } from '@/lib/formato'
 import { PannelloArchivio } from '@/features/archivio/PannelloArchivio'
 import { CorpoScheda, useEventoCorrente } from './LayoutEvento'
 import { DuplicaEvento, PannelloEdizioni } from './Edizioni'
+import { RiepilogoEvento } from './Riepilogo'
 import { type DatiModuloEvento, ModuloEvento } from './ModuloEvento'
 
 const NOMI_TIPO = { pranzo: 'Pranzo', cena: 'Cena', aperitivo: 'Aperitivo', brunch: 'Brunch' } as const
@@ -75,6 +76,8 @@ export function PaginaPanoramica() {
             </CardContent>
           </Card>
         ) : null}
+
+        <RiepilogoEvento eventoId={e.id} />
 
         <Card>
           <CardContent className="pt-4">

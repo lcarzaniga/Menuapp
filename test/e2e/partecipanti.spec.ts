@@ -85,5 +85,5 @@ test('partecipanti, accompagnatori e coperti calcolati', async ({ page, request 
   // Panoramica: coperti dai confermati (Marco non c'è più): 3 adulti + 1 bambino × 0,5.
   await page.getByRole('navigation', { name: 'Schede dell\'evento' }).getByRole('link', { name: 'Panoramica' }).click()
   await expect(page.getByText('3,5 equivalenti')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'calcolati dai partecipanti' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'calcolati dai partecipanti', exact: true })).toBeVisible()
 })

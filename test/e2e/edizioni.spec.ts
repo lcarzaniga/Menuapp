@@ -41,3 +41,27 @@ test('duplica Natale come nuova edizione, con i partecipanti da riconfermare', a
   await expect(ugo.getByRole('button', { name: 'In attesa' })).toHaveAttribute('aria-pressed', 'true')
   await foto(page, '02-nuova-edizione')
 })
+
+test('a che punto siamo: indicatori aggiornati e collegamenti alle sezioni', async ({ page, request }, info) => {
+  test.skip(info.project.name !== 'telefono', 'una sola esecuzione')
+  const famiglia = (await apiLeggi<{ id: string; nome: string }[]>(request, '/gruppi')).find((g) => g.nome === 'Famiglia')!
+  await apiScrivi(request, 'post', '/eventi', { id: 'ed-riep', nome: 'Compleanno di Giulia', data: '2030-05-10', oraServizio: '16:00', tipo: 'aperitivo', occasione: '', adulti: 8, bambini: 6, coefficienteBambini: 0.5, note: '', gruppoId: famiglia.id })
+  await page.goto('/#/eventi/ed-riep')
+  const riepilogo = page.getByRole('list', { name: 'A che punto siamo' })
+  // Evento semplice: solo i coperti.
+  await expect(riepilogo.getByRole('listitem')).toHaveCount(1)
+  await expect(riepilogo).toContainText('11 coperti')
+
+  await apiScrivi(request, 'post', '/eventi/ed-riep/cose', { id: 'ed-c1', nome: 'Palloncini' })
+  await apiScrivi(request, 'post', '/eventi/ed-riep/partecipanti', { id: 'ed-r1', nome: 'Nonna Lina', stato: 'confermato' })
+  await apiScrivi(request, 'post', '/eventi/ed-riep/partecipanti', { id: 'ed-r2', nome: 'Zio Pino' })
+  await page.reload()
+  await expect(riepilogo).toContainText('1 confermato, 1 in attesa')
+  await expect(riepilogo).toContainText('1 cosa da portare senza nessuno')
+  await foto(page, '03-a-che-punto')
+  await riepilogo.getByRole('link', { name: /1 cosa da portare senza nessuno/ }).click()
+  await expect(page).toHaveURL(/\/eventi\/ed-riep\/chi-porta$/)
+  await page.goBack()
+  await riepilogo.getByRole('link', { name: /1 confermato/ }).click()
+  await expect(page).toHaveURL(/\/eventi\/ed-riep\/partecipanti$/)
+})

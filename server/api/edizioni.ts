@@ -4,6 +4,7 @@ import type { FastifyInstance } from 'fastify'
 import { PREFISSO_API } from '../../src/contratto/comune.ts'
 import { SchemaDuplica, SchemaSerie } from '../../src/contratto/edizioni.ts'
 import * as duplicazione from '../servizi/duplicazione.ts'
+import { riepilogo } from '../servizi/riepilogo.ts'
 import { richiediEvento } from '../servizi/permessi.ts'
 import { chi, type Contesto, valida } from './aiuti.ts'
 
@@ -18,6 +19,7 @@ export function rotteEdizioni(app: FastifyInstance, ctx: Contesto): void {
     richiediEvento(db, u, req.params.id, 'lettura')
     return reply.code(201).send(duplicazione.duplica(db, config.cartellaFoto, u, req.params.id, valida(SchemaDuplica, req.body)))
   })
+  app.get<ConId>(`${P}/eventi/:id/riepilogo`, async (req) => riepilogo(db, chi(req), req.params.id))
   app.get<ConId>(`${P}/eventi/:id/edizioni`, async (req) => duplicazione.edizioni(db, chi(req), req.params.id))
   app.put<ConId>(`${P}/eventi/:id/serie`, async (req) => {
     const u = chi(req)
