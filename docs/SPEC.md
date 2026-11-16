@@ -1,4 +1,4 @@
-# Menù & Co. — Specifica tecnica consolidata
+# Ricette di famiglia & Co. (già Menù & Co.) — Specifica tecnica consolidata
 
 | | |
 |---|---|
@@ -226,6 +226,9 @@ Da 768 px: barra laterale con le stesse voci. Il contenuto dell'evento usa sched
 | `#/eventi/:id/piano` | Evento — Piano | Attività per giorno, checklist |
 | `#/eventi/:id/stampa` | Stampa menù | Designer: modelli, opzioni, anteprima, stampa/PDF (F8) |
 | `#/eventi/:id/voci/:voceId/cucina` | Vista cucina | Ricetta alle porzioni della voce |
+| `#/famiglia` | Famiglia | Bacheca del gruppo; «I più apprezzati» (§20) |
+| `#/notifiche` | Notifiche | Elenco, tutte lette, preferenze (§20.6) |
+| `#/eventi/:id/bacheca`, `#/eventi/:id/chi-porta` | Evento — Bacheca, Chi porta | Messaggi, sondaggi, proposte; incarichi (§20.2–20.5) |
 | `#/ricettario` | Ricettario | Ricerca; filtri per portata in testa (`?portata=…`, ricordato tornando dal piatto) e «senza ingredienti»; elenco alfabetico diviso per iniziale con rubrica laterale A–Z da toccare o trascinare (da 10 piatti) |
 | `#/ricettario/nuovo`, `#/ricettario/:id` | Piatto | Scheda; modifica |
 | `#/ricettario/:id/cucina` | Vista cucina | Ricetta con porzioni scelte |
@@ -1855,6 +1858,104 @@ locali, niente dominio proprio, niente password, niente login Google.
   i dati di tutti e, se il file è precedente alla versione 5, scollega tutti i dispositivi
   (recupero con la console).
 
+## 20. Spazio collaborativo della famiglia
+
+Decisione di Loris (16/11/2026): l'app diventa anche uno spazio della famiglia legato a cucina,
+menù ed eventi (non un social generico, non una chat). Nuovo nome «Ricette di famiglia & Co.»,
+breve «Ricette & Co.» (manifest, titoli, testi); restano `menuapp` repository, cartelle,
+database, servizi, URL e identificativi (l'`id` del manifest non cambia: le installazioni si
+aggiornano da sole). Migrazione `0007_famiglia.sql`.
+
+### 20.1 Gruppi familiari e bacheca della famiglia
+
+- `gruppi`, `membri_gruppo` (ruolo `amministratore|membro`): appartenenza esplicita. La
+  migrazione crea «Famiglia» con gli utenti esistenti; un utente nuovo vi entra se lo sceglie
+  l'amministratore (casella predefinita). Il modello ammette più gruppi; l'interfaccia ne usa uno.
+- Il ricettario di famiglia (§19.4) è visibile ai membri dello stesso gruppo del proprietario.
+- Bacheca del gruppo (`#/famiglia`): messaggi dal più recente, fissati in cima (li fissa chi
+  amministra il gruppo), commenti, reazioni (👍 ❤️ 😄 😋 👏), fino a 4 foto, ricetta segnalata
+  (mostrata solo a chi può leggerla, altrimenti «non disponibile» senza nome), sondaggi. Autore,
+  data, «modificato»; modifica l'autore (con versione e 409), elimina l'autore o chi amministra.
+
+### 20.2 Bacheca dell'evento
+
+- Scheda «Bacheca» dell'evento; legge chi vede l'evento. Scrive chi **partecipa**: proprietario,
+  invitati in modifica e invitati in lettura con `condivisioni_evento.partecipa = 1`
+  (predefinito; il proprietario può toglierlo per persona). Fissano proprietario e
+  collaboratori; elimina messaggi altrui il proprietario.
+- Un unico modello: `messaggi` (gruppo **o** evento, vincolo nel database), `commenti`,
+  `reazioni`, `allegati` (file in `dati/foto/`, stesso backup e recupero delle foto dei piatti).
+
+### 20.3 Sondaggi
+
+- Messaggio di tipo `sondaggio` (`sondaggi`, `opzioni_sondaggio`, `voti_sondaggio`): 2–12
+  opzioni diverse, risposta singola o multipla, scadenza facoltativa (futura), risultati
+  `sempre | dopo_voto | alla_chiusura`. Voti legati all'utente (non al dispositivo): un insieme
+  di preferenze per utente, sostituito a ogni voto, ritirabile; nomi dei votanti visibili (nessun
+  voto anonimo). Chiude l'autore o chi modera; chiuso o scaduto non accetta voti.
+
+### 20.4 Proposte di piatti
+
+- Messaggio di tipo `proposta` (solo bacheche di evento, `proposte`): nome, ricetta facoltativa
+  (che il proponente può leggere), portata suggerita, descrizione, foto. Preferenze con le
+  reazioni (👍) e commenti.
+- Decide chi organizza (permesso di modifica): in valutazione, accettata, non accettata; la
+  decisione non dipende dai voti. «Accetta e metti nel menù» crea la voce una volta sola (id
+  derivato dalla proposta); la ricetta entra come copia indipendente nel ricettario del
+  proprietario dell'evento (§19.4) con l'accesso del proponente; se non è più leggibile entra
+  il solo nome. Il proponente riceve l'esito.
+
+### 20.5 Chi porta cosa
+
+- Scheda «Chi porta» dell'evento: piatti del menù e cose da portare (`cose_da_portare`: nome,
+  quantità, note), stato da assegnare / assegnato / completato. Per i piatti la responsabilità
+  resta «A cura di» della voce (`voci_menu.incaricato`), con in più `incaricato_id`,
+  `incarico_completato`, `spesa_tolta_da_incarico`: nessun secondo sistema.
+- Chi partecipa si offre e rinuncia; chi organizza assegna, libera e segna come fatto.
+  Prese in carico condizionate alla versione: due persone non prendono la stessa cosa (409 con
+  lo stato attuale). Evento archiviato: sola lettura.
+- Spesa: chi prende un piatto può dire «porto tutto io» e la voce esce dalla spesa
+  (`in_spesa = 0`, ricordato); alla rinuncia o al cambio di incaricato torna nella spesa **solo**
+  se ne era uscita per quella presa in carico. Una modifica a mano di «A cura di» che non è più il
+  nome dell'utente incaricato lo scollega.
+
+### 20.6 Notifiche
+
+- Centro notifiche interno (`#/notifiche`, campanella con contatore), nessun push/email:
+  aggiornamento con la revisione (§12.6) e ogni minuto. Tipi: bacheca della famiglia, bacheca
+  degli eventi, risposte (commenti ai propri messaggi o alle discussioni a cui si partecipa),
+  sondaggi nuovi e chiusi, proposte, esito delle proprie proposte, incarichi (prese in carico,
+  rinunce, assegnazioni), modifiche importanti al menù (piatti aggiunti o tolti, data e ora),
+  condivisioni di eventi e ricette, nuove stelle ai piatti preparati.
+- Mai per le proprie azioni; raggruppate per chiave (una notifica non letta con contatore);
+  segna come letta, tutte lette; preferenze per tipo. In lettura i permessi si ricontrollano:
+  le notifiche su eventi, gruppi, messaggi o ricette non più accessibili vengono cancellate e
+  non compaiono; le lette più vecchie di 60 giorni si eliminano.
+
+### 20.7 Valutazioni e «I più apprezzati»
+
+- Dopo l'evento (concluso, archiviato o con la data arrivata) chi partecipa dà da 1 a 5 stelle
+  a ogni piatto servito, nel Menù. Un voto per utente e voce, modificabile (`valutazioni`, chiave
+  voce + utente). Nome, portata e ricetta d'origine fotografati al voto: restano dopo
+  archiviazione, modifiche ed eliminazioni di ricetta e voce (si perdono solo eliminando l'evento).
+- Classifica (`#/famiglia?scheda=apprezzati`) sugli eventi visibili all'utente: le preparazioni
+  della stessa ricetta (copie comprese, tramite `origine_piatto_id`) si sommano; i piatti senza
+  ricetta restano separati (niente fusione per nome). Ordine per media bayesiana
+  (3 × 3 + somma) / (3 + n): un solo 5 (3,5) non supera molti 4; si mostrano comunque media
+  vera, numero di voti e occasioni. Filtri per portata e anno. Collegamento alla ricetta solo
+  se l'utente può leggerla.
+
+### 20.8 Sicurezza e test
+
+- Stesse regole di §19.6: controllo prima della validazione, 404 indistinguibili, funzioni
+  `/admin/*` (anche i gruppi) solo dall'ingresso privato. Test: `server/api/famiglia.test.ts`,
+  `server/api/incarichi.test.ts`, matrice di `autorizzazione.test.ts` estesa alla
+  partecipazione, rotte nuove nel controllo «senza sessione → 401»; e2e
+  `test/e2e/famiglia.spec.ts` con due browser.
+- Limiti: niente tempo reale (si aggiorna con la revisione); la scadenza di un sondaggio non
+  genera notifica; i messaggi non entrano in «Esporta i miei dati»; l'esportazione completa ZIP
+  contiene le foto dei piatti, non gli allegati (che sono comunque nei backup).
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -1871,3 +1972,4 @@ locali, niente dominio proprio, niente password, niente login Google.
 | 13/11/2026 | 2.6 — Ricettario sfogliabile (richiesta di Loris): filtro per portata in testa all'elenco (portate predefinite nel loro ordine, poi le altre, poi «Senza portata»; le varianti importate come «Antipasti / Fritti» o «Dolci al cucchiaio» ricadono nella predefinita da cui cominciano, regola in `src/domain/ricettario.ts`), elenco in ordine alfabetico italiano diviso per iniziale e rubrica alfabetica a lato come un'agenda telefonica (lettere vuote attenuate: portano alla successiva piena). Nessuna modifica a dati, API o schema |
 | 13/11/2026 | 3.0 — **Multiutente** (§19, decisione di Loris): utenti, accesso su invito con approvazione del dispositivo e codice di verifica, sessioni lato server revocabili, eventi privati condivisibili in lettura o modifica, ricette condivisibili in lettura e usate per copia, trasferimento di proprietà, amministrazione dalla console e dall'ingresso privato, ingresso pubblico per Tailscale Funnel senza funzioni di sistema, rete di casa HTTP senza dati; migrazione `0005_utenti.sql` (tutti i dati all'amministratore); «Esporta i miei dati» |
 | 13/11/2026 | 3.1 — **Ricettario di famiglia** (decisione di Loris): le ricette sono visibili a tutti gli utenti per impostazione predefinita e il proprietario può renderle private (condivisibili con persone scelte); modifica sempre solo del proprietario, uso negli eventi altrui per copia; migrazione `0006_visibilita_piatti.sql` (tutte le ricette esistenti di famiglia); filtro «Solo le mie»; «Utenti e dispositivi» anche in Impostazioni |
+| 16/11/2026 | 4.0 — **Spazio della famiglia** e nuovo nome «Ricette di famiglia & Co.» (§20): gruppi familiari, bacheche della famiglia e degli eventi con commenti, reazioni e foto, sondaggi, proposte di piatti, chi porta cosa integrato con «A cura di» e spesa, centro notifiche, valutazioni e classifica; permesso di partecipazione distinto dalla modifica; migrazione `0007_famiglia.sql`; navigazione Eventi · Ricettario · Famiglia · Notifiche · Impostazioni (Ingredienti da Ricettario e Impostazioni) |

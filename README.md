@@ -1,12 +1,15 @@
-# Menù & Co.
+# Ricette di famiglia & Co.
 
-Web app installabile (PWA) per organizzare pranzi, cene e ricorrenze di famiglia: eventi,
-menù per portate, ricettario, lista della spesa aggregata, piano delle preparazioni, vista
-cucina e stampa del menù. Un unico database SQLite sul server di casa, condiviso da PC,
-telefono e tablet; accesso privato tramite Tailscale.
+*(già «Menù & Co.»; nome breve «Ricette & Co.»; il nome tecnico resta `menuapp`)*
 
-- Produzione: https://loris-srv01.dala-tortoise.ts.net:9870/ (tailnet, PWA installabile)
-- Da casa senza Tailscale (es. Echo Show 15): http://192.168.1.160:9880/
+Web app installabile (PWA) per le ricette, i pranzi e le ricorrenze della famiglia: ricettario
+di famiglia, eventi con menù per portate, lista della spesa aggregata, piano delle
+preparazioni, vista cucina, stampa del menù e uno spazio collaborativo (bacheche, sondaggi,
+proposte di piatti, chi porta cosa, notifiche, piatti più apprezzati). Un unico database
+SQLite sul server di casa; ogni familiare ha il suo account, con accesso su invito.
+
+- Accesso esterno (familiari): https://loris-srv01.dala-tortoise.ts.net/ (Tailscale Funnel)
+- Accesso privato e amministrazione: https://loris-srv01.dala-tortoise.ts.net:9870/ (tailnet)
 - Specifica: `docs/SPEC.md` · operazioni: `docs/OPERAZIONI.md` · avanzamento: `docs/AVANZAMENTO.md`
 
 ## Uso

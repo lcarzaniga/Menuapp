@@ -1,8 +1,10 @@
-# Menù & Co. (menuapp)
+# Ricette di famiglia & Co. (menuapp, già «Menù & Co.»)
 
 Web app (PWA) React + TypeScript + Vite con backend Node + Fastify e database SQLite
 centrale (`node:sqlite`) sul server Debian. Un solo database condiviso da tutti i
-dispositivi; nessun login: l'accesso è deciso da Tailscale. Leggi `docs/SPEC.md` (fonte di
+dispositivi; multiutente con accesso su invito e dispositivi approvati (SPEC §19), spazio
+collaborativo della famiglia (SPEC §20). Nome breve «Ricette & Co.»; repository, cartelle,
+database, servizi, URL e identificativi tecnici restano `menuapp`. Leggi `docs/SPEC.md` (fonte di
 verità) e `docs/AVANZAMENTO.md` (stato del lavoro) prima di cambiare qualcosa.
 
 ## Chi la usa e come

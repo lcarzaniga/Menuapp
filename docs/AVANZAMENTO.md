@@ -1,4 +1,4 @@
-# Avanzamento — Menù & Co.
+# Avanzamento — Ricette di famiglia & Co. (menuapp)
 
 Documento operativo per riprendere il lavoro fra sessioni.
 
@@ -140,10 +140,27 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Funnel non ancora attivato (autorizzato; lo esegue Loris con
   `scripts/attiva-ingresso-pubblico.sh` e `tailscale funnel`).
 
-## Ricettario di famiglia (13/11/2026, ramo `ricettario-famiglia`, da rilasciare)
+## Ricettario di famiglia (13/11/2026, in produzione: `20261113-1323-80ec6d8`, schema v6)
 
 - SPEC 3.1: ricette visibili a tutti per impostazione predefinita, «Rendi privata» per il
   proprietario (le private si condividono con persone scelte); modifica solo del proprietario;
   negli eventi altrui per copia. Migrazione `0006_visibilita_piatti.sql` provata su una copia
   del database di produzione (conteggi invariati, 36 ricette di famiglia, chiavi esterne e
   integrità ok). Filtro «Solo le mie», «Utenti e dispositivi» in Impostazioni.
+
+## Spazio della famiglia e nuovo nome (16/11/2026, ramo `famiglia`, da rilasciare)
+
+- SPEC 4.0 / §20. Milestone completate: C1 bacheche (famiglia ed eventi) con commenti, reazioni,
+  foto, ricette segnalate; C2 sondaggi; C3 proposte di piatti con inserimento nel menù (copia
+  della ricetta, nessun doppione); C4 chi porta cosa su «A cura di» con uscita/rientro nella
+  spesa e prese in carico concorrenti; C5 centro notifiche (raggruppate, preferenze, pulizia
+  dopo le revoche); C6 valutazioni e classifica ponderata. Gruppi familiari espliciti;
+  permesso di partecipazione distinto. Nome «Ricette di famiglia & Co.» (breve «Ricette & Co.»).
+- Migrazione `0007_famiglia.sql` provata su una copia del database di produzione (16/11):
+  conteggi invariati (3 eventi, 21 voci, 73 piatti, 657 ingredienti, 46 foto, 4 utenti, 8
+  sessioni), spesa identica, ricettario visibile identico per ogni utente, tutti e 4 gli utenti
+  nel gruppo «Famiglia» (Loris amministratore), chiavi esterne e integrità ok.
+- Test: `npm run check` 295 verdi (nuovi `famiglia.test.ts` 19, `incarichi.test.ts` 11, matrice
+  estesa); `npm run test:e2e` 35 verdi (nuovo `famiglia.spec.ts` con due browser; schermate in
+  `test-results/famiglia/`).
+- Rilascio: `! scripts/rilascia.sh famiglia` (migrazione 0007 con backup verificato).
