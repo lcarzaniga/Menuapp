@@ -196,7 +196,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   nuove, 404 dell'amministrazione dall'esterno, 9880 senza dati, conteggi invariati, 3 eventi
   e 73 ricette nella «Famiglia», chiavi esterne ok, altri servizi e serve invariati.
 
-## Persone senza account negli incarichi (16/11/2026, ramo `esterni`, da rilasciare)
+## Persone senza account negli incarichi (16/11/2026, in produzione: `20261116-1254-15742b6`, schema v9)
 
 - SPEC 5.1 / §22: rubrica «Senza app» per Famiglia; «Affida» in «Chi porta» a chi usa l'app,
   a una persona della rubrica o a un nome (anche salvato in rubrica), con nota e uscita dalla
@@ -206,4 +206,15 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Test: `npm run check` 314 verdi (nuovo `esterni.test.ts`, 6), `npm run test:e2e` 37 verdi
   (nuovo `esterni.spec.ts`).
 - Proposta aperta: elenco dei partecipanti collegato ai coperti (vedi SPEC §22).
-- Rilascio: `! scripts/rilascia.sh esterni`.
+- Rilasciato il 16/11 alle 12:54; verificati salute (privato e Funnel), 401 senza sessione sulla
+  rubrica, dati invariati, chiavi esterne ok, altri servizi attivi.
+
+## Avvisi del rilascio (16/11/2026, ramo `avvisi-rilascio`, da rilasciare)
+
+- `INEFFECTIVE_DYNAMIC_IMPORT`: il modulo dell'attività è ora in `src/features/piano/ModuloAttivita.tsx`
+  (usato dal Piano e dall'editor delle voci), così il Piano resta caricato su richiesta.
+- `glob@11.1.0` deprecato (dipendenza di `workbox-build`, solo per la build): `overrides` in
+  `package.json` verso `glob@^14` (stessa API `globSync`); service worker con gli stessi file.
+- `curl: Failed to connect` durante i controlli del rilascio: tentativi silenziosi mentre il
+  servizio riparte; in caso di fallimento finale si mostra l'errore.
+- Test: `npm run check` 314 verdi, `npm run test:e2e` 37 verdi. Nessuna migrazione.

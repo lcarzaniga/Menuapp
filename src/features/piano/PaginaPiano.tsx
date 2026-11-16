@@ -1,29 +1,17 @@
 // Evento — Piano: attività per giorno e checklist (SPEC F6, §7.7).
-import { Check, ChefHat, Plus, Trash2 } from 'lucide-react'
+import { Check, ChefHat, Plus } from 'lucide-react'
 import { useState } from 'react'
-import { toast } from 'sonner'
-import { api, nuovoId } from '@/api/client'
+import { api } from '@/api/client'
 import { useAttivita, useMenu } from '@/api/query'
 import { useScrittura } from '@/api/scrittura'
 import { Caricamento, Vuoto } from '@/components/Pagina'
 import { Button } from '@/components/ui/button'
-import { Campo, Input, Select, Textarea } from '@/components/ui/campi'
-import { Finestra } from '@/components/ui/dialog'
 import { usePuoScrivere } from '@/connessione/stato'
-import { aggiungiGiorni, dataLunga, oggiISO, sottraiMinuti } from '@/domain/tempo.ts'
-import type { Attivita, Evento } from '@/domain/tipi.ts'
+import { dataLunga, oggiISO } from '@/domain/tempo.ts'
+import type { Attivita } from '@/domain/tipi.ts'
 import { CorpoScheda, useEventoCorrente } from '@/features/eventi/LayoutEvento'
+import { ModuloAttivita } from './ModuloAttivita'
 import { cn } from '@/lib/utils'
-
-export function scelteRapide(e: Pick<Evento, 'data' | 'oraServizio'>): { etichetta: string; data: string; ora: string | null }[] {
-  const s = [
-    { etichetta: '2 giorni prima', data: aggiungiGiorni(e.data, -2), ora: null },
-    { etichetta: 'Il giorno prima', data: aggiungiGiorni(e.data, -1), ora: null },
-    { etichetta: 'La mattina', data: e.data, ora: '09:00' },
-  ]
-  if (e.oraServizio) s.push({ etichetta: 'Un\'ora prima del servizio', ...sottraiMinuti(e.data, e.oraServizio, 60) })
-  return s
-}
 
 function inRitardo(a: Attivita, oggi: string, ora: string): boolean {
   if (a.stato === 'fatto') return false
@@ -115,104 +103,5 @@ export function PaginaPiano() {
       )}
       {aperta ? <ModuloAttivita evento={e} attivita={aperta === 'nuova' ? null : aperta} voci={voci} onChiudi={() => setAperta(null)} /> : null}
     </CorpoScheda>
-  )
-}
-
-export function ModuloAttivita({
-  evento,
-  attivita: a,
-  voci,
-  voceIniziale = null,
-  onChiudi,
-}: {
-  evento: Evento
-  attivita: Attivita | null
-  voci: { id: string; nome: string }[]
-  voceIniziale?: string | null
-  onChiudi: () => void
-}) {
-  const [id] = useState(nuovoId)
-  const puoScrivere = usePuoScrivere()
-  const nomeVoce = voci.find((v) => v.id === voceIniziale)?.nome
-  const [d, setD] = useState({
-    titolo: a?.titolo ?? (nomeVoce ? `Preparare ${nomeVoce.charAt(0).toLowerCase()}${nomeVoce.slice(1)}` : ''),
-    data: a?.data ?? aggiungiGiorni(evento.data, -1),
-    ora: a?.ora ?? null,
-    voceMenuId: a?.voceMenuId ?? voceIniziale,
-    note: a?.note ?? '',
-  })
-  const salva = useScrittura(
-    () => (a ? api.modifica(`/attivita/${a.id}`, { ...d, stato: a.stato, versione: a.versione }) : api.crea(`/eventi/${evento.id}/attivita`, { id, ...d })),
-    { oggetto: 'L\'attività', dopo: onChiudi, successo: a ? 'Salvato' : 'Attività aggiunta' },
-  )
-  const ripristina = useScrittura((x: Attivita) => api.crea(`/eventi/${evento.id}/attivita`, { id: x.id, titolo: x.titolo, data: x.data, ora: x.ora, voceMenuId: x.voceMenuId, note: x.note }), {
-    successo: 'Attività ripristinata',
-  })
-  const elimina = useScrittura(() => api.elimina(`/attivita/${a!.id}`, a!.versione), {
-    successo: null,
-    dopo: () => {
-      onChiudi()
-      toast(`«${a!.titolo}» eliminata`, { duration: 5000, action: { label: 'Annulla', onClick: () => void ripristina.esegui(a!) } })
-    },
-  })
-  return (
-    <Finestra aperta onCambia={(x) => !x && onChiudi()} titolo={a ? 'Attività' : 'Nuova attività'}>
-      <form
-        className="flex flex-col gap-3"
-        onSubmit={(ev) => {
-          ev.preventDefault()
-          if (d.titolo.trim()) void salva.esegui(undefined)
-        }}
-      >
-        <Campo etichetta="Cosa fare" htmlFor="at-titolo">
-          <Input id="at-titolo" autoFocus={!a} value={d.titolo} onChange={(e) => setD({ ...d, titolo: e.target.value })} />
-        </Campo>
-        <div className="flex flex-wrap gap-1.5">
-          {scelteRapide(evento).map((s) => (
-            <button
-              key={s.etichetta}
-              type="button"
-              className={cn('rounded-full border border-bordo px-3 py-1.5 text-sm', d.data === s.data && d.ora === s.ora && 'border-primario bg-primario-tenue text-primario')}
-              onClick={() => setD({ ...d, data: s.data, ora: s.ora })}
-            >
-              {s.etichetta}
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Campo etichetta="Giorno" htmlFor="at-data">
-            <Input id="at-data" type="date" value={d.data} onChange={(e) => setD({ ...d, data: e.target.value })} />
-          </Campo>
-          <Campo etichetta="Ora (facoltativa)" htmlFor="at-ora">
-            <Input id="at-ora" type="time" value={d.ora ?? ''} onChange={(e) => setD({ ...d, ora: e.target.value || null })} />
-          </Campo>
-        </div>
-        <Campo etichetta="Piatto collegato" htmlFor="at-voce">
-          <Select id="at-voce" value={d.voceMenuId ?? ''} onChange={(e) => setD({ ...d, voceMenuId: e.target.value || null })}>
-            <option value="">Nessuno</option>
-            {voci.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.nome}
-              </option>
-            ))}
-          </Select>
-        </Campo>
-        <Campo etichetta="Note" htmlFor="at-note">
-          <Textarea id="at-note" className="min-h-16" value={d.note} onChange={(e) => setD({ ...d, note: e.target.value })} />
-        </Campo>
-        <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-          {a ? (
-            <Button variante="fantasma" className="text-pericolo" disabled={!puoScrivere} onClick={() => void elimina.esegui(undefined)}>
-              <Trash2 /> Elimina
-            </Button>
-          ) : (
-            <span />
-          )}
-          <Button type="submit" disabled={!d.titolo.trim() || !d.data || salva.inCorso || !puoScrivere}>
-            Salva
-          </Button>
-        </div>
-      </form>
-    </Finestra>
   )
 }

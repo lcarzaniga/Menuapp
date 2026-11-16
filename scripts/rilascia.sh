@@ -98,11 +98,12 @@ fi
 systemctl --user restart menuapp
 
 # 6. Controlli
+# Tentativi silenziosi: mentre il servizio riparte le connessioni rifiutate sono normali.
 controlla() {
   local s
-  s=$(curl -fsS "http://127.0.0.1:$PORTA/api/v1/salute") || return 1
+  s=$(curl -fs "http://127.0.0.1:$PORTA/api/v1/salute") || return 1
   grep -q "\"rilascio\":\"$id\"" <<<"$s" || return 1
-  curl -fsSI "http://127.0.0.1:$PORTA/sw.js" | grep -qi '^cache-control: no-cache' || return 1
+  curl -fsI "http://127.0.0.1:$PORTA/sw.js" | grep -qi '^cache-control: no-cache' || return 1
   ! ss -tlnH | awk '{print $4}' | grep -qE "^(0\.0\.0\.0|\*|\[::\]):$PORTA\$" || return 1
   # Rete di casa in HTTP: risponde ma non dà dati (le API 403, le pagine rimandano all'HTTPS).
   if systemctl --user cat menuapp 2>/dev/null | grep -q MENUAPP_PORTA_LAN; then
@@ -110,16 +111,17 @@ controlla() {
   fi
   # Ingresso pubblico (Funnel), se configurato: niente funzioni di sistema.
   if grep -q MENUAPP_PORTA_PUBBLICA "$DATI/server.json" 2>/dev/null; then
-    curl -fsS "http://127.0.0.1:$PORTA_PUBBLICA/api/v1/salute" | grep -q '"ok":true' || return 1
+    curl -fs "http://127.0.0.1:$PORTA_PUBBLICA/api/v1/salute" | grep -q '"ok":true' || return 1
     [[ "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORTA_PUBBLICA/api/v1/backup")" == 404 ]] || return 1
     ! ss -tlnH | awk '{print $4}' | grep -qE "^(0\.0\.0\.0|\*|\[::\]):$PORTA_PUBBLICA\$" || return 1
   fi
   if tailscale serve status 2>/dev/null | grep -q ":$PORTA"; then
-    curl -fsS "$URL_PUBBLICO/api/v1/salute" | grep -q "\"rilascio\":\"$id\"" || return 1
+    curl -fs "$URL_PUBBLICO/api/v1/salute" | grep -q "\"rilascio\":\"$id\"" || return 1
   fi
 }
 for _ in $(seq 1 20); do controlla && break; sleep 0.5; done
 if ! controlla; then
+  curl -sS "http://127.0.0.1:$PORTA/api/v1/salute" >&2 || true
   schema_prec=$( [[ -n "$precedente" ]] && jq -r .versioneSchema "$RILASCI/$precedente/rilascio.json" 2>/dev/null || echo "")
   if [[ -n "$precedente" && "$schema_prec" == "$schema" ]]; then
     ln -sfn "$precedente" "$RILASCI/.attuale-nuovo" && mv -T "$RILASCI/.attuale-nuovo" "$RILASCI/attuale"

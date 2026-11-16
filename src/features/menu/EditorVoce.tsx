@@ -12,7 +12,7 @@ import type { Menu, VoceDelMenu } from '@/contratto/eventi.ts'
 import { formattaCoperti } from '@/domain/porzioni.ts'
 import type { Evento, VoceMenu } from '@/domain/tipi.ts'
 import { CollegaPiatto } from '@/features/ricettario/CollegaPiatto'
-import { ModuloAttivita } from '@/features/piano/PaginaPiano'
+import { ModuloAttivita } from '@/features/piano/ModuloAttivita'
 
 interface Dati {
   nome: string
