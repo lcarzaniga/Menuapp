@@ -91,8 +91,17 @@ export function leggiPiatti(db: Db, ids: string[]): Map<string, Piatto> {
 }
 
 /** Piatti visibili all'utente nel ricettario: i suoi, quelli di famiglia e quelli condivisi con lui. */
-export function elencaPiatti(db: Db, utenteId: string, ricerca?: string) {
-  const filtro = ricerca ? `%${norm(ricerca).replace(/[%_]/g, '')}%` : '%'
+/** Un nome per forma normalizzata («Uova» e «uova» sono lo stesso). */
+function senzaDoppioni(nomi: string[]): string[] {
+  const visti = new Set<string>()
+  return nomi.filter((n) => {
+    const k = norm(n)
+    return !visti.has(k) && visti.add(k)
+  })
+}
+
+/** Ricette leggibili dall'utente, con i nomi degli ingredienti per la ricerca (§23). */
+export function elencaPiatti(db: Db, utenteId: string) {
   return tutti<{
     id: string
     nome: string
@@ -108,6 +117,7 @@ export function elencaPiatti(db: Db, utenteId: string, ricerca?: string) {
     origine_autore: string
     condiviso: number
     visibilita: 'famiglia' | 'privata'
+    ingredienti: string | null
   }>(
     db,
     `SELECT p.id, p.nome, p.portata_suggerita, p.porzioni_base, p.versione, p.aggiornato_il, p.proprietario_id, p.origine_autore,
@@ -116,12 +126,14 @@ export function elencaPiatti(db: Db, utenteId: string, ricerca?: string) {
        (SELECT count(*) FROM ingredienti_piatto i WHERE i.piatto_id = p.id) AS numero_ingredienti,
        (SELECT count(*) FROM ingredienti_piatto i WHERE i.piatto_id = p.id AND i.stato_parsing = 'da_verificare') AS da_verificare,
        (SELECT count(*) FROM voci_menu v WHERE v.piatto_id = p.id) AS usi,
-       EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id) AS condiviso
+       EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id) AS condiviso,
+       (SELECT group_concat(n, char(31)) FROM (
+          SELECT i.nome AS n FROM ingredienti_piatto i WHERE i.piatto_id = p.id
+          UNION SELECT c.nome FROM ingredienti_piatto i JOIN ingredienti c ON c.id = i.ingrediente_id WHERE i.piatto_id = p.id
+          UNION SELECT s.sinonimo FROM ingredienti_piatto i JOIN sinonimi_ingrediente s ON s.ingrediente_id = i.ingrediente_id WHERE i.piatto_id = p.id)) AS ingredienti
      FROM piatti p JOIN utenti u ON u.id = p.proprietario_id
-     WHERE p.nome_norm LIKE ?
-       AND (p.proprietario_id = ? OR ${CONDIVISA_CON_LE_MIE_FAMIGLIE} OR EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id AND c.utente_id = ?))
+     WHERE (p.proprietario_id = ? OR ${CONDIVISA_CON_LE_MIE_FAMIGLIE} OR EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id AND c.utente_id = ?))
      ORDER BY p.nome_norm`,
-    filtro,
     utenteId,
     utenteId,
     utenteId,
@@ -140,6 +152,7 @@ export function elencaPiatti(db: Db, utenteId: string, ricerca?: string) {
     condiviso: r.proprietario_id === utenteId && r.condiviso === 1,
     origineAutore: r.origine_autore,
     visibilita: r.visibilita,
+    ingredienti: senzaDoppioni(r.ingredienti ? r.ingredienti.split('\u001f') : []),
   }))
 }
 

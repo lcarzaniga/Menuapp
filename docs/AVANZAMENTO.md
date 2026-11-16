@@ -209,7 +209,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Rilasciato il 16/11 alle 12:54; verificati salute (privato e Funnel), 401 senza sessione sulla
   rubrica, dati invariati, chiavi esterne ok, altri servizi attivi.
 
-## Avvisi del rilascio (16/11/2026, ramo `avvisi-rilascio`, da rilasciare)
+## Avvisi del rilascio (16/11/2026, in produzione: `20261116-1334-00a32ea`)
 
 - `INEFFECTIVE_DYNAMIC_IMPORT`: il modulo dell'attività è ora in `src/features/piano/ModuloAttivita.tsx`
   (usato dal Piano e dall'editor delle voci), così il Piano resta caricato su richiesta.
@@ -218,3 +218,10 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - `curl: Failed to connect` durante i controlli del rilascio: tentativi silenziosi mentre il
   servizio riparte; in caso di fallimento finale si mostra l'errore.
 - Test: `npm run check` 314 verdi, `npm run test:e2e` 37 verdi. Nessuna migrazione.
+
+## Ricerca delle ricette per ingredienti (16/11/2026, ramo `ricerca-ingredienti`, da rilasciare)
+
+- SPEC 5.2 / §23: ricerca per nome e ingredienti (catalogo e sinonimi), più termini, senza
+  accenti e maiuscole, ordine per pertinenza; ricettario e scelta dei piatti nel menù.
+- Nessuna migrazione. Test: `npm run check` 324 verdi, `npm run test:e2e` 38 verdi.
+- Rilascio: `! scripts/rilascia.sh ricerca-ingredienti`.

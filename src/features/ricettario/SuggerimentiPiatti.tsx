@@ -3,14 +3,16 @@
 import { ChefHat } from 'lucide-react'
 import { usePiatti } from '@/api/query'
 import type { RiepilogoPiatto } from '@/contratto/ricettario.ts'
-import { norm } from '@/domain/testo.ts'
+import { cercaRicette, type Risultato } from '@/domain/ricerca.ts'
 
-export function cercaPiatti(piatti: RiepilogoPiatto[], testo: string, massimo = 5): RiepilogoPiatto[] {
-  const q = norm(testo)
-  if (q.length < 2) return []
-  const inizio = piatti.filter((p) => norm(p.nome).startsWith(q))
-  const dentro = piatti.filter((p) => !norm(p.nome).startsWith(q) && norm(p.nome).includes(q))
-  return [...inizio, ...dentro].slice(0, massimo)
+/** Ricette per nome e ingredienti, le più pertinenti per prime (SPEC §23). */
+export function cercaPiatti(piatti: RiepilogoPiatto[], testo: string, massimo = 5): Risultato<RiepilogoPiatto>[] {
+  return cercaRicette(piatti, testo).slice(0, massimo)
+}
+
+/** «con zucchine, menta» sotto un piatto trovato per i suoi ingredienti. */
+export function NotaIngredienti({ r }: { r: Risultato<RiepilogoPiatto> }) {
+  return r.ingredientiTrovati.length ? <span className="block truncate text-xs text-testo-tenue">con {r.ingredientiTrovati.join(', ')}</span> : null
 }
 
 export function SuggerimentiPiatti({ testo, onScegli }: { testo: string; onScegli: (p: RiepilogoPiatto) => void }) {
@@ -20,17 +22,21 @@ export function SuggerimentiPiatti({ testo, onScegli }: { testo: string; onScegl
   return (
     <ul role="listbox" aria-label="Piatti del ricettario" className="absolute inset-x-0 top-full z-30 mt-1 overflow-hidden rounded-xl border border-bordo bg-carta shadow-lg">
       <li className="px-3 pt-2 text-xs text-testo-tenue">Dal ricettario (tocca per collegare)</li>
-      {trovati.map((p) => (
-        <li key={p.id}>
+      {trovati.map((r) => (
+        <li key={r.ricetta.id}>
           <button
             type="button"
             role="option"
             aria-selected={false}
             className="flex min-h-11 w-full items-center gap-2 px-3 text-left text-sm hover:bg-tenue"
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onScegli(p)}
+            onClick={() => onScegli(r.ricetta)}
           >
-            <ChefHat className="size-4 text-successo" /> {p.nome}
+            <ChefHat className="size-4 shrink-0 text-successo" />
+            <span className="min-w-0">
+              {r.ricetta.nome}
+              <NotaIngredienti r={r} />
+            </span>
           </button>
         </li>
       ))}

@@ -2072,6 +2072,30 @@ Richiesta di Loris (16/11/2026): affidare piatti e cose da portare anche a chi n
   i due numeri dell'evento, indipendenti dagli incarichi.
 - Test: `server/api/esterni.test.ts`, e2e `test/e2e/esterni.spec.ts`.
 
+## 23. Ricerca delle ricette per nome e ingredienti
+
+Richiesta di Loris (16/11/2026). Prima: solo il nome, come sottostringa senza accenti, nel
+ricettario e nella scelta di un piatto per il menù (inserimento rapido e «Collega»).
+
+- Una sola funzione pura `cercaRicette` (`src/domain/ricerca.ts`) per ricettario, menù e
+  `GET /piatti?q=`. Nessun motore esterno.
+- Si cerca nel nome e negli **ingredienti**: nome scritto nella ricetta, nome del catalogo e
+  **sinonimi** del catalogo (`ingredienti`, `sinonimi_ingrediente`), forniti nel riepilogo
+  del piatto (`ingredienti: string[]`, senza doppioni per forma normalizzata).
+- Senza maiuscole e accenti; più parole insieme; parole vuote ignorate («di», «al», «con»…).
+  Negli ingredienti un termine vale all'inizio di parola o come singolare/plurale («uova» →
+  «uovo»); nel nome anche come parte di parola (come prima).
+- Ordine: 1) tutti i termini nel nome; 2) tutti i termini trovati, almeno uno fra gli
+  ingredienti; 3) corrispondenze parziali. A parità: chi comincia con il testo, più termini,
+  più termini nel nome, ordine alfabetico. Sotto il risultato «con …» dice cosa ha trovato.
+- Il ricettario mostra i gruppi «Nel nome», «Negli ingredienti», «Corrispondenze parziali»;
+  il filtro per portata vale anche con la ricerca; la rubrica alfabetica resta senza ricerca.
+- Permessi: si cerca solo fra le ricette che l'utente può leggere (il server non manda le
+  altre). La Famiglia attiva non filtra il ricettario (§21.3).
+- Prestazioni: 73 ricette reali, elenco 5–9 ms, ricerca sotto 8 ms; 5000 ricette da 15
+  ingredienti: prima ricerca ~0,4 s, poi ~16 ms; dal server con 2000 ricette ~150 ms.
+- Test: `src/domain/ricerca.test.ts`, `server/api/ricerca.test.ts`, e2e `test/e2e/ricerca.spec.ts`.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2091,3 +2115,4 @@ Richiesta di Loris (16/11/2026): affidare piatti e cose da portare anche a chi n
 | 16/11/2026 | 4.0 — **Spazio della famiglia** e nuovo nome «Ricette di famiglia & Co.» (§20): gruppi familiari, bacheche della famiglia e degli eventi con commenti, reazioni e foto, sondaggi, proposte di piatti, chi porta cosa integrato con «A cura di» e spesa, centro notifiche, valutazioni e classifica; permesso di partecipazione distinto dalla modifica; migrazione `0007_famiglia.sql`; navigazione Eventi · Ricettario · Famiglia · Notifiche · Impostazioni (Ingredienti da Ricettario e Impostazioni) |
 | 16/11/2026 | 5.0 — **Più Famiglie per persona** (§21): Famiglie con inviti ad aderire, uscita, rimozione e passaggio dell'amministrazione; Famiglia attiva con selettore solo da due Famiglie; eventi associati a una Famiglia; ricette condivise con una o più Famiglie (copie private); classifiche e notifiche per Famiglia; migrazione `0008_famiglie.sql` |
 | 16/11/2026 | 5.1 — **Persone senza account** negli incarichi (§22): rubrica per Famiglia, incarichi affidati a utenti, persone della rubrica o nomi liberi senza doppioni, note, quantità e unità delle cose da portare; migrazione `0009_persone_esterne.sql` |
+| 16/11/2026 | 5.2 — **Ricerca per ingredienti** (§23): nome, ingredienti, catalogo e sinonimi, più termini, ordine per pertinenza nel ricettario e nel menù |

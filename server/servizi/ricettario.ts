@@ -1,5 +1,6 @@
 // Casi d'uso del ricettario e del catalogo (SPEC §7.2, §7.5–7.6, F3–F4).
 import type { AggiornaIngrediente, AggiornaPiatto, DettaglioPiatto, NuovoIngrediente, NuovoPiatto, RiepilogoPiatto } from '../../src/contratto/ricettario.ts'
+import { cercaRicette, terminiRicerca } from '../../src/domain/ricerca.ts'
 import { norm, pulisci } from '../../src/domain/testo.ts'
 import type { Ingrediente, IngredientePiatto, Piatto, Reparto, VoceMenu } from '../../src/domain/tipi.ts'
 import { REPARTO_ALTRO } from '../../src/domain/tipi.ts'
@@ -14,9 +15,11 @@ import { elencaReparti, leggiReparto } from './impostazioni.ts'
 import { elencaFoto, fotoPrincipali, ricollegaPassi } from './foto.ts'
 import { aggiornaConVersione, controllaVersioni, creaIdempotente, eliminaConVersione, incrementaVersione } from './versioni.ts'
 
+/** Ricette leggibili; con `ricerca` solo quelle trovate, nell'ordine della ricerca (§23). */
 export function elencaPiatti(db: Db, utenteId: string, ricerca?: string): RiepilogoPiatto[] {
   const principali = fotoPrincipali(db)
-  return repo.elencaPiatti(db, utenteId, ricerca).map((p) => ({ ...p, fotoPrincipale: principali.get(p.id) ?? null }))
+  const elenco = repo.elencaPiatti(db, utenteId).map((p) => ({ ...p, fotoPrincipale: principali.get(p.id) ?? null }))
+  return ricerca && terminiRicerca(ricerca).length ? cercaRicette(elenco, ricerca).map((x) => x.ricetta) : elenco
 }
 
 /** Scheda del piatto vista da `utenteId` (l'accesso è già stato verificato). */

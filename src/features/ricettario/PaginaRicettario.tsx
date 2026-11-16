@@ -7,7 +7,7 @@ import { Caricamento, Pagina, Vuoto } from '@/components/Pagina'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/campi'
-import { norm } from '@/domain/testo.ts'
+import { cercaRicette, type LivelloRisultato, type Risultato, terminiRicerca } from '@/domain/ricerca.ts'
 import { portataDelPiatto, portateDelRicettario, rubrica } from '@/domain/ricettario.ts'
 import { formattaCoperti } from '@/domain/porzioni.ts'
 import { cn } from '@/lib/utils'
@@ -41,15 +41,14 @@ export function PaginaRicettario() {
   const scelta = parametri.get('portata')
   const portata = portate.some((p) => p.nome === scelta) ? scelta : null
   const scegli = (nome: string | null) => setParametri(nome ? { portata: nome } : {}, { replace: true })
-  const q = norm(cerca)
-  const elenco = useMemo(
-    () =>
-      tutti.filter(
-        (p) => (!q || norm(p.nome).includes(q)) && (!soloVuoti || p.numeroIngredienti === 0) && (!soloMie || p.mio) && (!portata || portataDelPiatto(p.portataSuggerita, predefinite) === portata),
-      ),
-    [tutti, q, soloVuoti, soloMie, portata, predefinite],
+  const filtrati = useMemo(
+    () => tutti.filter((p) => (!soloVuoti || p.numeroIngredienti === 0) && (!soloMie || p.mio) && (!portata || portataDelPiatto(p.portataSuggerita, predefinite) === portata)),
+    [tutti, soloVuoti, soloMie, portata, predefinite],
   )
-  const gruppi = useMemo(() => rubrica(elenco), [elenco])
+  // Con una ricerca: per pertinenza (nome, poi ingredienti, poi in parte); senza: rubrica alfabetica.
+  const risultati = useMemo(() => (terminiRicerca(cerca).length ? cercaRicette(filtrati, cerca) : null), [filtrati, cerca])
+  const elenco = risultati ? risultati.map((x) => x.ricetta) : filtrati
+  const gruppi = useMemo(() => rubrica(filtrati), [filtrati])
   const lettere = useMemo(() => gruppi.map((g) => g.lettera), [gruppi])
   const vuoti = tutti.filter((p) => p.numeroIngredienti === 0).length
   return (
@@ -76,7 +75,7 @@ export function PaginaRicettario() {
     >
       <div className="relative mb-3">
         <Search className="absolute left-3 top-3.5 size-4 text-testo-tenue" />
-        <Input className="pl-9" placeholder="Cerca un piatto" aria-label="Cerca un piatto" value={cerca} onChange={(e) => setCerca(e.target.value)} />
+        <Input className="pl-9" placeholder="Cerca per nome o ingredienti" aria-label="Cerca un piatto" value={cerca} onChange={(e) => setCerca(e.target.value)} />
       </div>
       {portate.length > 1 || vuoti > 0 || tutti.some((p) => !p.mio) ? (
         <div role="group" aria-label="Filtra per portata" className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
@@ -119,6 +118,8 @@ export function PaginaRicettario() {
         />
       ) : elenco.length === 0 ? (
         <p className="py-6 text-center text-sm text-testo-tenue">Nessun piatto trovato.</p>
+      ) : risultati ? (
+        <RisultatiRicerca risultati={risultati} />
       ) : (
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
@@ -146,7 +147,29 @@ export function PaginaRicettario() {
   )
 }
 
-function RigaPiatto({ piatto: p }: { piatto: RiepilogoPiatto }) {
+const TITOLI: Record<LivelloRisultato, string> = { nome: 'Nel nome', ingredienti: 'Negli ingredienti', parziale: 'Corrispondenze parziali' }
+
+function RisultatiRicerca({ risultati }: { risultati: Risultato<RiepilogoPiatto>[] }) {
+  const livelli = (['nome', 'ingredienti', 'parziale'] as const).map((l) => ({ l, voci: risultati.filter((x) => x.livello === l) })).filter((g) => g.voci.length)
+  return (
+    <div className="flex flex-col gap-3">
+      {livelli.map(({ l, voci }) => (
+        <section key={l} aria-label={TITOLI[l]}>
+          {livelli.length > 1 || l !== 'nome' ? <h2 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-testo-tenue">{TITOLI[l]}</h2> : null}
+          <ul className="flex flex-col gap-2">
+            {voci.map((x) => (
+              <li key={x.ricetta.id}>
+                <RigaPiatto piatto={x.ricetta} ingredienti={x.ingredientiTrovati} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  )
+}
+
+function RigaPiatto({ piatto: p, ingredienti = [] }: { piatto: RiepilogoPiatto; ingredienti?: string[] }) {
   return (
     <Link to={`/ricettario/${p.id}`} className="flex items-center gap-3 rounded-2xl border border-bordo/70 bg-carta p-2 pr-3 shadow-carta hover:bg-tenue/60">
       {p.fotoPrincipale ? (
@@ -165,6 +188,7 @@ function RigaPiatto({ piatto: p }: { piatto: RiepilogoPiatto }) {
           <span>· {p.numeroIngredienti} ingredienti</span>
           {p.daVerificare ? <Badge variante="avviso">{p.daVerificare} da verificare</Badge> : null}
         </p>
+        {ingredienti.length ? <p className="mt-0.5 truncate text-xs text-successo">con {ingredienti.join(', ')}</p> : null}
       </div>
       <ChevronRight className="size-5 shrink-0 text-testo-tenue" />
     </Link>

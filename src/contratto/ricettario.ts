@@ -90,6 +90,8 @@ export const SchemaRiepilogoPiatto = z.object({
   ...CampiProprieta,
   /** Ricetta privata che il proprietario condivide con qualcuno. */
   condiviso: z.boolean(),
+  /** Nomi per la ricerca (§23): ingredienti come scritti, nel catalogo e loro sinonimi. */
+  ingredienti: z.array(z.string()),
 })
 export type RiepilogoPiatto = z.infer<typeof SchemaRiepilogoPiatto>
 

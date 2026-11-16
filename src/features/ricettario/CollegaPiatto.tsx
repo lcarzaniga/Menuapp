@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/campi'
 import { usePuoScrivere } from '@/connessione/stato'
 import type { VoceMenu } from '@/domain/tipi.ts'
-import { cercaPiatti } from './SuggerimentiPiatti'
+import { cercaPiatti, NotaIngredienti } from './SuggerimentiPiatti'
 
 export function CollegaPiatto({ voce, onCollega, onCreato }: { voce: VoceMenu; onCollega: (piattoId: string) => void; onCreato: () => void }) {
   const [cerca, setCerca] = useState('')
@@ -31,13 +31,17 @@ export function CollegaPiatto({ voce, onCollega, onCreato }: { voce: VoceMenu; o
       <Button variante="contorno" misura="piccolo" className="self-start" disabled={!puoScrivere || crea.inCorso} onClick={() => void crea.esegui(nuovoId())}>
         <Plus /> Crea «{voce.nome}» nel ricettario
       </Button>
-      <Input aria-label="Cerca un piatto esistente" placeholder="…oppure cerca un piatto esistente" value={cerca} onChange={(e) => setCerca(e.target.value)} />
+      <Input aria-label="Cerca un piatto esistente" placeholder="…oppure cerca per nome o ingredienti" value={cerca} onChange={(e) => setCerca(e.target.value)} />
       {trovati.length ? (
         <ul className="flex flex-col">
-          {trovati.map((p) => (
-            <li key={p.id}>
-              <button type="button" className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left text-sm hover:bg-carta" onClick={() => onCollega(p.id)}>
-                <ChefHat className="size-4 text-successo" /> {p.nome}
+          {trovati.map((r) => (
+            <li key={r.ricetta.id}>
+              <button type="button" className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left text-sm hover:bg-carta" onClick={() => onCollega(r.ricetta.id)}>
+                <ChefHat className="size-4 shrink-0 text-successo" />
+                <span className="min-w-0">
+                  {r.ricetta.nome}
+                  <NotaIngredienti r={r} />
+                </span>
                 <span className="ml-auto text-xs text-testo-tenue">collega</span>
               </button>
             </li>
