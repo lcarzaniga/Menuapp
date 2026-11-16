@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils'
 import { Bacheca } from './Bacheca'
 import { useClassifica } from './api'
 import { useFamigliaAttiva } from './attiva'
+import { RicorrenzeFamiglia } from './RicorrenzeFamiglia'
 
 export function PaginaFamiglia() {
   const { attiva, caricamento } = useFamigliaAttiva()
@@ -162,6 +163,8 @@ function Membri({ famiglia }: { famiglia: Gruppo }) {
           ) : null}
         </CardContent>
       </Card>
+
+      <RicorrenzeFamiglia famiglia={famiglia} />
 
       <RubricaFamiglia famiglia={famiglia} />
 

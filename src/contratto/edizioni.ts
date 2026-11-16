@@ -1,8 +1,7 @@
-// Contratto API: duplicazione degli eventi, edizioni di una ricorrenza, riepilogo e confronto
-// (SPEC §25–§27).
+// Contratto API: duplicazione degli eventi, ricorrenze, riepilogo e confronto (SPEC §25–§28).
 import { z } from 'zod'
 import { SchemaEvento } from './eventi.ts'
-import { DataISO, Id, NomeObbligatorio } from './comune.ts'
+import { DataISO, Id, NomeObbligatorio, TestoBreve, Versione } from './comune.ts'
 
 export const SchemaDuplica = z.object({
   /** Id del nuovo evento (scelto dal client: la ripetizione della richiesta non duplica due volte). */
@@ -12,8 +11,8 @@ export const SchemaDuplica = z.object({
   /** Famiglia del nuovo evento (verificata); assente: quella dell'originale, se ne fai parte. */
   gruppoId: Id.nullable().optional(),
   copiaPartecipanti: z.boolean().default(false),
-  /** Collega la copia alla stessa serie dell'originale (stessa Famiglia). */
-  collegaSerie: z.boolean().default(true),
+  /** Ricorrenza della copia (della sua Famiglia); assente: quella dell'originale se la Famiglia è la stessa. */
+  ricorrenzaId: Id.nullable().optional(),
 })
 export type Duplica = z.infer<typeof SchemaDuplica>
 
@@ -27,18 +26,29 @@ export type EsitoDuplica = z.infer<typeof SchemaEsitoDuplica>
 export const SchemaEdizione = z.object({ id: Id, nome: z.string(), data: DataISO, stato: z.string() })
 export type Edizione = z.infer<typeof SchemaEdizione>
 
+// ── Ricorrenze (SPEC §28) ───────────────────────────────────
+
+export const SchemaRicorrenza = z.object({ id: Id, nome: z.string(), descrizione: z.string(), eventi: z.number().int(), versione: Versione })
+export type Ricorrenza = z.infer<typeof SchemaRicorrenza>
+const NomeRicorrenza = NomeObbligatorio.max(80)
+export const SchemaNuovaRicorrenza = z.object({ id: Id, nome: NomeRicorrenza, descrizione: TestoBreve.default('') })
+export const SchemaAggiornaRicorrenza = z.object({ nome: NomeRicorrenza, descrizione: TestoBreve, versione: Versione })
+
 export const SchemaEdizioni = z.object({
-  serieId: Id.nullable(),
-  /** Altre edizioni della serie che l'utente può vedere, dalla più vecchia. */
+  /** Ricorrenza dell'evento (null: nessuna). */
+  ricorrenza: z.object({ id: Id, nome: z.string() }).nullable(),
+  /** Altri eventi della stessa ricorrenza che l'utente può vedere, in ordine di data. */
   edizioni: z.array(SchemaEdizione),
-  /** Eventi della stessa Famiglia visibili all'utente, da collegare o confrontare a mano. */
+  /** Altri eventi della stessa Famiglia visibili all'utente, da confrontare a mano. */
   altriEventi: z.array(SchemaEdizione),
-  puoCollegare: z.boolean(),
+  /** Ricorrenze della Famiglia dell'evento, per sceglierne una (solo a chi può modificare e ne fa parte). */
+  ricorrenze: z.array(z.object({ id: Id, nome: z.string() })),
+  puoAssociare: z.boolean(),
 })
 export type Edizioni = z.infer<typeof SchemaEdizioni>
 
-/** Collega l'evento alla serie di un altro (stessa Famiglia), oppure lo scollega con null. */
-export const SchemaSerie = z.object({ conEventoId: Id.nullable() })
+/** Associa l'evento a una ricorrenza della sua Famiglia, oppure la toglie con null. */
+export const SchemaAssociaRicorrenza = z.object({ ricorrenzaId: Id.nullable() })
 
 // ── Riepilogo «A che punto siamo?» (SPEC §26) ───────────────
 // Ogni parte è null quando la funzione non è usata nell'evento: niente indicatori vuoti.

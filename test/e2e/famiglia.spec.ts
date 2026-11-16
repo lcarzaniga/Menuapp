@@ -34,7 +34,9 @@ test('famiglia: bacheca e sondaggio, evento con proposta, chi porta cosa, stelle
   test.setTimeout(150_000)
   const lucia = await familiare(browser, request, 'Lucia')
 
-  // ── Bacheca della famiglia: Loris apre un sondaggio
+  // ── Bacheca della famiglia: Loris apre un sondaggio (nella Famiglia, anche se ne ha altre)
+  const gruppoFamiglia = (await (await request.get('/api/v1/gruppi')).json()).find((g: { nome: string }) => g.nome === 'Famiglia').id
+  await page.addInitScript((id) => localStorage.setItem('menuapp.famiglia', id), gruppoFamiglia)
   await page.goto('/#/famiglia')
   await expect(page.getByRole('heading', { name: 'Famiglia' })).toBeVisible()
   await page.getByRole('button', { name: 'Sondaggio' }).click()

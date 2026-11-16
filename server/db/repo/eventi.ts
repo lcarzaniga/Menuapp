@@ -16,7 +16,7 @@ interface RigaEvento {
   coefficiente_bambini: number
   coperti_automatici: number
   max_accompagnatori: number | null
-  serie_id: string | null
+  ricorrenza_id: string | null
   note: string
   stato: string
   concluso_il: number | null
@@ -42,7 +42,7 @@ function daRigaEvento(db: Db, r: RigaEvento, portate: Portata[]): Evento {
     copertiAutomatici: automatici,
     copertiManuali: { adulti: r.adulti, bambini: r.bambini },
     maxAccompagnatori: r.max_accompagnatori,
-    serieId: r.serie_id,
+    ricorrenzaId: r.ricorrenza_id,
     note: r.note,
     stato: r.stato as StatoEvento,
     conclusoIl: r.concluso_il,
@@ -108,7 +108,7 @@ export function collegaPiatto(db: Db, voceId: string, piattoId: string | null, a
   esegui(db, 'UPDATE voci_menu SET piatto_id = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ?', piattoId, adesso, voceId)
 }
 
-export function inserisciEvento(db: Db, e: Omit<Evento, 'versione' | 'portate' | 'copertiAutomatici' | 'copertiManuali' | 'maxAccompagnatori' | 'serieId'>, proprietarioId: string, gruppoId: string | null = null): void {
+export function inserisciEvento(db: Db, e: Omit<Evento, 'versione' | 'portate' | 'copertiAutomatici' | 'copertiManuali' | 'maxAccompagnatori' | 'ricorrenzaId'>, proprietarioId: string, gruppoId: string | null = null): void {
   esegui(
     db,
     `INSERT INTO eventi (id, nome, data, ora_servizio, tipo, occasione, adulti, bambini, coefficiente_bambini, note, stato,
@@ -216,14 +216,15 @@ export function piattoEsiste(db: Db, id: string): boolean {
   return uno(db, 'SELECT 1 FROM piatti WHERE id = ?', id) !== undefined
 }
 
-// ── Edizioni ────────────────────────────────────────────────
+// ── Ricorrenze ────────────────────────────────────────────────
 
-export function impostaSerie(db: Db, eventoId: string, serieId: string | null): void {
-  esegui(db, 'UPDATE eventi SET serie_id = ? WHERE id = ?', serieId, eventoId)
+export function impostaRicorrenza(db: Db, eventoId: string, ricorrenzaId: string | null): void {
+  esegui(db, 'UPDATE eventi SET ricorrenza_id = ? WHERE id = ?', ricorrenzaId, eventoId)
 }
 
-export const eventiDellaSerie = (db: Db, serieId: string) =>
-  tutti<{ id: string }>(db, 'SELECT id FROM eventi WHERE serie_id = ? ORDER BY data, ora_servizio, nome', serieId).map((r) => r.id)
+/** Eventi di una ricorrenza in ordine di data effettiva. */
+export const eventiDellaRicorrenza = (db: Db, ricorrenzaId: string) =>
+  tutti<{ id: string }>(db, 'SELECT id FROM eventi WHERE ricorrenza_id = ? ORDER BY data, ora_servizio, nome', ricorrenzaId).map((r) => r.id)
 
 /** Voce d'origine delle voci copiate duplicando l'evento (SPEC §27). */
 export function originiVoci(db: Db, eventoId: string): Map<string, string> {

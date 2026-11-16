@@ -1,4 +1,4 @@
-// Duplicazione degli eventi ed edizioni di una ricorrenza (SPEC §25). Si copia la struttura
+// Duplicazione degli eventi e ricorrenze degli eventi (SPEC §25, §28). Si copia la struttura
 // (portate, menù, porzioni personalizzate, stile di stampa, piano da rifare e, a richiesta, i
 // partecipanti da riconfermare); mai conferme, incarichi, voti, bacheca, notifiche, spesa o
 // archiviazione. Un evento archiviato si duplica dal suo archivio, che resta com'è.
@@ -15,12 +15,13 @@ import * as repoFam from '../db/repo/famiglia.ts'
 import { incrementaRevisione } from '../db/repo/meta.ts'
 import * as repoPart from '../db/repo/partecipanti.ts'
 import * as repoRic from '../db/repo/ricettario.ts'
+import * as repoRicorrenze from '../db/repo/ricorrenze.ts'
 import * as repoStampa from '../db/repo/stampa.ts'
 import { copiaPiattoDaSnapshot, eventoDaSnapshot, snapshotValido } from './archivio.ts'
 import { creaAttivita, elencaAttivita } from './attivita.ts'
 import { piattoPerEvento } from './condivisione.ts'
 import { ErroreApi, nonTrovato, regolaViolata } from './errori.ts'
-import { creaEvento, creaVoci, leggiEvento, leggiMenu } from './eventi.ts'
+import { creaEvento, creaVoci, leggiEvento, leggiMenu, richiediModificabile } from './eventi.ts'
 import { perArchivio } from './partecipanti.ts'
 import { permessoEvento, richiediEvento, type UtenteCorrente } from './permessi.ts'
 
@@ -28,7 +29,7 @@ const puoModificare = (p: string | null) => p === 'proprietario' || p === 'modif
 
 export function duplica(db: Db, cartellaFoto: string, u: UtenteCorrente, origineId: string, d: Duplica, adesso = Date.now()): EsitoDuplica {
   return transazione(db, () => {
-    const permesso = richiediEvento(db, u, origineId, 'lettura')
+    richiediEvento(db, u, origineId, 'lettura')
     // Ripetizione della stessa richiesta: l'evento c'è già ed è di chi lo ha chiesto.
     if (uno(db, 'SELECT 1 FROM eventi WHERE id = ?', d.id)) {
       if (repoAccesso.proprietarioEvento(db, d.id) === u.id) return { evento: leggiEvento(db, d.id), avvisi: [] }
@@ -47,8 +48,13 @@ export function duplica(db: Db, cartellaFoto: string, u: UtenteCorrente, origine
     const famigliaOrigine = repoAccesso.gruppoEvento(db, origineId)
     const gruppoId = d.gruppoId !== undefined ? d.gruppoId : famigliaOrigine && repoAccesso.ruoloNelGruppo(db, famigliaOrigine, u.id) ? famigliaOrigine : null
     if (gruppoId && !repoAccesso.ruoloNelGruppo(db, gruppoId, u.id)) throw nonTrovato('Famiglia')
-    if (d.collegaSerie && gruppoId !== famigliaOrigine) throw regolaViolata('serie_altra_famiglia', 'Le edizioni di una ricorrenza restano nella stessa Famiglia: scegli la stessa Famiglia o non collegarle')
-    if (d.collegaSerie && !origine.serieId && !puoModificare(permesso)) throw regolaViolata('serie_non_modificabile', 'Per collegare le edizioni serve poter modificare l\'evento originale')
+    // Ricorrenza: quella scelta (della Famiglia del nuovo evento), altrimenti quella dell'originale
+    // se resta nella stessa Famiglia e la ricorrenza esiste ancora.
+    let ricorrenzaId: string | null = null
+    if (d.ricorrenzaId) ricorrenzaId = ricorrenzaDellaFamiglia(db, d.ricorrenzaId, gruppoId)
+    else if (d.ricorrenzaId === undefined && gruppoId && gruppoId === famigliaOrigine && origine.ricorrenzaId && repoRicorrenze.leggiRicorrenza(db, origine.ricorrenzaId)?.gruppo_id === gruppoId) {
+      ricorrenzaId = origine.ricorrenzaId
+    }
 
     // Nuovo evento: coperti manuali (con i partecipanti da riconfermare i calcolati sarebbero zero).
     const idPortate = new Map(portate.map((p) => [p.id, randomUUID()]))
@@ -126,11 +132,7 @@ export function duplica(db: Db, cartellaFoto: string, u: UtenteCorrente, origine
     // Partecipanti: stessa composizione, tutto da riconfermare.
     if (inviti.length) copiaPartecipanti(db, d.id, gruppoId, inviti, avvisi, adesso)
 
-    if (d.collegaSerie) {
-      const serie = origine.serieId ?? repo.leggiEvento(db, origineId)?.serieId ?? randomUUID()
-      if (!vivo.serieId) repo.impostaSerie(db, origineId, serie)
-      repo.impostaSerie(db, d.id, serie)
-    }
+    if (ricorrenzaId) repo.impostaRicorrenza(db, d.id, ricorrenzaId)
     incrementaRevisione(db)
     return { evento: leggiEvento(db, d.id), avvisi }
   })
@@ -175,55 +177,56 @@ function copiaPartecipanti(db: Db, eventoId: string, gruppoId: string | null, in
   }
 }
 
+/** Una ricorrenza della Famiglia indicata (che l'utente ha già dimostrato di frequentare). */
+function ricorrenzaDellaFamiglia(db: Db, ricorrenzaId: string, gruppoId: string | null): string {
+  const r = repoRicorrenze.leggiRicorrenza(db, ricorrenzaId)
+  if (!r) throw nonTrovato('Ricorrenza')
+  if (r.gruppo_id !== gruppoId) throw regolaViolata('ricorrenza_altra_famiglia', 'La ricorrenza è di un\'altra Famiglia')
+  return r.id
+}
+
 const edizione = (db: Db, id: string): Edizione => {
   const e = repo.leggiEvento(db, id)!
   return { id, nome: e.nome, data: e.data, stato: e.stato }
 }
 
-/** Edizioni della serie e altri eventi della stessa Famiglia, solo quelli che l'utente vede. */
+/** Ricorrenza dell'evento, le altre sue edizioni e gli altri eventi della Famiglia, solo quelli visibili. */
 export function edizioni(db: Db, u: UtenteCorrente, eventoId: string): Edizioni {
   return lettura(db, () => {
     const permesso = richiediEvento(db, u, eventoId, 'lettura')
     const e = leggiEvento(db, eventoId)
     const famiglia = repoAccesso.gruppoEvento(db, eventoId)
+    const membro = Boolean(famiglia && repoAccesso.ruoloNelGruppo(db, famiglia, u.id))
     const visibile = (id: string) => id !== eventoId && permessoEvento(db, u, id) !== null
-    const serie = e.serieId ? repo.eventiDellaSerie(db, e.serieId).filter(visibile) : []
-    // Altri eventi: della stessa Famiglia (o personali dello stesso tipo se l'evento è personale).
+    const ricorrenza = e.ricorrenzaId ? repoRicorrenze.leggiRicorrenza(db, e.ricorrenzaId) : undefined
+    const stesse = ricorrenza ? repo.eventiDellaRicorrenza(db, ricorrenza.id).filter(visibile) : []
     const altri = repo
       .elencaEventi(db, u.id)
-      .filter((x) => x.id !== eventoId && x.gruppo?.id === (famiglia ?? undefined) && !serie.includes(x.id))
+      .filter((x) => x.id !== eventoId && x.gruppo?.id === (famiglia ?? undefined) && !stesse.includes(x.id))
       .sort((a, b) => b.data.localeCompare(a.data))
+    const puoAssociare = puoModificare(permesso) && membro && e.stato !== 'archiviato'
     return {
-      serieId: e.serieId,
-      edizioni: serie.map((id) => edizione(db, id)),
+      ricorrenza: ricorrenza ? { id: ricorrenza.id, nome: ricorrenza.nome } : null,
+      edizioni: stesse.map((id) => edizione(db, id)),
       altriEventi: altri.map((x) => ({ id: x.id, nome: x.nome, data: x.data, stato: x.stato })),
-      puoCollegare: puoModificare(permesso),
+      ricorrenze: puoAssociare && famiglia ? repoRicorrenze.ricorrenzeFamiglia(db, famiglia).map((r) => ({ id: r.id, nome: r.nome })) : [],
+      puoAssociare,
     }
   })
 }
 
-/**
- * Collega l'evento alla serie di un altro (che deve poter modificare anche lui se non ha ancora
- * una serie), oppure lo scollega. Mai fra Famiglie diverse.
- */
-export function collegaSerie(db: Db, u: UtenteCorrente, eventoId: string, conEventoId: string | null): Edizioni {
+/** Associa l'evento a una ricorrenza della sua Famiglia (chi lo modifica e ne fa parte) o la toglie. */
+export function associaRicorrenza(db: Db, u: UtenteCorrente, eventoId: string, ricorrenzaId: string | null): Edizioni {
   transazione(db, () => {
     richiediEvento(db, u, eventoId, 'modifica')
-    if (conEventoId === null) repo.impostaSerie(db, eventoId, null)
-    else {
-      const altro = richiediEvento(db, u, conEventoId, 'lettura')
-      if (conEventoId === eventoId) throw regolaViolata('stessa_edizione', 'Scegli un altro evento')
-      if (repoAccesso.gruppoEvento(db, conEventoId) !== repoAccesso.gruppoEvento(db, eventoId)) {
-        throw regolaViolata('serie_altra_famiglia', 'Si collegano solo eventi della stessa Famiglia')
-      }
-      let serie = leggiEvento(db, conEventoId).serieId
-      if (!serie) {
-        if (!puoModificare(altro)) throw regolaViolata('serie_non_modificabile', 'Per collegarli serve poter modificare anche l\'altro evento')
-        serie = randomUUID()
-        repo.impostaSerie(db, conEventoId, serie)
-      }
-      repo.impostaSerie(db, eventoId, serie)
+    richiediModificabile(leggiEvento(db, eventoId))
+    if (ricorrenzaId) {
+      const famiglia = repoAccesso.gruppoEvento(db, eventoId)
+      if (!famiglia) throw regolaViolata('evento_personale', 'Un evento personale non ha ricorrenze: spostalo prima in una Famiglia')
+      if (!repoAccesso.ruoloNelGruppo(db, famiglia, u.id)) throw nonTrovato('Ricorrenza')
+      ricorrenzaDellaFamiglia(db, ricorrenzaId, famiglia)
     }
+    repo.impostaRicorrenza(db, eventoId, ricorrenzaId)
     incrementaRevisione(db)
   })
   return edizioni(db, u, eventoId)

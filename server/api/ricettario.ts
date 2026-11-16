@@ -9,6 +9,7 @@ import {
   SchemaCreaPiattoDaVoce,
   SchemaNuovoIngrediente,
   SchemaNuovoPiatto,
+  SchemaCopiaInFamiglia,
   SchemaFamigliePiatto,
   SchemaVisibilita,
 } from '../../src/contratto/ricettario.ts'
@@ -81,6 +82,12 @@ export function rotteRicettario(app: FastifyInstance, ctx: Contesto): void {
     const u = chi(req)
     richiediPiatto(db, u, req.params.id, 'lettura')
     const id = condivisione.copiaPiatto(db, ctx.config.cartellaFoto, u, req.params.id, valida(SchemaCopiaPiatto, req.body).id)
+    return reply.code(201).send(r.leggiPiatto(db, id, u.id))
+  })
+  app.post<ConId>(`${P}/piatti/:id/copia-in-famiglia`, async (req, reply) => {
+    const u = chi(req)
+    richiediPiatto(db, u, req.params.id, 'lettura')
+    const id = condivisione.copiaInFamiglia(db, ctx.config.cartellaFoto, u, req.params.id, valida(SchemaCopiaInFamiglia, req.body))
     return reply.code(201).send(r.leggiPiatto(db, id, u.id))
   })
 

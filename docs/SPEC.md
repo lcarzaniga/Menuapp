@@ -2002,11 +2002,12 @@ Il modello è pronto per un'apertura al pubblico (Famiglie isolate tra loro). Mi
 
 ### 21.3 Ricette
 
-- Il ricettario personale non dipende dalla Famiglia attiva. Una ricetta è condivisa con zero
-  (privata), una o più Famiglie dell'autore (`condivisioni_piatto_gruppo`); la vedono i membri
-  di quelle Famiglie **finché l'autore ne fa parte**. Le ricette nuove dall'app si condividono
-  con la Famiglia attiva (si possono rendere private); la scheda mostra «Condividi con… / Rendi
-  privata» con una Famiglia e le caselle delle Famiglie con più d'una. Le condivisioni con
+- Il ricettario personale non dipende dalla Famiglia attiva. Una ricetta è privata oppure
+  visibile in **una** Famiglia dell'autore (`condivisioni_piatto_gruppo`, al massimo una riga
+  dalla 6.1, §28); la vedono i membri di quella Famiglia **finché l'autore ne fa parte**. Le
+  ricette nuove dall'app sono visibili nella Famiglia attiva (si possono rendere private); la
+  scheda mostra «Condividi con… / Rendi privata» con una Famiglia e un elenco a scelta singola
+  con più d'una. In un'altra Famiglia la ricetta si copia (§28). Le condivisioni con
   persone (§19.4) restano per le private.
 - Copie (copia nel mio ricettario, inserimento in un evento altrui, passaggio di proprietà,
   copia da un evento archiviato): indipendenti e **private** finché l'autore della copia non le
@@ -2152,10 +2153,9 @@ M2. Migrazioni `0011_edizioni.sql` (`eventi.serie_id`) e `0012_origine_voci.sql`
   come ricetta privata (avviso); l'archivio originale non cambia.
 - **Partecipanti** (a richiesta): stessa composizione, tutti in attesa, accompagnatori senza
   nome in attesa; collegamenti alla rubrica solo se della Famiglia di destinazione.
-- **Edizioni**: la copia può diventare un'edizione della stessa ricorrenza (stessa `serie_id`,
-  solo nella stessa Famiglia: vincolo nel database). Collegare e scollegare a mano da «Altre
-  edizioni»; nessun collegamento automatico per nome; spostare un evento in un'altra Famiglia
-  lo toglie dalla serie. Ogni voce copiata ricorda la voce d'origine (identità per §27).
+- **Ricorrenza**: la copia riceve la ricorrenza dell'originale, cambiabile o da togliere (dalla
+  6.1 le serie anonime della 0011 sono sostituite dalle ricorrenze della Famiglia, §28). Ogni
+  voce copiata ricorda la voce d'origine (identità per §27).
 - Test: `server/api/duplicazione.test.ts`, e2e `edizioni.spec.ts`.
 
 ## 26. Riepilogo «A che punto siamo?»
@@ -2174,8 +2174,9 @@ richiesta. Ogni indicatore apre la sua sezione; quelli delle funzioni non usate 
 
 ## 27. Confronto fra edizioni
 
-M4. «Confronta con l'anno scorso» (da «Altre edizioni») apre `#/eventi/:id/confronto`:
-propone l'edizione precedente della serie, oppure un evento della stessa Famiglia scelto a mano.
+M4. «Confronta con l'anno scorso» (dal riquadro «Ricorrenza») apre `#/eventi/:id/confronto`:
+propone l'evento precedente della stessa ricorrenza per data (anche non consecutivo, senza
+segnalare le edizioni mancanti), oppure un evento della stessa Famiglia scelto a mano.
 
 - Mostra coperti, persone e partecipanti delle due edizioni, portate nuove o tolte, piatti in
   entrambe (con le porzioni se cambiano), nuovi e non riproposti.
@@ -2187,6 +2188,48 @@ propone l'edizione precedente della serie, oppure un evento della stessa Famigli
 - Eventi archiviati letti dall'archivio. Solo eventi visibili all'utente e della stessa
   Famiglia (404 / 422 altrimenti).
 - Test: `src/domain/confronto.test.ts`, `server/api/confronto.test.ts`, e2e `edizioni.spec.ts`.
+
+## 28. Ricorrenze e copia delle ricette fra Famiglie
+
+Richiesta di Loris (16/11/2026). Migrazione `0013_ricorrenze.sql`.
+
+### 28.1 Ricorrenze
+
+- Ogni Famiglia ha un elenco di ricorrenze (`ricorrenze`: nome, descrizione facoltativa),
+  gestito in Famiglia → Membri. Nessuna frequenza, data o generazione di eventi; nessun esempio
+  precaricato. I membri le creano e le rinominano; eliminarle spetta a chi amministra la
+  Famiglia. Nomi unici nella Famiglia (senza accenti né maiuscole).
+- Un evento ha zero o una ricorrenza della propria Famiglia (`eventi.ricorrenza_id`, vincolo nel
+  database), scelta nel riquadro «Ricorrenza» della Panoramica da chi lo modifica e fa parte
+  della Famiglia. Gli eventi personali non ne hanno; spostare un evento in un'altra Famiglia
+  toglie la ricorrenza. Nessuna associazione dedotta da nomi o date.
+- Eliminare una ricorrenza toglie solo l'associazione: eventi, menù, partecipanti e archivi
+  restano.
+- Duplicando si propone la ricorrenza dell'originale (se la Famiglia è la stessa), cambiabile o
+  da togliere. Il confronto (§27) propone l'evento precedente della ricorrenza per data.
+- Migrazione: le serie della 0011 nelle Famiglie diventano ricorrenze con il nome della prima
+  edizione; quelle di eventi personali restano scollegate; la colonna `serie_id` è rimossa.
+  In produzione non c'erano serie.
+
+### 28.2 Visibilità e copia delle ricette
+
+- «Visibile nella Famiglia» significa visibile ai membri della Famiglia, mai pubblica su
+  Internet. Una ricetta è privata (con eventuali persone scelte, §19.4) oppure visibile in una
+  sola Famiglia; la modifica resta al proprietario. Non è più possibile renderla visibile in
+  più Famiglie insieme (indice unico; regola `una_famiglia`).
+- «Copia in un'altra Famiglia» (per chi fa parte di più Famiglie, da una ricetta che vede in una
+  di esse): nuova ricetta dell'utente con nuovo id, ingredienti, quantità, procedimento, tempi,
+  note e foto **duplicate** (file propri), visibile nella Famiglia di destinazione. Nessun
+  legame operativo: `origine_piatto_id` vuoto (classifiche, copie e confronto separati), niente
+  voti, commenti o dati degli eventi; resta anche se l'originale cambia o sparisce o se
+  l'utente esce dalla Famiglia d'origine.
+- **Provenienza** (`piatti.provenienza`, JSON di solo testo): titolo originale, data e ora,
+  chi ha copiato, e il nome della Famiglia d'origine solo se chi copia sceglie di indicarlo.
+  Mostrata con discrezione nella scheda; non dà accesso a nulla.
+- Ricette già visibili in più Famiglie: in produzione nessuna (una sola Famiglia). Se ce ne
+  fossero, la migrazione si ferma senza modificare nulla (indice unico violato): la scelta di
+  quale Famiglia tiene l'originale va presa con Loris prima di convertirle in copie.
+- Test: `server/api/ricorrenze.test.ts`, e2e `ricorrenze.spec.ts` ed `edizioni.spec.ts`.
 
 ### Registro delle modifiche
 
@@ -2209,3 +2252,4 @@ propone l'edizione precedente della serie, oppure un evento della stessa Famigli
 | 16/11/2026 | 5.1 — **Persone senza account** negli incarichi (§22): rubrica per Famiglia, incarichi affidati a utenti, persone della rubrica o nomi liberi senza doppioni, note, quantità e unità delle cose da portare; migrazione `0009_persone_esterne.sql` |
 | 16/11/2026 | 5.2 — **Ricerca per ingredienti** (§23): nome, ingredienti, catalogo e sinonimi, più termini, ordine per pertinenza nel ricettario e nel menù |
 | 16/11/2026 | 6.0 — **Organizzazione degli eventi** (§24–§27): partecipanti con conferme e accompagnatori, coperti manuali o calcolati; duplicazione ed edizioni; «A che punto siamo?»; confronto fra edizioni; migrazioni 0010–0012 |
+| 16/11/2026 | 6.1 — **Ricorrenze** della Famiglia (sostituiscono le serie anonime) e **copia delle ricette fra Famiglie** con provenienza; una ricetta visibile in una sola Famiglia (§28); migrazione `0013_ricorrenze.sql` |

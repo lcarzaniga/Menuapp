@@ -1,26 +1,27 @@
-// Ricette: condivisione in sola lettura e copia indipendente nel proprio ricettario (SPEC §19.4).
-import { Copy, Lock, Share2, UsersRound } from 'lucide-react'
+// Ricette: dove è visibile (privata o in una Famiglia), condivisione con persone, copie
+// indipendenti nel proprio ricettario o in un'altra Famiglia (SPEC §19.4, §28).
+import { Copy, History, Lock, Share2, UsersRound } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { api, nuovoId } from '@/api/client'
 import { useScrittura } from '@/api/scrittura'
 import { Button } from '@/components/ui/button'
-import { Casella } from '@/components/ui/campi'
+import { Campo, Casella, Select } from '@/components/ui/campi'
 import { Finestra } from '@/components/ui/dialog'
-import type { DettaglioPiatto } from '@/contratto/ricettario.ts'
+import type { DettaglioPiatto, Provenienza } from '@/contratto/ricettario.ts'
 import { useStatoConnessione } from '@/connessione/stato'
 import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 import { usePersone } from './sessione'
 
 /**
- * Con chi è condivisa la ricetta (per il proprietario): una o più delle sue Famiglie, oppure
- * nessuna (privata). Una privata si può condividere con persone scelte.
+ * Dove è visibile la ricetta (per il proprietario): in una delle sue Famiglie oppure privata.
+ * Una privata si può condividere con persone scelte. In un'altra Famiglia si copia.
  */
 export function VisibilitaRicetta({ piatto }: { piatto: DettaglioPiatto }) {
   const connesso = useStatoConnessione() === 'connesso'
   const { famiglie } = useFamigliaAttiva()
   const imposta = useScrittura((gruppi: string[]) => api.modifica<DettaglioPiatto>(`/piatti/${piatto.id}/famiglie`, { gruppi }), {
-    successo: (p) => (p.famiglie.length ? `Condivisa con ${p.famiglie.map((f) => f.nome).join(', ')}` : 'Ricetta privata: la vedi solo tu'),
+    successo: (p) => (p.famiglie.length ? `Visibile in ${p.famiglie[0]!.nome}` : 'Ricetta privata: la vedi solo tu'),
   })
   const condivisa = new Set(piatto.famiglie.map((f) => f.id))
   const privata = condivisa.size === 0
@@ -33,7 +34,7 @@ export function VisibilitaRicetta({ piatto }: { piatto: DettaglioPiatto }) {
             ? piatto.condivisaCon.length
               ? `Privata, condivisa con ${piatto.condivisaCon.map((p) => p.nome).join(', ')}`
               : 'Privata: la vedi solo tu'
-            : `Condivisa con ${piatto.famiglie.map((f) => f.nome).join(', ')}: la vedono e possono copiarla`}
+            : `Visibile ai membri di ${piatto.famiglie.map((f) => f.nome).join(', ')}: la vedono e possono copiarla`}
         </span>
         {privata ? <CondividiRicetta piatto={piatto} /> : null}
         {famiglie.length === 1 ? (
@@ -43,23 +44,19 @@ export function VisibilitaRicetta({ piatto }: { piatto: DettaglioPiatto }) {
         ) : null}
       </div>
       {famiglie.length >= 2 ? (
-        <div role="group" aria-label="Famiglie con cui è condivisa" className="flex flex-wrap gap-x-4">
+        <Select
+          aria-label="Dove è visibile la ricetta"
+          value={piatto.famiglie[0]?.id ?? ''}
+          disabled={!connesso || imposta.inCorso}
+          onChange={(e) => void imposta.esegui(e.target.value ? [e.target.value] : [])}
+        >
+          <option value="">Privata: solo io</option>
           {famiglie.map((f) => (
-            <label key={f.id} className="flex min-h-10 items-center gap-2">
-              <Casella
-                checked={condivisa.has(f.id)}
-                disabled={!connesso || imposta.inCorso}
-                onChange={(e) => {
-                  const n = new Set(condivisa)
-                  if (e.target.checked) n.add(f.id)
-                  else n.delete(f.id)
-                  void imposta.esegui([...n])
-                }}
-              />
-              {f.nome}
-            </label>
+            <option key={f.id} value={f.id}>
+              Visibile in {f.nome}
+            </option>
           ))}
-        </div>
+        </Select>
       ) : null}
     </div>
   )
@@ -133,3 +130,76 @@ export function CopiaRicetta({ piatto }: { piatto: DettaglioPiatto }) {
     </Button>
   )
 }
+
+/**
+ * «Copia in un'altra Famiglia»: per chi fa parte di più Famiglie, da una ricetta visibile in una
+ * di esse. La copia è nuova e indipendente: non segue le modifiche dell'originale.
+ */
+export function CopiaInFamiglia({ piatto }: { piatto: DettaglioPiatto }) {
+  const { famiglie } = useFamigliaAttiva()
+  const altre = famiglie.filter((f) => f.id !== piatto.famiglia?.id)
+  const [aperta, setAperta] = useState(false)
+  const connesso = useStatoConnessione() === 'connesso'
+  if (!piatto.famiglia || altre.length === 0) return null
+  return (
+    <>
+      <Button variante="contorno" misura="piccolo" className="self-start" disabled={!connesso} onClick={() => setAperta(true)}>
+        <Copy /> Copia in un&apos;altra Famiglia
+      </Button>
+      {aperta ? <FinestraCopiaInFamiglia piatto={piatto} famiglie={altre} origine={piatto.famiglia.nome} onChiudi={() => setAperta(false)} /> : null}
+    </>
+  )
+}
+
+function FinestraCopiaInFamiglia({ piatto, famiglie, origine, onChiudi }: { piatto: DettaglioPiatto; famiglie: { id: string; nome: string }[]; origine: string; onChiudi: () => void }) {
+  const naviga = useNavigate()
+  const [gruppoId, setGruppoId] = useState(famiglie[0]!.id)
+  const [indica, setIndica] = useState(false)
+  const copia = useScrittura(() => api.crea<DettaglioPiatto>(`/piatti/${piatto.id}/copia-in-famiglia`, { id: nuovoId(), gruppoId, indicaFamiglia: indica }), {
+    successo: 'Copia creata',
+    dopo: (c) => {
+      onChiudi()
+      naviga(`/ricettario/${c.id}`)
+    },
+  })
+  return (
+    <Finestra
+      aperta
+      onCambia={(a) => !a && onChiudi()}
+      titolo={`Copia «${piatto.nome}»`}
+      descrizione="Nasce una nuova ricetta tua, con ingredienti, procedimento e foto. È indipendente: le modifiche all'originale non la cambiano, e voti e commenti non la seguono."
+      piede={
+        <Button disabled={copia.inCorso} onClick={() => void copia.esegui(undefined)}>
+          <Copy /> Copia
+        </Button>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        <Campo etichetta="Nella Famiglia" htmlFor="copia-famiglia">
+          <Select id="copia-famiglia" value={gruppoId} onChange={(e) => setGruppoId(e.target.value)}>
+            {famiglie.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.nome}
+              </option>
+            ))}
+          </Select>
+        </Campo>
+        <label className="flex min-h-11 items-center gap-3 text-sm">
+          <Casella checked={indica} onChange={(e) => setIndica(e.target.checked)} /> Indica che viene da «{origine}»
+        </label>
+      </div>
+    </Finestra>
+  )
+}
+
+/** Provenienza di una copia da un'altra Famiglia: solo informazione, nessun collegamento. */
+export function ProvenienzaRicetta({ provenienza: p }: { provenienza: Provenienza }) {
+  const quando = new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium' }).format(p.copiataIl)
+  return (
+    <p className="flex items-center gap-1.5 text-xs text-testo-tenue" data-testid="provenienza-ricetta">
+      <History className="size-3.5" /> Copiata il {quando} da {p.copiataDa} da {p.famiglia ? `«${p.famiglia}»` : "un'altra Famiglia"}
+      {p.titolo ? ` (era «${p.titolo}»)` : ''}
+    </p>
+  )
+}
+

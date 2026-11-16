@@ -116,16 +116,19 @@ describe('isolamento fra Famiglie', () => {
     expect((await t.leggi(`${P}/persone?gruppo=rossi`)).statusCode).toBe(404)
   })
 
-  it('ricette: privata, condivisa con una Famiglia, con più Famiglie; chi esce smette di condividerle', async () => {
+  it('ricette: privata o visibile in una sola Famiglia (mai in più d\'una); chi esce smette di condividerle', async () => {
     await famigliaRossi()
     await ok(anna.scrivi('POST', `${P}/piatti`, { id: 'p-priv', nome: 'Privata', ingredienti: [], famiglie: [] }))
     await ok(anna.scrivi('POST', `${P}/piatti`, { id: 'p-rossi', nome: 'Solo Rossi', ingredienti: [], famiglie: ['rossi'] }))
-    const due = await ok(anna.scrivi('POST', `${P}/piatti`, { id: 'p-due', nome: 'Per tutti', ingredienti: [], famiglie: [G, 'rossi'] }))
-    expect(due.famiglie.map((f: { nome: string }) => f.nome)).toEqual(['Famiglia', 'Famiglia Rossi'])
+    // In più Famiglie no: per un'altra Famiglia si copia (SPEC §28).
+    expect(corpo(await anna.scrivi('POST', `${P}/piatti`, { id: 'p-due', nome: 'Per tutti', ingredienti: [], famiglie: [G, 'rossi'] })).errore.dettagli.regola).toBe('una_famiglia')
+    const due = await ok(anna.scrivi('POST', `${P}/piatti`, { id: 'p-due', nome: 'Per tutti', ingredienti: [], famiglie: [G] }))
+    expect(due.famiglie.map((f: { nome: string }) => f.nome)).toEqual(['Famiglia'])
+    expect((await anna.scrivi('PUT', `${P}/piatti/p-due/famiglie`, { gruppi: [G, 'rossi'] })).statusCode).toBe(400)
     expect((await anna.scrivi('POST', `${P}/piatti`, { id: 'p-x', nome: 'x', ingredienti: [], famiglie: ['inesistente'] })).statusCode).toBe(404)
     const vede = async (c: ClientDiProva) => corpo(await c.leggi(`${P}/piatti`)).filter((p: { mio: boolean }) => !p.mio).map((p: { id: string }) => p.id).sort()
     expect(await vede(t)).toEqual(['p-due'])
-    expect(await vede(bruno)).toEqual(['p-due', 'p-rossi'])
+    expect(await vede(bruno)).toEqual(['p-rossi'])
     expect((await t.leggi(`${P}/piatti/p-rossi`)).statusCode).toBe(404)
     // L'amministratore della Famiglia non vede le ricette private dei membri.
     expect((await anna.leggi(`${P}/piatti/p-priv`)).statusCode).toBe(200)
@@ -217,7 +220,7 @@ describe('migrazione 0008', () => {
       ]) {
         esegui(db, `INSERT INTO piatti (id, nome, nome_norm, creato_il, aggiornato_il, proprietario_id, visibilita) VALUES (?, 'P', 'p', 1, 1, ?, ?)`, id, owner, vis)
       }
-      await applicaMigrazioni(db, { cartellaBackup: null })
+      await applicaMigrazioni(db, { cartellaBackup: null, fino: 8 })
       expect(tutti(db, 'SELECT id, gruppo_id FROM eventi ORDER BY id')).toEqual([
         { id: 'e-admin', gruppo_id: 'gruppo-famiglia' },
         { id: 'e-due', gruppo_id: null },

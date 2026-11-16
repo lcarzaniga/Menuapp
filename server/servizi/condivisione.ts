@@ -120,8 +120,8 @@ export function spostaInFamiglia(db: Db, u: UtenteCorrente, eventoId: string, gr
   return transazione(db, () => {
     richiediEvento(db, u, eventoId, 'proprietario')
     if (gruppoId && !repo.ruoloNelGruppo(db, gruppoId, u.id)) throw nonTrovato('Famiglia')
-    // Una serie resta dentro una Famiglia: cambiando Famiglia l'evento esce dalla sua serie.
-    if (repo.gruppoEvento(db, eventoId) !== gruppoId) repoEventi.impostaSerie(db, eventoId, null)
+    // La ricorrenza è della Famiglia: cambiando Famiglia l'evento la perde.
+    if (repo.gruppoEvento(db, eventoId) !== gruppoId) repoEventi.impostaRicorrenza(db, eventoId, null)
     repo.impostaGruppoEvento(db, eventoId, gruppoId, adesso)
     incrementaRevisione(db)
     return accessoEvento(db, u, eventoId)
@@ -131,26 +131,33 @@ export function spostaInFamiglia(db: Db, u: UtenteCorrente, eventoId: string, gr
 // ── Ricette ──────────────────────────────────────────────────
 
 /**
- * Famiglie con cui condividere una nuova ricetta: quelle indicate (verificando che l'autore
- * ne faccia parte), altrimenti tutte le sue, salvo che la voglia privata.
+ * Famiglia in cui rendere visibile una nuova ricetta (al massimo una, SPEC §28): quella indicata
+ * (verificando che l'autore ne faccia parte), altrimenti la sua unica Famiglia; con più Famiglie
+ * e nessuna indicata la ricetta nasce privata.
  */
 export function famiglieDiPartenza(db: Db, u: UtenteCorrente, famiglie: string[] | undefined, visibilita?: 'famiglia' | 'privata'): string[] {
   if (famiglie) {
-    for (const g of famiglie) if (!repo.ruoloNelGruppo(db, g, u.id)) throw nonTrovato('Famiglia')
-    return [...new Set(famiglie)]
+    const uniche = [...new Set(famiglie)]
+    if (uniche.length > 1) throw regolaViolata('una_famiglia', 'Una ricetta è visibile in una sola Famiglia: per un\'altra Famiglia copiala')
+    for (const g of uniche) if (!repo.ruoloNelGruppo(db, g, u.id)) throw nonTrovato('Famiglia')
+    return uniche
   }
-  return visibilita === 'privata' ? [] : repo.gruppiDiUtente(db, u.id).map((g) => g.id)
+  const mie = repo.gruppiDiUtente(db, u.id).map((g) => g.id)
+  return visibilita === 'privata' || mie.length !== 1 ? [] : mie
 }
 
-/** «Privata» o «condivisa con le mie Famiglie» (compatibilità con la versione a Famiglia unica). */
+/** «Privata» o «della mia Famiglia» (compatibilità con la versione a Famiglia unica). */
 export function impostaVisibilita(db: Db, u: UtenteCorrente, piattoId: string, visibilita: 'famiglia' | 'privata', adesso = Date.now()): void {
-  impostaFamiglie(db, u, piattoId, visibilita === 'privata' ? [] : repo.gruppiDiUtente(db, u.id).map((g) => g.id), adesso)
+  const mie = repo.gruppiDiUtente(db, u.id).map((g) => g.id)
+  if (visibilita === 'famiglia' && mie.length > 1) throw regolaViolata('scegli_famiglia', 'Hai più Famiglie: scegli in quale rendere visibile la ricetta')
+  impostaFamiglie(db, u, piattoId, visibilita === 'privata' ? [] : mie, adesso)
 }
 
-/** Famiglie con cui il proprietario condivide la ricetta (anche più d'una; nessuna = privata). */
+/** Famiglia in cui il proprietario rende visibile la ricetta (al massimo una; nessuna = privata). */
 export function impostaFamiglie(db: Db, u: UtenteCorrente, piattoId: string, gruppi: string[], adesso = Date.now()): void {
   transazione(db, () => {
     richiediPiatto(db, u, piattoId, 'proprietario')
+    if (new Set(gruppi).size > 1) throw regolaViolata('una_famiglia', 'Una ricetta è visibile in una sola Famiglia: per un\'altra Famiglia copiala')
     for (const g of gruppi) if (!repo.ruoloNelGruppo(db, g, u.id)) throw nonTrovato('Famiglia')
     repo.impostaFamigliePiatto(db, piattoId, [...new Set(gruppi)], adesso)
     incrementaRevisione(db)
@@ -177,7 +184,7 @@ export function impostaCondivisioniPiatto(db: Db, u: UtenteCorrente, piattoId: s
 }
 
 /** Copia indipendente (ingredienti e foto) nel ricettario di `proprietarioId`. Restituisce il nuovo id. */
-function copiaPiattoInterna(db: Db, cartellaFoto: string, piattoId: string, nuovoId: string, proprietarioId: string, adesso: number): string {
+function copiaPiattoInterna(db: Db, cartellaFoto: string, piattoId: string, nuovoId: string, proprietarioId: string, adesso: number, opzioni = { indipendente: false }): string {
   const p = repoRic.leggiPiatto(db, piattoId)
   const prop = repoRic.proprietaPiatto(db, piattoId)
   if (!p || !prop) throw nonTrovato('Piatto')
@@ -187,12 +194,41 @@ function copiaPiattoInterna(db: Db, cartellaFoto: string, piattoId: string, nuov
     proprietarioId,
     // La copia nasce privata: chi l'ha fatta decide se e con chi condividerla.
     // Una copia di una copia ricorda l'autore originale.
-    originePiattoId: prop.originePiattoId ?? piattoId,
-    origineAutore: prop.origineAutore || prop.proprietarioNome,
+    // Fra Famiglie la copia non ha legami con l'originale (né classifica né riuso delle copie).
+    originePiattoId: opzioni.indipendente ? null : (prop.originePiattoId ?? piattoId),
+    // Fra Famiglie l'autore resta come informazione solo se è un altro (la provenienza dice il resto).
+    origineAutore: opzioni.indipendente && proprietarioId === prop.proprietarioId && !prop.origineAutore ? '' : prop.origineAutore || prop.proprietarioNome,
   })
   repoRic.scriviIngredienti(db, nuovoId, ingredienti.map((i) => ({ ...i, id: randomUUID() })))
   copiaFotoPiatto(db, cartellaFoto, piattoId, nuovoId, adesso)
   return nuovoId
+}
+
+/**
+ * «Copia in un'altra Famiglia» (SPEC §28): una nuova ricetta dell'utente, visibile nella Famiglia
+ * di destinazione, con ingredienti, procedimento e foto duplicate. Nessun legame con l'originale
+ * (né per le modifiche, né per voti e commenti): resta solo una provenienza descrittiva.
+ */
+export function copiaInFamiglia(
+  db: Db,
+  cartellaFoto: string,
+  u: UtenteCorrente,
+  piattoId: string,
+  d: { id: string; gruppoId: string; indicaFamiglia: boolean },
+  adesso = Date.now(),
+): string {
+  return transazione(db, () => {
+    richiediPiatto(db, u, piattoId, 'lettura')
+    if (!repo.ruoloNelGruppo(db, d.gruppoId, u.id)) throw nonTrovato('Famiglia')
+    const origine = repo.famigliePiatto(db, piattoId).find((g) => repo.ruoloNelGruppo(db, g.id, u.id))
+    if (origine?.id === d.gruppoId) throw regolaViolata('stessa_famiglia', 'La ricetta è già visibile in questa Famiglia')
+    const titolo = repoRic.leggiPiatto(db, piattoId)!.nome
+    const id = copiaPiattoInterna(db, cartellaFoto, piattoId, d.id, u.id, adesso, { indipendente: true })
+    repo.impostaFamigliePiatto(db, id, [d.gruppoId], adesso)
+    repoRic.impostaProvenienza(db, id, { titolo, copiataIl: adesso, copiataDa: u.nome, famiglia: d.indicaFamiglia && origine ? origine.nome : null })
+    incrementaRevisione(db)
+    return id
+  })
 }
 
 /** «Copia nel mio ricettario» di una ricetta che l'utente può leggere. */

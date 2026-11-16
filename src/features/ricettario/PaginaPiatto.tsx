@@ -12,7 +12,7 @@ import { Campo, Input, Select, Textarea } from '@/components/ui/campi'
 import { Card, CardContent } from '@/components/ui/card'
 import { Conferma } from '@/components/ui/dialog'
 import { SolaLettura, usePuoScrivere } from '@/connessione/stato'
-import { CopiaRicetta, VisibilitaRicetta } from '@/features/accesso/CondivisioneRicetta'
+import { CopiaInFamiglia, CopiaRicetta, ProvenienzaRicetta, VisibilitaRicetta } from '@/features/accesso/CondivisioneRicetta'
 import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 import type { DettaglioPiatto } from '@/contratto/ricettario.ts'
 import { formattaCoperti } from '@/domain/porzioni.ts'
@@ -92,6 +92,8 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
     >
       <div className="flex flex-col gap-4">
         {p.mio ? <VisibilitaRicetta piatto={p} /> : null}
+        <CopiaInFamiglia piatto={p} />
+        {p.provenienza ? <ProvenienzaRicetta provenienza={p.provenienza} /> : null}
         <GalleriaFoto piattoId={p.id} foto={p.foto} nome={p.nome} procedimento={p.procedimento} />
         <div className="flex flex-wrap gap-2 text-sm">
           <Badge variante={p.porzioniBase ? 'primario' : 'avviso'}>

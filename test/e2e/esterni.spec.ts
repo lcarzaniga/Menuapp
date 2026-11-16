@@ -19,7 +19,7 @@ test('rubrica e incarichi affidati a chi non ha l\'app', async ({ page, request 
   await page.goto('/#/famiglia?scheda=membri')
   await page.getByLabel('Nome', { exact: true }).fill('Nonna Maria')
   await page.getByLabel('Nota (facoltativa)').fill('Fa le lasagne migliori')
-  await page.getByRole('button', { name: 'Aggiungi' }).click()
+  await page.locator('form').filter({ has: page.getByLabel('Nota (facoltativa)') }).getByRole('button', { name: 'Aggiungi' }).click()
   await expect(page.getByRole('list', { name: 'Rubrica senza app' })).toContainText('Nonna Maria')
   await foto(page, '01-rubrica')
 

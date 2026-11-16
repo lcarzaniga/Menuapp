@@ -18,7 +18,7 @@ import type { Evento } from '@/domain/tipi.ts'
 import { plurale } from '@/lib/formato'
 import { PannelloArchivio } from '@/features/archivio/PannelloArchivio'
 import { CorpoScheda, useEventoCorrente } from './LayoutEvento'
-import { DuplicaEvento, PannelloEdizioni } from './Edizioni'
+import { DuplicaEvento, PannelloRicorrenza } from './Edizioni'
 import { RiepilogoEvento } from './Riepilogo'
 import { type DatiModuloEvento, ModuloEvento } from './ModuloEvento'
 
@@ -152,7 +152,7 @@ export function PaginaPanoramica() {
         <SolaLettura motivo={proprietario ? null : 'Solo il proprietario archivia l\'evento'}>
           <PannelloArchivio evento={e} />
         </SolaLettura>
-        <PannelloEdizioni evento={e} />
+        <PannelloRicorrenza evento={e} />
         <CondivisioneEvento evento={e} />
       </div>
       {duplica ? <DuplicaEvento evento={e} onChiudi={() => setDuplica(false)} /> : null}

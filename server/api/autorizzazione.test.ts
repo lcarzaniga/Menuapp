@@ -105,8 +105,8 @@ describe('accesso diretto a ogni rotta con id', () => {
       const soloProprietarioRicetta = r.url.endsWith('/piatti/:id/condivisioni')
       // Partecipare (bacheca, chi porta cosa, valutazioni) è permesso anche a chi legge, salvo esclusione.
       const partecipazione = PARTECIPAZIONE.includes(`${r.metodo} ${r.url}`)
-      const lettura = (r.metodo === 'GET' && !soloProprietarioRicetta) || r.url.endsWith('/copia-piatto') || r.url.endsWith('/piatti/:id/copia') || r.url.endsWith('/eventi/:id/duplica') || partecipazione
-      const piattoAltrui = (/\/(piatti|foto)\/:id/.test(r.url) && r.metodo !== 'GET' && !r.url.endsWith('/copia')) || soloProprietarioRicetta
+      const lettura = (r.metodo === 'GET' && !soloProprietarioRicetta) || r.url.endsWith('/copia-piatto') || r.url.endsWith('/piatti/:id/copia') || r.url.endsWith('/piatti/:id/copia-in-famiglia') || r.url.endsWith('/eventi/:id/duplica') || partecipazione
+      const piattoAltrui = (/\/(piatti|foto)\/:id/.test(r.url) && r.metodo !== 'GET' && !/\/copia(-in-famiglia)?$/.test(r.url)) || soloProprietarioRicetta
       const lasciaEvento = r.metodo === 'DELETE' && r.url.endsWith('/condivisioni/:utenteId')
       if (lettura) expect([200, 201, 400, 409, 422], `${r.metodo} ${r.url} → ${res.body}`).toContain(res.statusCode)
       else if (piattoAltrui || !lasciaEvento) expect(res.statusCode, `${r.metodo} ${r.url} → ${res.body}`).toBe(403)
@@ -124,7 +124,7 @@ describe('accesso diretto a ogni rotta con id', () => {
     for (const r of t.app.rotte.filter((x) => RISORSE.test(x.url) && !x.url.endsWith('/foto/:id/file'))) {
       const chiave = `${r.metodo} ${r.url}`
       const res = await richiesta(anna, r.metodo, percorsoReale(r.url))
-      const ricettaAltrui = (/\/(piatti|foto)\/:id/.test(r.url) && r.metodo !== 'GET' && !r.url.endsWith('/copia')) || r.url.endsWith('/piatti/:id/condivisioni')
+      const ricettaAltrui = (/\/(piatti|foto)\/:id/.test(r.url) && r.metodo !== 'GET' && !/\/copia(-in-famiglia)?$/.test(r.url)) || r.url.endsWith('/piatti/:id/condivisioni')
       if (SOLO_PROPRIETARIO.includes(chiave) || ricettaAltrui) expect(res.statusCode, `${chiave} → ${res.body}`).toBe(403)
       else if (chiave === `DELETE ${P}/eventi/:id/condivisioni/:utenteId`) expect(res.statusCode).toBe(403) // revocare altri: no
       else expect([200, 201, 204, 400, 409, 422], `${chiave} → ${res.body}`).toContain(res.statusCode)

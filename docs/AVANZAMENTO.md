@@ -226,7 +226,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Nessuna migrazione. Test: `npm run check` 324 verdi, `npm run test:e2e` 38 verdi.
 - Rilasciato il 16/11 alle 14:56; verificati salute (privato e Funnel), 401 senza sessione, altri servizi attivi.
 
-## Organizzazione degli eventi (16/11/2026, ramo `organizzazione-eventi`, da rilasciare)
+## Organizzazione degli eventi (16/11/2026, in produzione: `20261116-1738-5e13659`, schema v12)
 
 - SPEC 6.0 / §24–§27, quattro commit (M1–M4):
   - M1 Partecipanti: elenco facoltativo, conferme, accompagnatori con e senza nome, coperti
@@ -242,4 +242,22 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   copiano duplicando; i voti di un'edizione non passano alla successiva (per scelta).
 - Test: `npm run check` 357 verdi, `npm run test:e2e` 41 verdi (nuovi `partecipanti.spec.ts`,
   `edizioni.spec.ts`). Nessun intervento manuale oltre al rilascio.
-- Rilascio: `! scripts/rilascia.sh organizzazione-eventi`.
+- Rilasciato il 16/11 alle 17:38; verificati salute (privato e Funnel), 401 senza sessione,
+  dati invariati (nessun partecipante, eventi in manuale, nessuna serie), chiavi esterne ok,
+  altri servizi attivi.
+
+## Ricorrenze e copia delle ricette fra Famiglie (16/11/2026, ramo `ricorrenze-ricette`, da rilasciare)
+
+- SPEC 6.1 / §28: ricorrenze per Famiglia (Famiglia → Membri), associazione facoltativa agli
+  eventi (riquadro «Ricorrenza» in Panoramica), proposta duplicando, confronto con l'evento
+  precedente della ricorrenza. Sostituiscono le serie anonime di §25.
+- Ricette: visibili in una sola Famiglia; «Copia in un'altra Famiglia» con foto duplicate e
+  provenienza descrittiva, senza legami con l'originale.
+- Migrazione `0013_ricorrenze.sql` provata su una copia del database di produzione: conteggi,
+  spesa, menù, coperti, incarichi e archivi identici; nessuna serie da convertire, nessuna
+  ricetta in più Famiglie; chiavi esterne e integrità ok.
+- Differenze di comportamento: una ricetta creata via API senza Famiglia da chi ne ha più d'una
+  nasce privata (prima: visibile in tutte); le serie anonime diventano ricorrenze con un nome.
+- Test: `npm run check` 364 verdi (nuovo `ricorrenze.test.ts`), `npm run test:e2e` 43 verdi
+  (nuovo `ricorrenze.spec.ts`).
+- Rilascio: `! scripts/rilascia.sh ricorrenze-ricette`.

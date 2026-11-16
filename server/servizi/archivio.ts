@@ -173,7 +173,7 @@ export function spesaDaSnapshot(db: Db, eventoId: string): RispostaSpesa {
 
 /** Gli snapshot precedenti ai partecipanti (§24) non hanno la modalità dei coperti: erano manuali. */
 export function eventoDaSnapshot(e: ContenutoSnapshot['evento']): ContenutoSnapshot['evento'] {
-  return { ...e, copertiAutomatici: e.copertiAutomatici ?? false, copertiManuali: e.copertiManuali ?? { adulti: e.adulti, bambini: e.bambini }, maxAccompagnatori: e.maxAccompagnatori ?? null, serieId: e.serieId ?? null }
+  return { ...e, copertiAutomatici: e.copertiAutomatici ?? false, copertiManuali: e.copertiManuali ?? { adulti: e.adulti, bambini: e.bambini }, maxAccompagnatori: e.maxAccompagnatori ?? null, ricorrenzaId: e.ricorrenzaId ?? null }
 }
 
 export function menuDaSnapshot(db: Db, eventoId: string): Menu {

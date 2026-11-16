@@ -39,6 +39,8 @@ export function leggiPiatto(db: Db, id: string, utenteId: string): DettaglioPiat
       originePiattoId: prop.originePiattoId,
       visibilita: prop.visibilita,
       famiglie: mio ? repoAccesso.famigliePiatto(db, id) : [],
+      famiglia: repoAccesso.famigliePiatto(db, id).find((g) => repoAccesso.ruoloNelGruppo(db, g.id, utenteId)) ?? null,
+      provenienza: repo.provenienza(db, id),
       condivisaCon: mio ? repoAccesso.condivisioniPiatto(db, id).map((c) => ({ id: c.utente_id, nome: c.nome })) : [],
     }
   })

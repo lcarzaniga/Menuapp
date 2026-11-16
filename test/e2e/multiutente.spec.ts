@@ -102,7 +102,9 @@ test('invito, approvazione, condivisione e revoca fra due persone', async ({ pag
   await foto(anna.page, '07-evento-revocato')
 
   // ── Ricettario di famiglia: Anna vede la ricetta di Loris senza condivisioni e la copia
-  await apiScrivi(request, 'post', '/piatti', { id: 'p-cotechino', nome: 'Cotechino con lenticchie', porzioniBase: 6, ingredienti: [] })
+  // Con più Famiglie la ricetta va resa visibile in una (SPEC §28): quella di Anna.
+  const famiglia = (await (await request.get('/api/v1/gruppi')).json()).find((g: { nome: string }) => g.nome === 'Famiglia').id
+  await apiScrivi(request, 'post', '/piatti', { id: 'p-cotechino', nome: 'Cotechino con lenticchie', porzioniBase: 6, ingredienti: [], famiglie: [famiglia] })
   await anna.page.goto('/#/ricettario')
   const riga = anna.page.getByRole('link', { name: /Cotechino con lenticchie/ })
   await expect(riga).toContainText('di Loris')
@@ -116,18 +118,11 @@ test('invito, approvazione, condivisione e revoca fra due persone', async ({ pag
 
   // ── Loris rende privata la ricetta: Anna non vede più l'originale, la sua copia resta
   await page.goto('/#/ricettario/p-cotechino')
-  await expect(page.getByTestId('visibilita-ricetta')).toContainText('Condivisa con Famiglia')
-  // Con una Famiglia c'è «Rendi privata»; con più Famiglie si tolgono le spunte.
+  await expect(page.getByTestId('visibilita-ricetta')).toContainText('Visibile ai membri di Famiglia')
+  // Con una Famiglia c'è «Rendi privata»; con più Famiglie si sceglie «Privata» nell'elenco.
   const rendiPrivata = page.getByRole('button', { name: 'Rendi privata' })
   if (await rendiPrivata.count()) await rendiPrivata.click()
-  else {
-    const spuntate = page.getByRole('group', { name: 'Famiglie con cui è condivisa' }).getByRole('checkbox', { checked: true })
-    for (let n = await spuntate.count(); n > 0; n--) {
-      // La casella cambia quando il server ha salvato.
-      await spuntate.first().click()
-      await expect(spuntate).toHaveCount(n - 1)
-    }
-  }
+  else await page.getByLabel('Dove è visibile la ricetta').selectOption({ label: 'Privata: solo io' })
   await expect(page.getByTestId('visibilita-ricetta')).toContainText('la vedi solo tu')
   await foto(page, '10-ricetta-privata')
   await anna.page.goto('/#/ricettario')

@@ -1,4 +1,5 @@
 // SQL di piatti, ingredienti dei piatti, catalogo ingredienti e sinonimi.
+import type { Provenienza } from '../../../src/contratto/ricettario.ts'
 import { norm } from '../../../src/domain/testo.ts'
 import type { CodiceUnita, Ingrediente, IngredientePiatto, Piatto, Scalatura, StatoParsing } from '../../../src/domain/tipi.ts'
 import { type Db, esegui, tutti, uno } from '../connessione.ts'
@@ -344,3 +345,14 @@ export function piattiConIngrediente(db: Db, id: string, utenteId: string) {
 
 /** Piatto collegato a una voce di menù (null se la voce è solo un nome). */
 export const voceConPiatto = (db: Db, voceId: string) => uno<{ piatto_id: string | null }>(db, 'SELECT piatto_id FROM voci_menu WHERE id = ?', voceId)?.piatto_id ?? null
+
+// ── Provenienza delle copie fra Famiglie (SPEC §28) ─────────
+
+export function provenienza(db: Db, piattoId: string): Provenienza | null {
+  const r = uno<{ provenienza: string | null }>(db, 'SELECT provenienza FROM piatti WHERE id = ?', piattoId)
+  return r?.provenienza ? (JSON.parse(r.provenienza) as Provenienza) : null
+}
+
+export function impostaProvenienza(db: Db, piattoId: string, p: Provenienza): void {
+  esegui(db, 'UPDATE piatti SET provenienza = ? WHERE id = ?', JSON.stringify(p), piattoId)
+}

@@ -1,4 +1,4 @@
-// Duplica evento ed edizioni di una ricorrenza (SPEC §25), dal telefono.
+// Duplica evento, ricorrenze (SPEC §25, §28), riepilogo e confronto, dal telefono.
 import { mkdirSync } from 'node:fs'
 import { expect, type Page, test } from '@playwright/test'
 import { apiLeggi, apiScrivi } from './aiuti'
@@ -20,34 +20,40 @@ test('duplica Natale come nuova edizione, con i partecipanti da riconfermare', a
     ],
   })
   await apiScrivi(request, 'post', '/eventi/ed-2026/partecipanti', { id: 'ed-p1', nome: 'Zio Ugo', stato: 'confermato' })
+  await apiScrivi(request, 'post', `/famiglie/${famiglia.id}/ricorrenze`, { id: 'ed-natale', nome: 'Natale dai nonni' })
 
+  // La ricorrenza si sceglie dalla Panoramica.
   await page.goto('/#/eventi/ed-2026')
+  await page.getByLabel('Ricorrenza dell\'evento').selectOption({ label: 'Natale dai nonni' })
+  await expect(page.getByText('Ricorrenza: Natale dai nonni')).toBeVisible()
   await page.getByRole('button', { name: 'Duplica evento' }).click()
   const dialogo = page.getByRole('dialog')
   await expect(dialogo.getByLabel('Nome del nuovo evento')).toHaveValue('Natale dai nonni 2027')
   await expect(dialogo.getByLabel('Data')).toHaveValue('2027-12-25')
+  await expect(dialogo.getByLabel('Ricorrenza')).toHaveValue('ed-natale')
   await dialogo.getByText('Copia anche i partecipanti').click()
   await foto(page, '01-duplica')
   await dialogo.getByRole('button', { name: 'Duplica' }).click()
 
   // Si apre la nuova edizione: stesso menù, porzioni personalizzate, partecipanti in attesa.
   await expect(page.getByRole('heading', { name: 'Natale dai nonni 2027' })).toBeVisible()
-  await expect(page.getByRole('list', { name: 'Altre edizioni' })).toContainText('Natale dai nonni 2026')
-  await page.getByRole('navigation', { name: 'Schede dell\'evento' }).getByRole('link', { name: 'Menù' }).click()
+  await expect(page.getByRole('list', { name: 'Altri eventi della ricorrenza' })).toContainText('Natale dai nonni 2026')
+  // Sul telefono i messaggi di conferma coprono le schede: si va direttamente agli indirizzi.
+  const id = /eventi\/([^/]+)/.exec(page.url())![1]!
+  await page.goto(`/#/eventi/${id}/menu`)
   await expect(page.getByRole('button', { name: 'Tortellini in brodo: apri dettagli' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Cappone ripieno: apri dettagli' })).toBeVisible()
-  await page.getByRole('navigation', { name: 'Schede dell\'evento' }).getByRole('link', { name: 'Partecipanti' }).click()
+  await page.goto(`/#/eventi/${id}/partecipanti`)
   const ugo = page.getByTestId('invito').filter({ hasText: 'Zio Ugo' })
   await expect(ugo.getByRole('button', { name: 'In attesa' })).toHaveAttribute('aria-pressed', 'true')
   await foto(page, '02-nuova-edizione')
 
   // ── Confronta con l'anno scorso: un piatto nuovo, uno tolto, quelli rimasti
-  const id = /eventi\/([^/]+)/.exec(page.url())![1]!
   const menu = await apiLeggi<{ portate: { id: string; nome: string; voci: { id: string; nome: string; versione: number }[] }[] }>(request, `/eventi/${id}/menu`)
   const cappone = menu.portate.flatMap((p) => p.voci).find((v) => v.nome === 'Cappone ripieno')!
   await apiScrivi(request, 'delete', `/voci/${cappone.id}?versione=${cappone.versione}`)
   await apiScrivi(request, 'post', `/eventi/${id}/voci`, { voci: [{ id: 'ed-v3', portataId: menu.portate[2]!.id, nome: 'Arrosto di tacchino' }] })
-  await page.getByRole('navigation', { name: 'Schede dell\'evento' }).getByRole('link', { name: 'Panoramica' }).click()
+  await page.goto(`/#/eventi/${id}`)
   await page.getByRole('link', { name: 'Confronta con l\'anno scorso' }).click()
   await expect(page.getByLabel('Confronta con')).toHaveValue('ed-2026')
   await expect(page.getByRole('list', { name: 'In entrambe' })).toContainText('Tortellini in brodo')

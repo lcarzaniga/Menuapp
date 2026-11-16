@@ -1,6 +1,6 @@
-// Duplica evento ed edizioni di una ricorrenza (SPEC §25).
+// Duplica evento e ricorrenza dell'evento (SPEC §25, §28).
 import { useQuery } from '@tanstack/react-query'
-import { Copy, Link2, Unlink } from 'lucide-react'
+import { Copy, Repeat } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Campo, Casella, Input, Select } from '@/components/ui/campi'
 import { Finestra } from '@/components/ui/dialog'
 import { usePuoScrivere } from '@/connessione/stato'
-import type { Edizioni, EsitoDuplica } from '@/contratto/edizioni.ts'
+import type { Edizioni, EsitoDuplica, Ricorrenza } from '@/contratto/edizioni.ts'
 import { dataBreve } from '@/domain/tempo.ts'
 import type { Evento } from '@/domain/tipi.ts'
 import { useAccessoEvento } from '@/features/accesso/sessione'
@@ -19,6 +19,8 @@ import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 
 export const useEdizioni = (eventoId: string) =>
   useQuery({ queryKey: ['edizioni', eventoId], queryFn: () => api.leggi<Edizioni>(`/eventi/${eventoId}/edizioni`) })
+export const useRicorrenze = (gruppoId: string | null) =>
+  useQuery({ queryKey: ['ricorrenze', gruppoId], queryFn: () => api.leggi<Ricorrenza[]>(`/famiglie/${gruppoId}/ricorrenze`), enabled: Boolean(gruppoId) })
 
 /** «Natale 2026» → «Natale 2027» quando la data passa all'anno dopo. */
 export function nomeEdizione(nome: string, dataOrigine: string, dataNuova: string): string {
@@ -41,7 +43,10 @@ export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiud
   const [gruppoId, setGruppoId] = useState<string>(famigliaEvento && famiglie.some((f) => f.id === famigliaEvento) ? famigliaEvento : (famiglie[0]?.id ?? ''))
   const [partecipanti, setPartecipanti] = useState(false)
   const stessaFamiglia = (gruppoId || null) === famigliaEvento
-  const [collega, setCollega] = useState(true)
+  // Si propone la stessa ricorrenza dell'originale; cambiando Famiglia si sceglie fra le sue.
+  const [ricorrenza, setRicorrenza] = useState(e.ricorrenzaId ?? '')
+  const ricorrenze = useRicorrenze(gruppoId || null)
+  const sceltaRicorrenza = ricorrenze.data ? (ricorrenze.data.some((x) => x.id === ricorrenza) ? ricorrenza : '') : stessaFamiglia ? ricorrenza : ''
   const duplica = useScrittura(
     () =>
       api.crea<EsitoDuplica>(`/eventi/${e.id}/duplica`, {
@@ -50,7 +55,7 @@ export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiud
         data,
         gruppoId: gruppoId || null,
         copiaPartecipanti: partecipanti,
-        collegaSerie: collega && stessaFamiglia,
+        ricorrenzaId: sceltaRicorrenza || null,
       }),
     {
       successo: (r) => `Creato «${r.evento.nome}»`,
@@ -111,35 +116,68 @@ export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiud
         <label className="flex min-h-11 items-center gap-3 text-sm">
           <Casella checked={partecipanti} onChange={(ev) => setPartecipanti(ev.target.checked)} /> Copia anche i partecipanti (da riconfermare)
         </label>
-        <label className="flex min-h-11 items-center gap-3 text-sm">
-          <Casella checked={collega && stessaFamiglia} disabled={!stessaFamiglia} onChange={(ev) => setCollega(ev.target.checked)} /> È una nuova edizione della stessa ricorrenza
-        </label>
-        {!stessaFamiglia ? <p className="text-xs text-testo-tenue">Le edizioni di una ricorrenza restano nella stessa Famiglia.</p> : null}
+        {ricorrenze.data?.length ? (
+          <Campo etichetta="Ricorrenza" htmlFor="dup-ricorrenza">
+            <Select id="dup-ricorrenza" value={sceltaRicorrenza} onChange={(ev) => setRicorrenza(ev.target.value)}>
+              <option value="">Nessuna</option>
+              {ricorrenze.data.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.nome}
+                </option>
+              ))}
+            </Select>
+          </Campo>
+        ) : null}
       </div>
     </Finestra>
   )
 }
 
-/** Altre edizioni della ricorrenza, con il confronto e il collegamento a mano. */
-export function PannelloEdizioni({ evento: e }: { evento: Evento }) {
+/** Ricorrenza dell'evento: sceglierla o toglierla, gli altri eventi della ricorrenza, il confronto. */
+export function PannelloRicorrenza({ evento: e }: { evento: Evento }) {
   const q = useEdizioni(e.id)
   const puoScrivere = usePuoScrivere()
-  const [collega, setCollega] = useState(false)
-  const [scelto, setScelto] = useState('')
-  const imposta = useScrittura((conEventoId: string | null) => api.modifica<Edizioni>(`/eventi/${e.id}/serie`, { conEventoId }), {
-    successo: (r) => (r.serieId ? 'Edizioni collegate' : 'Evento scollegato dalla ricorrenza'),
-    dopo: () => setCollega(false),
+  const imposta = useScrittura((ricorrenzaId: string | null) => api.modifica<Edizioni>(`/eventi/${e.id}/ricorrenza`, { ricorrenzaId }), {
+    successo: (r) => (r.ricorrenza ? `Ricorrenza: ${r.ricorrenza.nome}` : 'Ricorrenza tolta'),
   })
   const d = q.data
-  if (!d || (!d.edizioni.length && !d.puoCollegare && !d.altriEventi.length)) return null
+  if (!d || (!d.ricorrenza && !d.ricorrenze.length && !d.altriEventi.length)) return null
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Altre edizioni</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Repeat className="size-4 text-primario" /> Ricorrenza
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
+        {d.puoAssociare && d.ricorrenze.length ? (
+          <Select
+            aria-label="Ricorrenza dell'evento"
+            value={d.ricorrenza?.id ?? ''}
+            disabled={!puoScrivere || imposta.inCorso}
+            onChange={(ev) => void imposta.esegui(ev.target.value || null)}
+          >
+            <option value="">Nessuna ricorrenza</option>
+            {d.ricorrenze.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.nome}
+              </option>
+            ))}
+          </Select>
+        ) : (
+          <p className="text-sm">{d.ricorrenza ? d.ricorrenza.nome : 'Nessuna ricorrenza'}</p>
+        )}
+        {d.puoAssociare && !d.ricorrenze.length ? (
+          <p className="text-xs text-testo-tenue">
+            Le ricorrenze (Natale, un compleanno…) si creano in{' '}
+            <Link to="/famiglia?scheda=membri" className="underline">
+              Famiglia
+            </Link>
+            .
+          </p>
+        ) : null}
         {d.edizioni.length ? (
-          <ul className="flex flex-col gap-1 text-sm" aria-label="Altre edizioni">
+          <ul className="flex flex-col gap-1 text-sm" aria-label="Altri eventi della ricorrenza">
             {d.edizioni.map((x) => (
               <li key={x.id}>
                 <Link to={`/eventi/${x.id}`} className="text-primario underline-offset-2 hover:underline">
@@ -149,49 +187,13 @@ export function PannelloEdizioni({ evento: e }: { evento: Evento }) {
               </li>
             ))}
           </ul>
-        ) : (
-          <p className="text-sm text-testo-tenue">Nessuna altra edizione collegata. Duplicando l&apos;evento la copia diventa la prossima edizione.</p>
-        )}
-        <div className="flex flex-wrap gap-2">
-          {d.edizioni.length || d.altriEventi.length ? (
-            <Button variante="contorno" misura="piccolo" asChild>
-              <Link to={`/eventi/${e.id}/confronto`}>Confronta con l&apos;anno scorso</Link>
-            </Button>
-          ) : null}
-          {d.puoCollegare && d.altriEventi.length ? (
-            <Button variante="contorno" misura="piccolo" disabled={!puoScrivere} onClick={() => setCollega(true)}>
-              <Link2 /> Collega a un&apos;edizione
-            </Button>
-          ) : null}
-          {d.puoCollegare && d.serieId ? (
-            <Button variante="fantasma" misura="piccolo" disabled={!puoScrivere || imposta.inCorso} onClick={() => void imposta.esegui(null)}>
-              <Unlink /> Scollega
-            </Button>
-          ) : null}
-        </div>
-      </CardContent>
-      <Finestra
-        aperta={collega}
-        onCambia={setCollega}
-        titolo="Collega a un'altra edizione"
-        descrizione="Solo eventi della stessa Famiglia. Non si collega nulla da solo, nemmeno con lo stesso nome."
-        piede={
-          <Button disabled={!scelto || imposta.inCorso} onClick={() => void imposta.esegui(scelto)}>
-            Collega
+        ) : null}
+        {d.edizioni.length || d.altriEventi.length ? (
+          <Button variante="contorno" misura="piccolo" className="self-start" asChild>
+            <Link to={`/eventi/${e.id}/confronto`}>Confronta con l&apos;anno scorso</Link>
           </Button>
-        }
-      >
-        <Campo etichetta="Evento" htmlFor="serie-evento">
-          <Select id="serie-evento" value={scelto} onChange={(ev) => setScelto(ev.target.value)}>
-            <option value="">Scegli…</option>
-            {d.altriEventi.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.nome} · {dataBreve(x.data)}
-              </option>
-            ))}
-          </Select>
-        </Campo>
-      </Finestra>
+        ) : null}
+      </CardContent>
     </Card>
   )
 }
