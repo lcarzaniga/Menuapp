@@ -119,6 +119,7 @@ describe('accesso diretto a ogni rotta con id', () => {
       `POST ${P}/eventi/:id/archivia`,
       `POST ${P}/eventi/:id/trasferisci`,
       `PUT ${P}/eventi/:id/condivisioni/:utenteId`,
+      `PUT ${P}/eventi/:id/famiglia`,
     ]
     for (const r of t.app.rotte.filter((x) => RISORSE.test(x.url) && !x.url.endsWith('/foto/:id/file'))) {
       const chiave = `${r.metodo} ${r.url}`
@@ -328,7 +329,8 @@ describe('ricettario di famiglia', () => {
     const ev = corpo(await t.leggi(`${P}/eventi/ev`))
     const [voce] = await ok(t.scrivi('POST', `${P}/eventi/ev/voci`, { voci: [{ id: 'v-torta', portataId: ev.portate[4].id, nome: 'Torta di mele', piattoId: 'p-anna-fam' }] }))
     expect(voce.piattoId).not.toBe('p-anna-fam')
-    expect(corpo(await t.leggi(`${P}/piatti/${voce.piattoId}`))).toMatchObject({ mio: true, origineAutore: 'Anna', visibilita: 'famiglia' })
+    // La copia nasce privata: Loris decide se condividerla.
+    expect(corpo(await t.leggi(`${P}/piatti/${voce.piattoId}`))).toMatchObject({ mio: true, origineAutore: 'Anna', visibilita: 'privata' })
     // Anna la rende privata: l'evento di Loris non cambia.
     await ok(anna.scrivi('PUT', `${P}/piatti/p-anna-fam/visibilita`, { visibilita: 'privata' }))
     expect(corpo(await t.leggi(`${P}/voci/v-torta`)).piattoId).toBe(voce.piattoId)

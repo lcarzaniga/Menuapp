@@ -257,9 +257,9 @@ export const valutazioniEvento = (db: Db, eventoId: string) =>
 
 /** Valutazioni degli eventi visibili all'utente (suoi o condivisi con lui). */
 export const valutazioniVisibili = (db: Db, utenteId: string) =>
-  tutti<{ evento_id: string; voce_id: string; stelle: number; nome_piatto: string; portata: string; ricetta_origine_id: string | null; data: string; aggiornato_il: number }>(
+  tutti<{ evento_id: string; voce_id: string; stelle: number; nome_piatto: string; portata: string; ricetta_origine_id: string | null; data: string; aggiornato_il: number; gruppo_id: string | null }>(
     db,
-    `SELECT v.evento_id, v.voce_id, v.stelle, v.nome_piatto, v.portata, v.ricetta_origine_id, e.data, v.aggiornato_il
+    `SELECT v.evento_id, v.voce_id, v.stelle, v.nome_piatto, v.portata, v.ricetta_origine_id, e.data, v.aggiornato_il, e.gruppo_id
      FROM valutazioni v JOIN eventi e ON e.id = v.evento_id
      WHERE e.proprietario_id = ? OR EXISTS (SELECT 1 FROM condivisioni_evento c WHERE c.evento_id = e.id AND c.utente_id = ?)`,
     utenteId,

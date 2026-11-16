@@ -35,6 +35,8 @@ export const SchemaRiepilogoEvento = SchemaEvento.extend({
   proprietario: SchemaPersona,
   /** Permesso dell'utente corrente: suo, oppure condiviso in modifica o lettura. */
   permesso: z.enum(['proprietario', 'modifica', 'lettura']),
+  /** Famiglia dell'evento (null: evento personale, fuori dalle Famiglie). */
+  gruppo: SchemaPersona.nullable(),
 })
 export type RiepilogoEvento = z.infer<typeof SchemaRiepilogoEvento>
 
@@ -52,6 +54,8 @@ const CampiEvento = {
 
 export const SchemaNuovoEvento = z.object({
   id: Id,
+  /** Famiglia dell'evento (verificata sul server). Assente: l'unica Famiglia dell'autore, se ne ha una. */
+  gruppoId: Id.nullable().optional(),
   ...CampiEvento,
   coefficienteBambini: Coefficiente.optional(),
   /** Assenti: copiate dalle portate predefinite. */

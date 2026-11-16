@@ -10,7 +10,7 @@ import {
 } from '../../src/contratto/accesso.ts'
 import { nonAutenticato, nonTrovato, troppiTentativi } from '../servizi/errori.ts'
 import * as identita from '../servizi/identita.ts'
-import { richiediAmministratore } from '../servizi/permessi.ts'
+import { richiediAmministratore, richiediGruppo } from '../servizi/permessi.ts'
 import { type Contesto, chi, valida } from './aiuti.ts'
 import { Limitatore } from './limiti.ts'
 
@@ -128,7 +128,13 @@ export function rotteSessione(app: FastifyInstance, ctx: Contesto, ingresso: Ing
     return { ok: true }
   })
 
-  app.get(`${P}/persone`, async (req) => identita.elencaPersone(db, chi(req).id))
+  // Persone con cui condividere: della Famiglia indicata (se ne fai parte) o di tutte le tue.
+  app.get<{ Querystring: { gruppo?: string } }>(`${P}/persone`, async (req) => {
+    const u = chi(req)
+    const gruppo = typeof req.query.gruppo === 'string' && req.query.gruppo ? req.query.gruppo : undefined
+    if (gruppo) richiediGruppo(db, u, gruppo)
+    return identita.elencaPersone(db, u.id, gruppo)
+  })
 
   app.get(`${P}/account/sessioni`, async (req) => identita.elencaSessioni(db, chi(req), false))
   app.delete<{ Params: { id: string } }>(`${P}/account/sessioni/:id`, async (req, reply) => {

@@ -2,7 +2,7 @@
 import { norm } from '../../../src/domain/testo.ts'
 import type { CodiceUnita, Ingrediente, IngredientePiatto, Piatto, Scalatura, StatoParsing } from '../../../src/domain/tipi.ts'
 import { type Db, esegui, tutti, uno } from '../connessione.ts'
-import { STESSO_GRUPPO } from './accesso.ts'
+import { CONDIVISA_CON_LE_MIE_FAMIGLIE } from './accesso.ts'
 
 interface RigaPiatto {
   id: string
@@ -110,7 +110,8 @@ export function elencaPiatti(db: Db, utenteId: string, ricerca?: string) {
     visibilita: 'famiglia' | 'privata'
   }>(
     db,
-    `SELECT p.id, p.nome, p.portata_suggerita, p.porzioni_base, p.versione, p.aggiornato_il, p.proprietario_id, p.origine_autore, p.visibilita,
+    `SELECT p.id, p.nome, p.portata_suggerita, p.porzioni_base, p.versione, p.aggiornato_il, p.proprietario_id, p.origine_autore,
+       CASE WHEN EXISTS (SELECT 1 FROM condivisioni_piatto_gruppo cg WHERE cg.piatto_id = p.id) THEN 'famiglia' ELSE 'privata' END AS visibilita,
        u.nome AS proprietario_nome,
        (SELECT count(*) FROM ingredienti_piatto i WHERE i.piatto_id = p.id) AS numero_ingredienti,
        (SELECT count(*) FROM ingredienti_piatto i WHERE i.piatto_id = p.id AND i.stato_parsing = 'da_verificare') AS da_verificare,
@@ -118,10 +119,9 @@ export function elencaPiatti(db: Db, utenteId: string, ricerca?: string) {
        EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id) AS condiviso
      FROM piatti p JOIN utenti u ON u.id = p.proprietario_id
      WHERE p.nome_norm LIKE ?
-       AND (p.proprietario_id = ? OR (p.visibilita = 'famiglia' AND ${STESSO_GRUPPO}) OR EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id AND c.utente_id = ?))
+       AND (p.proprietario_id = ? OR ${CONDIVISA_CON_LE_MIE_FAMIGLIE} OR EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id AND c.utente_id = ?))
      ORDER BY p.nome_norm`,
     filtro,
-    utenteId,
     utenteId,
     utenteId,
     utenteId,
@@ -154,7 +154,9 @@ export interface InfoProprieta {
 export function proprietaPiatto(db: Db, id: string): InfoProprieta | undefined {
   const r = uno<{ proprietario_id: string; nome: string; origine_piatto_id: string | null; origine_autore: string; visibilita: 'famiglia' | 'privata' }>(
     db,
-    'SELECT p.proprietario_id, u.nome, p.origine_piatto_id, p.origine_autore, p.visibilita FROM piatti p JOIN utenti u ON u.id = p.proprietario_id WHERE p.id = ?',
+    `SELECT p.proprietario_id, u.nome, p.origine_piatto_id, p.origine_autore,
+       CASE WHEN EXISTS (SELECT 1 FROM condivisioni_piatto_gruppo cg WHERE cg.piatto_id = p.id) THEN 'famiglia' ELSE 'privata' END AS visibilita
+     FROM piatti p JOIN utenti u ON u.id = p.proprietario_id WHERE p.id = ?`,
     id,
   )
   return (
@@ -203,7 +205,8 @@ export interface Proprieta {
   proprietarioId: string
   originePiattoId?: string | null
   origineAutore?: string
-  visibilita?: 'famiglia' | 'privata'
+  /** Famiglie con cui condividerlo subito (verificate dal servizio). Assente = nessuna. */
+  famiglie?: string[]
 }
 
 export function inserisciPiatto(db: Db, id: string, d: DatiPiatto, adesso: number, p: Proprieta): void {
@@ -212,7 +215,8 @@ export function inserisciPiatto(db: Db, id: string, d: DatiPiatto, adesso: numbe
     proprietario_id: p.proprietarioId,
     origine_piatto_id: p.originePiattoId ?? null,
     origine_autore: p.origineAutore ?? '',
-    visibilita: p.visibilita ?? 'famiglia',
+    // Colonna storica: la condivisione con le Famiglie è in condivisioni_piatto_gruppo.
+    visibilita: p.famiglie?.length ? 'famiglia' : 'privata',
   }
   const nomi = Object.keys(c)
   esegui(
@@ -223,6 +227,7 @@ export function inserisciPiatto(db: Db, id: string, d: DatiPiatto, adesso: numbe
     adesso,
     adesso,
   )
+  for (const g of p.famiglie ?? []) esegui(db, 'INSERT INTO condivisioni_piatto_gruppo (piatto_id, gruppo_id, creato_il) VALUES (?, ?, ?)', id, g, adesso)
 }
 
 /** Sostituisce gli ingredienti del piatto (fanno parte dell'aggregato piatto). */

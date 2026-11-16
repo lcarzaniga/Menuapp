@@ -13,8 +13,36 @@ const TestoMessaggio = z.string().max(5000, 'Al massimo 5000 caratteri')
 
 // ── Gruppi ───────────────────────────────────────────────────
 
-export const SchemaGruppo = z.object({ id: Id, nome: z.string(), ruolo: z.enum(['amministratore', 'membro']), membri: z.array(SchemaPersona) })
+export const RUOLI_FAMIGLIA = ['amministratore', 'membro'] as const
+
+/** Una Famiglia di cui l'utente fa parte, con il suo ruolo e i membri. */
+export const SchemaGruppo = z.object({
+  id: Id,
+  nome: z.string(),
+  versione: Versione,
+  ruolo: z.enum(RUOLI_FAMIGLIA),
+  membri: z.array(SchemaPersona.extend({ ruolo: z.enum(RUOLI_FAMIGLIA) })),
+})
 export type Gruppo = z.infer<typeof SchemaGruppo>
+
+export const SchemaNuovaFamiglia = z.object({ id: Id, nome: NomeObbligatorio.max(80) })
+export const SchemaRinominaFamiglia = z.object({ nome: NomeObbligatorio.max(80), versione: Versione })
+export const SchemaPassaAmministrazione = z.object({ utenteId: Id })
+
+/** Invito ad aderire a una Famiglia (per chi ha già un account): link monouso, 7 giorni. */
+export const SchemaInvitoFamiglia = z.object({ id: Id, creatoIl: Epoch, scadeIl: Epoch, stato: z.enum(['valido', 'usato', 'scaduto', 'annullato']), usatoDa: z.string().nullable() })
+export type InvitoFamiglia = z.infer<typeof SchemaInvitoFamiglia>
+export const SchemaInvitoFamigliaCreato = SchemaInvitoFamiglia.extend({ link: z.string(), famiglia: z.string() })
+export type InvitoFamigliaCreato = z.infer<typeof SchemaInvitoFamigliaCreato>
+
+/** Cosa vede chi apre il link d'invito a una Famiglia. */
+export const SchemaAnteprimaInvito = z.object({
+  famiglia: z.object({ id: Id, nome: z.string() }),
+  invitatoDa: z.string().nullable(),
+  stato: z.enum(['valido', 'usato', 'scaduto', 'annullato', 'gia_membro']),
+})
+export type AnteprimaInvito = z.infer<typeof SchemaAnteprimaInvito>
+export const SchemaAccettaInvito = z.object({ token: z.string().min(20).max(100) })
 
 // ── Messaggi ─────────────────────────────────────────────────
 
@@ -190,6 +218,8 @@ export const SchemaNotifica = z.object({
   id: Id,
   tipo: z.enum(TIPI_NOTIFICA),
   titolo: z.string(),
+  /** Famiglia di provenienza (per chi ne ha più d'una). */
+  famiglia: z.string().nullable(),
   testo: z.string(),
   attore: z.string().nullable(),
   conteggio: z.number().int(),

@@ -23,6 +23,15 @@ function personaAttiva(db: Db, chi: UtenteCorrente, id: string, giaCondiviso = f
   return u
 }
 
+/** Invitato a un evento: della Famiglia dell'evento (o di una Famiglia comune, se l'evento non ne ha). */
+function invitabile(db: Db, chi: UtenteCorrente, eventoId: string, id: string, giaCondiviso = false): repo.RigaUtente {
+  const gruppo = repo.gruppoEvento(db, eventoId)
+  if (!gruppo || giaCondiviso) return personaAttiva(db, chi, id, giaCondiviso)
+  const u = repo.leggiUtente(db, id)
+  if (!u || u.stato !== 'attivo' || !repo.ruoloNelGruppo(db, gruppo, id)) throw nonTrovato('Utente')
+  return u
+}
+
 // ── Eventi ───────────────────────────────────────────────────
 
 export function accessoEvento(db: Db, u: UtenteCorrente, eventoId: string): AccessoEvento {
@@ -32,6 +41,10 @@ export function accessoEvento(db: Db, u: UtenteCorrente, eventoId: string): Acce
     permesso,
     partecipa: puoPartecipare(db, u, eventoId),
     proprietario: { id: proprietarioId, nome: repo.leggiUtente(db, proprietarioId)?.nome ?? '' },
+    gruppo: (() => {
+      const g = repo.gruppoEvento(db, eventoId)
+      return g ? { id: g, nome: repo.leggiGruppo(db, g)?.nome ?? '' } : null
+    })(),
     condivisioni:
       permesso === 'proprietario'
         ? repo.condivisioniEvento(db, eventoId).map((c) => ({ utenteId: c.utente_id, utenteNome: c.nome, permesso: c.permesso, partecipa: c.partecipa === 1 }))
@@ -52,7 +65,7 @@ export function condividiEvento(
     richiediEvento(db, u, eventoId, 'proprietario')
     if (utenteId === u.id) throw regolaViolata('condividi_con_te', 'L\'evento è già tuo')
     const nuova = !repo.condivisioniEvento(db, eventoId).some((c) => c.utente_id === utenteId)
-    personaAttiva(db, u, utenteId, !nuova)
+    invitabile(db, u, eventoId, utenteId, !nuova)
     repo.impostaCondivisioneEvento(db, eventoId, utenteId, permesso, adesso, partecipa)
     if (nuova) {
       const evento = repoEventi.leggiEvento(db, eventoId)!
@@ -83,7 +96,7 @@ export function trasferisciEvento(db: Db, cartellaFoto: string, u: UtenteCorrent
     const evento = repoEventi.leggiEvento(db, eventoId)!
     if (evento.versione !== versione) throw conflittoVersione(evento)
     if (nuovoId === u.id) throw regolaViolata('gia_proprietario', 'L\'evento è già tuo')
-    const nuovo = personaAttiva(db, u, nuovoId)
+    const nuovo = invitabile(db, u, eventoId, nuovoId)
     repoEventi.cambiaProprietario(db, eventoId, nuovoId, adesso)
     const copie = new Map<string, string>()
     for (const v of repoEventi.vociEvento(db, eventoId)) {
@@ -102,13 +115,42 @@ export function trasferisciEvento(db: Db, cartellaFoto: string, u: UtenteCorrent
   })
 }
 
+/** Sposta l'evento in un'altra Famiglia del proprietario (o lo rende personale con null). */
+export function spostaInFamiglia(db: Db, u: UtenteCorrente, eventoId: string, gruppoId: string | null, adesso = Date.now()): AccessoEvento {
+  return transazione(db, () => {
+    richiediEvento(db, u, eventoId, 'proprietario')
+    if (gruppoId && !repo.ruoloNelGruppo(db, gruppoId, u.id)) throw nonTrovato('Famiglia')
+    repo.impostaGruppoEvento(db, eventoId, gruppoId, adesso)
+    incrementaRevisione(db)
+    return accessoEvento(db, u, eventoId)
+  })
+}
+
 // ── Ricette ──────────────────────────────────────────────────
 
-/** Ricettario di famiglia o ricetta privata (solo il proprietario la cambia). */
+/**
+ * Famiglie con cui condividere una nuova ricetta: quelle indicate (verificando che l'autore
+ * ne faccia parte), altrimenti tutte le sue, salvo che la voglia privata.
+ */
+export function famiglieDiPartenza(db: Db, u: UtenteCorrente, famiglie: string[] | undefined, visibilita?: 'famiglia' | 'privata'): string[] {
+  if (famiglie) {
+    for (const g of famiglie) if (!repo.ruoloNelGruppo(db, g, u.id)) throw nonTrovato('Famiglia')
+    return [...new Set(famiglie)]
+  }
+  return visibilita === 'privata' ? [] : repo.gruppiDiUtente(db, u.id).map((g) => g.id)
+}
+
+/** «Privata» o «condivisa con le mie Famiglie» (compatibilità con la versione a Famiglia unica). */
 export function impostaVisibilita(db: Db, u: UtenteCorrente, piattoId: string, visibilita: 'famiglia' | 'privata', adesso = Date.now()): void {
+  impostaFamiglie(db, u, piattoId, visibilita === 'privata' ? [] : repo.gruppiDiUtente(db, u.id).map((g) => g.id), adesso)
+}
+
+/** Famiglie con cui il proprietario condivide la ricetta (anche più d'una; nessuna = privata). */
+export function impostaFamiglie(db: Db, u: UtenteCorrente, piattoId: string, gruppi: string[], adesso = Date.now()): void {
   transazione(db, () => {
     richiediPiatto(db, u, piattoId, 'proprietario')
-    repo.impostaVisibilitaPiatto(db, piattoId, visibilita, adesso)
+    for (const g of gruppi) if (!repo.ruoloNelGruppo(db, g, u.id)) throw nonTrovato('Famiglia')
+    repo.impostaFamigliePiatto(db, piattoId, [...new Set(gruppi)], adesso)
     incrementaRevisione(db)
   })
 }
@@ -141,8 +183,7 @@ function copiaPiattoInterna(db: Db, cartellaFoto: string, piattoId: string, nuov
   const { id: _id, versione: _v, creatoIl: _c, aggiornatoIl: _a, ingredienti, ...dati } = p
   repoRic.inserisciPiatto(db, nuovoId, dati, adesso, {
     proprietarioId,
-    // La copia ha la visibilità dell'originale: una ricetta privata resta privata.
-    visibilita: prop.visibilita,
+    // La copia nasce privata: chi l'ha fatta decide se e con chi condividerla.
     // Una copia di una copia ricorda l'autore originale.
     originePiattoId: prop.originePiattoId ?? piattoId,
     origineAutore: prop.origineAutore || prop.proprietarioNome,

@@ -132,12 +132,15 @@ export const SchemaAccessoEvento = z.object({
   /** L'utente corrente può partecipare (bacheca, sondaggi, proposte, chi porta cosa). */
   partecipa: z.boolean(),
   proprietario: SchemaPersona,
+  /** Famiglia dell'evento: i suoi membri sono le persone che si possono invitare. */
+  gruppo: SchemaPersona.nullable(),
   condivisioni: z.array(SchemaCondivisioneEvento),
 })
 export type AccessoEvento = z.infer<typeof SchemaAccessoEvento>
 
 export const SchemaImpostaCondivisione = z.object({ permesso: z.enum(PERMESSI_EVENTO), partecipa: z.boolean().default(true) })
 export const SchemaTrasferisci = z.object({ utenteId: Id, versione: Versione })
+export const SchemaFamigliaEvento = z.object({ gruppoId: Id.nullable() })
 
 export const SchemaCondivisioniPiatto = z.object({ utenti: z.array(SchemaPersona) })
 export const SchemaCopiaPiatto = z.object({ id: Id })

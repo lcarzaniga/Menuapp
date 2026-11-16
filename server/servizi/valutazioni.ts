@@ -78,9 +78,10 @@ const MEDIA_PRIORE = 3
  * separati per evento (nessuna fusione per nome). Ordine per media bayesiana:
  * (C × m + somma) / (C + n), con m = 3 stelle e C = 3: un solo 5 (3,5) non supera molti 4 (≈3,9).
  */
-export function classifica(db: Db, u: UtenteCorrente, filtri: { portata?: string; anno?: string } = {}): VoceClassifica[] {
+export function classifica(db: Db, u: UtenteCorrente, filtri: { portata?: string; anno?: string; gruppo?: string } = {}): VoceClassifica[] {
   return lettura(db, () => {
-    let voti = repo.valutazioniVisibili(db, u.id)
+    // Classifica di una Famiglia: solo gli eventi di quella Famiglia (fra quelli visibili).
+    let voti = repo.valutazioniVisibili(db, u.id).filter((v) => !filtri.gruppo || v.gruppo_id === filtri.gruppo)
     if (filtri.anno) voti = voti.filter((v) => v.data.startsWith(filtri.anno!))
     if (filtri.portata) {
       const p = norm(filtri.portata).replace(/[aeio]$/, '')

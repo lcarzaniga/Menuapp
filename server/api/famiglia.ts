@@ -5,7 +5,11 @@ import { z } from 'zod'
 import { PREFISSO_API } from '../../src/contratto/comune.ts'
 import {
   REAZIONI,
+  SchemaAccettaInvito,
   SchemaAggiornaCommento,
+  SchemaNuovaFamiglia,
+  SchemaPassaAmministrazione,
+  SchemaRinominaFamiglia,
   SchemaAggiornaCosa,
   SchemaAssegna,
   SchemaCompleta,
@@ -37,14 +41,46 @@ const SchemaQueryAllegato = z.object({ id: Id })
 const SchemaReazione = z.enum(REAZIONI)
 const SchemaMembro = z.object({ ruolo: z.enum(['amministratore', 'membro']) })
 const SchemaQueryVersione = z.object({ versione: z.coerce.number().int().min(0) })
-const SchemaFiltriClassifica = z.object({ portata: z.string().max(100).optional(), anno: z.string().regex(/^\d{4}$/).optional() })
+const SchemaFiltriClassifica = z.object({ portata: z.string().max(100).optional(), anno: z.string().regex(/^\d{4}$/).optional(), gruppo: Id.optional() })
 
 export function rotteFamiglia(app: FastifyInstance, ctx: Contesto): void {
   const { db, config } = ctx
   const P = PREFISSO_API
 
-  // ── Gruppi ──
+  // ── Famiglie ──
+  const urlInviti = () => config.urlPubblico ?? config.urlPrivato ?? config.origini[0] ?? ''
   app.get(`${P}/gruppi`, async (req) => famiglia.gruppiDi(db, chi(req)))
+  app.post(`${P}/famiglie`, async (req, reply) => reply.code(201).send(famiglia.creaFamiglia(db, chi(req), valida(SchemaNuovaFamiglia, req.body))))
+  app.put<ConId>(`${P}/famiglie/:id`, async (req) => {
+    const u = chi(req)
+    richiediGruppo(db, u, req.params.id, 'amministratore')
+    const d = valida(SchemaRinominaFamiglia, req.body)
+    return famiglia.rinomina(db, u, req.params.id, d.nome, d.versione)
+  })
+  app.post<ConId>(`${P}/famiglie/:id/inviti`, async (req, reply) => reply.code(201).send(famiglia.creaInvito(db, chi(req), req.params.id, urlInviti())))
+  app.get<ConId>(`${P}/famiglie/:id/inviti`, async (req) => famiglia.invitiDi(db, chi(req), req.params.id))
+  app.delete<{ Params: { id: string; invito: string } }>(`${P}/famiglie/:id/inviti/:invito`, async (req, reply) => {
+    famiglia.annullaInvito(db, chi(req), req.params.id, req.params.invito)
+    return reply.code(204).send()
+  })
+  // Il token viaggia nel corpo (non nell'indirizzo), come per l'attivazione dei dispositivi.
+  app.post(`${P}/inviti-famiglia/anteprima`, async (req) => famiglia.anteprimaInvito(db, chi(req), valida(SchemaAccettaInvito, req.body).token))
+  app.post(`${P}/inviti-famiglia/accetta`, async (req) => famiglia.accettaInvito(db, chi(req), valida(SchemaAccettaInvito, req.body).token))
+  app.post<ConId>(`${P}/famiglie/:id/esci`, async (req) => {
+    famiglia.esci(db, chi(req), req.params.id)
+    return { ok: true }
+  })
+  app.delete<{ Params: { id: string; utenteId: string } }>(`${P}/famiglie/:id/membri/:utenteId`, async (req) => famiglia.rimuovi(db, chi(req), req.params.id, req.params.utenteId))
+  app.put<{ Params: { id: string; utenteId: string } }>(`${P}/famiglie/:id/membri/:utenteId`, async (req) => {
+    const u = chi(req)
+    richiediGruppo(db, u, req.params.id, 'amministratore')
+    return famiglia.impostaRuolo(db, u, req.params.id, req.params.utenteId, valida(SchemaMembro, req.body).ruolo)
+  })
+  app.post<ConId>(`${P}/famiglie/:id/amministrazione`, async (req) => {
+    const u = chi(req)
+    richiediGruppo(db, u, req.params.id, 'amministratore')
+    return famiglia.passaAmministrazione(db, u, req.params.id, valida(SchemaPassaAmministrazione, req.body).utenteId)
+  })
   app.put<{ Params: { id: string; utenteId: string } }>(`${P}/admin/gruppi/:id/membri/:utenteId`, async (req) => {
     richiediAmministratore(chi(req))
     return famiglia.impostaMembro(db, req.params.id, req.params.utenteId, valida(SchemaMembro, req.body).ruolo)
@@ -226,5 +262,10 @@ export function rotteFamiglia(app: FastifyInstance, ctx: Contesto): void {
     richiediVoce(db, u, req.params.id, 'lettura')
     return valutazioni.togli(db, u, req.params.id)
   })
-  app.get(`${P}/classifica`, async (req) => valutazioni.classifica(db, chi(req), valida(SchemaFiltriClassifica, req.query)))
+  app.get(`${P}/classifica`, async (req) => {
+    const u = chi(req)
+    const f = valida(SchemaFiltriClassifica, req.query)
+    if (f.gruppo) richiediGruppo(db, u, f.gruppo)
+    return valutazioni.classifica(db, u, f)
+  })
 }

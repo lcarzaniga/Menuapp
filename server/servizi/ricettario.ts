@@ -35,6 +35,7 @@ export function leggiPiatto(db: Db, id: string, utenteId: string): DettaglioPiat
       origineAutore: prop.origineAutore,
       originePiattoId: prop.originePiattoId,
       visibilita: prop.visibilita,
+      famiglie: mio ? repoAccesso.famigliePiatto(db, id) : [],
       condivisaCon: mio ? repoAccesso.condivisioniPiatto(db, id).map((c) => ({ id: c.utente_id, nome: c.nome })) : [],
     }
   })

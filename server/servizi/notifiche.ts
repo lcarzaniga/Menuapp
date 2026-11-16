@@ -86,6 +86,11 @@ function titolo(db: Db, n: repo.RigaNotifica): string {
   return 'Ricette di famiglia & Co.'
 }
 
+function famiglia(db: Db, n: repo.RigaNotifica): string | null {
+  const g = n.gruppo_id ?? (n.evento_id ? repoAccesso.gruppoEvento(db, n.evento_id) : null)
+  return g ? (repoAccesso.leggiGruppo(db, g)?.nome ?? null) : null
+}
+
 /** Notifiche dell'utente, ricontrollando i permessi: quelle non più accessibili si cancellano. */
 export function elencaNotifiche(db: Db, u: UtenteCorrente, adesso = Date.now()): Notifica[] {
   return transazione(db, () => {
@@ -100,6 +105,7 @@ export function elencaNotifiche(db: Db, u: UtenteCorrente, adesso = Date.now()):
         id: n.id,
         tipo: (TIPI_NOTIFICA as readonly string[]).includes(n.tipo) ? (n.tipo as TipoNotifica) : 'menu',
         titolo: titolo(db, n),
+        famiglia: famiglia(db, n),
         testo: n.testo,
         attore: n.attore_nome,
         conteggio: n.conteggio,

@@ -226,7 +226,7 @@ export function piattoLeggibileDaAltri(db: Db, piattoId: string, utenteId: strin
   return (
     uno(
       db,
-      `SELECT 1 FROM piatti p WHERE p.id = ? AND p.visibilita = 'famiglia' AND ${STESSO_GRUPPO}
+      `SELECT 1 FROM piatti p WHERE p.id = ? AND ${CONDIVISA_CON_LE_MIE_FAMIGLIE}
        UNION ALL
        SELECT 1 FROM condivisioni_piatto WHERE piatto_id = ? AND utente_id = ?
        UNION ALL
@@ -234,7 +234,6 @@ export function piattoLeggibileDaAltri(db: Db, piattoId: string, utenteId: strin
        WHERE v.piatto_id = ? AND (e.proprietario_id = ? OR EXISTS (SELECT 1 FROM condivisioni_evento c WHERE c.evento_id = e.id AND c.utente_id = ?))
        LIMIT 1`,
       piattoId,
-      utenteId,
       utenteId,
       piattoId,
       utenteId,
@@ -251,6 +250,67 @@ export function piattoLeggibileDaAltri(db: Db, piattoId: string, utenteId: strin
  */
 export const STESSO_GRUPPO =
   '(p.proprietario_id = ? OR EXISTS (SELECT 1 FROM membri_gruppo a JOIN membri_gruppo b ON b.gruppo_id = a.gruppo_id WHERE a.utente_id = p.proprietario_id AND b.utente_id = ?))'
+
+/**
+ * Condizione SQL «il piatto `p` è condiviso con una Famiglia di cui fanno parte sia chi legge
+ * (parametro) sia il proprietario»: chi esce da una Famiglia smette di condividerci le sue ricette.
+ */
+export const CONDIVISA_CON_LE_MIE_FAMIGLIE = `EXISTS (SELECT 1 FROM condivisioni_piatto_gruppo cg
+  JOIN membri_gruppo mv ON mv.gruppo_id = cg.gruppo_id AND mv.utente_id = ?
+  JOIN membri_gruppo mo ON mo.gruppo_id = cg.gruppo_id AND mo.utente_id = p.proprietario_id
+  WHERE cg.piatto_id = p.id)`
+
+/** Famiglie con cui il proprietario condivide il piatto (solo quelle di cui fa ancora parte). */
+export const famigliePiatto = (db: Db, piattoId: string) =>
+  tutti<{ id: string; nome: string }>(
+    db,
+    `SELECT g.id, g.nome FROM condivisioni_piatto_gruppo cg JOIN gruppi g ON g.id = cg.gruppo_id JOIN piatti p ON p.id = cg.piatto_id
+     JOIN membri_gruppo m ON m.gruppo_id = g.id AND m.utente_id = p.proprietario_id WHERE cg.piatto_id = ? ORDER BY g.nome`,
+    piattoId,
+  )
+
+export function impostaFamigliePiatto(db: Db, piattoId: string, gruppi: string[], adesso: number): void {
+  esegui(db, 'DELETE FROM condivisioni_piatto_gruppo WHERE piatto_id = ?', piattoId)
+  for (const g of gruppi) esegui(db, 'INSERT INTO condivisioni_piatto_gruppo (piatto_id, gruppo_id, creato_il) VALUES (?, ?, ?)', piattoId, g, adesso)
+  esegui(db, 'UPDATE piatti SET versione = versione + 1, aggiornato_il = ? WHERE id = ?', adesso, piattoId)
+}
+
+// ── Inviti ad aderire a una Famiglia ────────────────────────
+
+export interface RigaInvitoFamiglia {
+  id: string
+  gruppo_id: string
+  token_hash: string
+  creato_da: string | null
+  creato_il: number
+  scade_il: number
+  usato_da: string | null
+  usato_il: number | null
+  annullato_il: number | null
+}
+export const invitoFamigliaPerHash = (db: Db, hash: string) => uno<RigaInvitoFamiglia>(db, 'SELECT * FROM inviti_famiglia WHERE token_hash = ?', hash)
+export const invitiFamiglia = (db: Db, gruppoId: string) => tutti<RigaInvitoFamiglia>(db, 'SELECT * FROM inviti_famiglia WHERE gruppo_id = ? ORDER BY creato_il DESC LIMIT 50', gruppoId)
+export function inserisciInvitoFamiglia(db: Db, i: Pick<RigaInvitoFamiglia, 'id' | 'gruppo_id' | 'token_hash' | 'creato_da' | 'creato_il' | 'scade_il'>): void {
+  esegui(db, 'INSERT INTO inviti_famiglia (id, gruppo_id, token_hash, creato_da, creato_il, scade_il) VALUES (?, ?, ?, ?, ?, ?)', i.id, i.gruppo_id, i.token_hash, i.creato_da, i.creato_il, i.scade_il)
+}
+/** Consuma l'invito una volta sola: 1 = usato ora. */
+export const consumaInvitoFamiglia = (db: Db, id: string, utenteId: string, adesso: number) =>
+  esegui(db, 'UPDATE inviti_famiglia SET usato_da = ?, usato_il = ? WHERE id = ? AND usato_il IS NULL AND annullato_il IS NULL AND scade_il > ?', utenteId, adesso, id, adesso)
+export const annullaInvitoFamiglia = (db: Db, id: string, gruppoId: string, adesso: number) =>
+  esegui(db, 'UPDATE inviti_famiglia SET annullato_il = ? WHERE id = ? AND gruppo_id = ? AND usato_il IS NULL AND annullato_il IS NULL', adesso, id, gruppoId)
+
+export function inserisciGruppo(db: Db, id: string, nome: string, adesso: number): void {
+  esegui(db, 'INSERT INTO gruppi (id, nome, creato_il, aggiornato_il) VALUES (?, ?, ?, ?)', id, nome, adesso, adesso)
+}
+export const leggiGruppo = (db: Db, id: string) => uno<{ id: string; nome: string; versione: number }>(db, 'SELECT id, nome, versione FROM gruppi WHERE id = ?', id)
+export const rinominaGruppo = (db: Db, id: string, nome: string, versione: number, adesso: number) =>
+  esegui(db, 'UPDATE gruppi SET nome = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ? AND versione = ?', nome, adesso, id, versione)
+
+// ── Famiglia degli eventi ───────────────────────────────────
+
+export const gruppoEvento = (db: Db, eventoId: string) => uno<{ gruppo_id: string | null }>(db, 'SELECT gruppo_id FROM eventi WHERE id = ?', eventoId)?.gruppo_id ?? null
+export const impostaGruppoEvento = (db: Db, eventoId: string, gruppoId: string | null, adesso: number) =>
+  esegui(db, 'UPDATE eventi SET gruppo_id = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ?', gruppoId, adesso, eventoId)
 
 // ── Gruppi ──────────────────────────────────────────────────
 
@@ -349,9 +409,6 @@ export const condivisioniPiatto = (db: Db, piattoId: string) =>
     piattoId,
   )
 
-export function impostaVisibilitaPiatto(db: Db, piattoId: string, visibilita: 'famiglia' | 'privata', adesso: number): void {
-  esegui(db, 'UPDATE piatti SET visibilita = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ?', visibilita, adesso, piattoId)
-}
 
 export function sostituisciCondivisioniPiatto(db: Db, piattoId: string, utenti: string[], adesso: number): void {
   esegui(db, 'DELETE FROM condivisioni_piatto WHERE piatto_id = ?', piattoId)

@@ -9,6 +9,7 @@ import { SchemaPersona } from './accesso.ts'
 export const VISIBILITA_PIATTO = ['famiglia', 'privata'] as const
 export type VisibilitaPiatto = (typeof VISIBILITA_PIATTO)[number]
 export const SchemaVisibilita = z.object({ visibilita: z.enum(VISIBILITA_PIATTO) })
+export const SchemaFamigliePiatto = z.object({ gruppi: z.array(Id).max(20) })
 
 const Minuti = z.number().int().min(0).max(100_000).nullable()
 const Quantita = z.number().min(0).max(1_000_000).nullable()
@@ -68,6 +69,8 @@ export const SchemaDettaglioPiatto = SchemaPiatto.extend({
   foto: z.array(SchemaFoto),
   ...CampiProprieta,
   originePiattoId: Id.nullable(),
+  /** Famiglie con cui è condivisa (solo per il proprietario). */
+  famiglie: z.array(SchemaPersona),
   /** Con chi è condivisa una ricetta privata (solo per il proprietario). */
   condivisaCon: z.array(SchemaPersona),
 })
@@ -93,6 +96,8 @@ export type RiepilogoPiatto = z.infer<typeof SchemaRiepilogoPiatto>
 export const SchemaNuovoPiatto = z.object({
   id: Id,
   visibilita: z.enum(VISIBILITA_PIATTO).optional(),
+  /** Famiglie con cui condividerla (di cui l'autore fa parte). Assente: tutte le sue, salvo `privata`. */
+  famiglie: z.array(Id).max(20).optional(),
   nome: NomeObbligatorio,
   portataSuggerita: CampiPiatto.portataSuggerita.optional(),
   porzioniBase: CampiPiatto.porzioniBase.optional(),

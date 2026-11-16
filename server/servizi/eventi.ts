@@ -26,8 +26,8 @@ export function richiediModificabile(e: Evento): void {
   }
 }
 
-export function elencaEventi(db: Db, utenteId: string, stato?: StatoEvento): RiepilogoEvento[] {
-  return lettura(db, () => repo.elencaEventi(db, utenteId, stato).map((e) => ({ ...e, copertiEquivalenti: copertiEquivalenti(e) })))
+export function elencaEventi(db: Db, utenteId: string, stato?: StatoEvento, gruppoId?: string): RiepilogoEvento[] {
+  return lettura(db, () => repo.elencaEventi(db, utenteId, stato, gruppoId).map((e) => ({ ...e, copertiEquivalenti: copertiEquivalenti(e) })))
 }
 
 function nomiPortateUnici(portate: { nome: string }[]): void {
@@ -35,7 +35,7 @@ function nomiPortateUnici(portate: { nome: string }[]): void {
   if (new Set(nomi).size !== nomi.length) throw richiestaNonValida('Due portate hanno lo stesso nome')
 }
 
-export function creaEvento(db: Db, d: NuovoEvento, proprietarioId: string, adesso = Date.now()): { creato: boolean; valore: Evento } {
+export function creaEvento(db: Db, d: NuovoEvento, proprietarioId: string, adesso = Date.now(), gruppoId: string | null = null): { creato: boolean; valore: Evento } {
   return transazione(db, () => {
     const imp = leggiImpostazioni(db)
     const portate = (d.portate ?? imp.portatePredefinite.map((p) => ({ id: `${d.id}:${p.id}`, nome: p.nome }))).map((p, i) => ({
@@ -66,7 +66,7 @@ export function creaEvento(db: Db, d: NuovoEvento, proprietarioId: string, adess
         e.nome === dati.nome && e.data === dati.data && e.tipo === dati.tipo && e.adulti === dati.adulti && e.bambini === dati.bambini &&
         repoAccesso.proprietarioEvento(db, d.id) === proprietarioId,
       () => {
-        repo.inserisciEvento(db, { ...dati, stato: 'attivo', conclusoIl: null, archiviatoIl: null, creatoIl: adesso, aggiornatoIl: adesso }, proprietarioId)
+        repo.inserisciEvento(db, { ...dati, stato: 'attivo', conclusoIl: null, archiviatoIl: null, creatoIl: adesso, aggiornatoIl: adesso }, proprietarioId, gruppoId)
         portate.forEach((p) => repo.inserisciPortata(db, d.id, p))
       },
     )

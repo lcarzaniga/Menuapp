@@ -25,6 +25,8 @@ export const TABELLE_CONTENUTO = [
   'stili_stampa',
   'condivisioni_evento',
   'condivisioni_piatto',
+  'condivisioni_piatto_gruppo',
+  'inviti_famiglia',
   'messaggi',
   'commenti',
   'reazioni',

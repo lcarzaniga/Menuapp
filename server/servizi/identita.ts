@@ -67,7 +67,8 @@ export const elencaUtenti = (db: Db): Utente[] => repo.elencaUtenti(db).map(daRi
 export const famigliaDi = (db: Db, utenteId: string) => repo.famigliaDi(db, utenteId)
 
 /** Persone della stessa Famiglia con cui condividere (escluso chi chiede). */
-export const elencaPersone = (db: Db, utenteId: string): Persona[] => repo.personeDellaFamiglia(db, utenteId)
+export const elencaPersone = (db: Db, utenteId: string, gruppoId?: string): Persona[] =>
+  gruppoId ? repo.membriGruppo(db, gruppoId).filter((m) => m.utente_id !== utenteId).map((m) => ({ id: m.utente_id, nome: m.nome })) : repo.personeDellaFamiglia(db, utenteId)
 
 /** Nuovo utente; con `famiglia` entra nella Famiglia indicata (quella di chi lo crea). */
 export function creaUtente(db: Db, d: NuovoUtente, adesso = Date.now(), famigliaId?: string): Utente {
