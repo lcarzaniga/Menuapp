@@ -323,3 +323,6 @@ export function piattiConIngrediente(db: Db, id: string, utenteId: string) {
     altri: righe.filter((r) => r.proprietario_id !== utenteId).length,
   }
 }
+
+/** Piatto collegato a una voce di menù (null se la voce è solo un nome). */
+export const voceConPiatto = (db: Db, voceId: string) => uno<{ piatto_id: string | null }>(db, 'SELECT piatto_id FROM voci_menu WHERE id = ?', voceId)?.piatto_id ?? null

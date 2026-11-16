@@ -7,6 +7,7 @@ import type { Evento, StatoEvento, VoceMenu } from '../../src/domain/tipi.ts'
 import { type Db, esegui, lettura, transazione } from '../db/connessione.ts'
 import * as repoAccesso from '../db/repo/accesso.ts'
 import * as repo from '../db/repo/eventi.ts'
+import * as repoFamiglia from '../db/repo/famiglia.ts'
 import { incrementaRevisione } from '../db/repo/meta.ts'
 import { nonTrovato, regolaViolata, richiestaNonValida } from './errori.ts'
 import { leggiImpostazioni } from './impostazioni.ts'
@@ -241,6 +242,7 @@ export function aggiornaVoce(db: Db, id: string, d: AggiornaVoce, risolvi: Risol
       () => leggiVoce(db, id),
       adesso,
     )
+    repoFamiglia.allineaIncaricato(db, id)
     incrementaRevisione(db)
     return leggiVoce(db, id)
   })

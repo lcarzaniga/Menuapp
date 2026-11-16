@@ -6,6 +6,12 @@ import { PREFISSO_API } from '../../src/contratto/comune.ts'
 import {
   REAZIONI,
   SchemaAggiornaCommento,
+  SchemaAggiornaCosa,
+  SchemaAssegna,
+  SchemaCompleta,
+  SchemaNuovaCosa,
+  SchemaPrendi,
+  SchemaValuta,
   SchemaAggiornaMessaggio,
   SchemaDecisione,
   SchemaFissa,
@@ -19,8 +25,10 @@ import { Id } from '../../src/contratto/comune.ts'
 import * as bacheca from '../servizi/bacheca.ts'
 import { leggiFile } from '../servizi/foto.ts'
 import * as famiglia from '../servizi/gruppi.ts'
+import * as incarichi from '../servizi/incarichi.ts'
 import * as notifiche from '../servizi/notifiche.ts'
-import { richiediAmministratore, richiediEvento, richiediGruppo } from '../servizi/permessi.ts'
+import * as valutazioni from '../servizi/valutazioni.ts'
+import { richiediAmministratore, richiediEvento, richiediGruppo, richiediVoce } from '../servizi/permessi.ts'
 import { richiestaNonValida } from '../servizi/errori.ts'
 import { chi, type Contesto, valida } from './aiuti.ts'
 
@@ -28,6 +36,8 @@ type ConId = { Params: { id: string } }
 const SchemaQueryAllegato = z.object({ id: Id })
 const SchemaReazione = z.enum(REAZIONI)
 const SchemaMembro = z.object({ ruolo: z.enum(['amministratore', 'membro']) })
+const SchemaQueryVersione = z.object({ versione: z.coerce.number().int().min(0) })
+const SchemaFiltriClassifica = z.object({ portata: z.string().max(100).optional(), anno: z.string().regex(/^\d{4}$/).optional() })
 
 export function rotteFamiglia(app: FastifyInstance, ctx: Contesto): void {
   const { db, config } = ctx
@@ -155,4 +165,66 @@ export function rotteFamiglia(app: FastifyInstance, ctx: Contesto): void {
     const u = chi(req)
     return notifiche.impostaPreferenze(db, u, valida(SchemaPreferenze, req.body).disattivate)
   })
+
+  // ── Chi porta cosa ──
+  app.get<ConId>(`${P}/eventi/:id/incarichi`, async (req) => incarichi.elenca(db, chi(req), req.params.id))
+  app.post<ConId>(`${P}/eventi/:id/cose`, async (req, reply) => {
+    const u = chi(req)
+    richiediEvento(db, u, req.params.id, 'lettura')
+    return reply.code(201).send(incarichi.creaCosa(db, u, req.params.id, valida(SchemaNuovaCosa, req.body)))
+  })
+  app.put<ConId>(`${P}/cose/:id`, async (req) => {
+    const u = chi(req)
+    incarichi.richiediIncarico(db, u, 'cosa', req.params.id)
+    return incarichi.aggiornaCosa(db, u, req.params.id, valida(SchemaAggiornaCosa, req.body))
+  })
+  app.delete<ConId>(`${P}/cose/:id`, async (req, reply) => {
+    const u = chi(req)
+    incarichi.richiediIncarico(db, u, 'cosa', req.params.id)
+    incarichi.eliminaCosa(db, u, req.params.id, valida(SchemaQueryVersione, req.query).versione)
+    return reply.code(204).send()
+  })
+  for (const tipo of ['voce', 'cosa'] as const) {
+    const base = `${P}/${tipo === 'voce' ? 'voci' : 'cose'}/:id`
+    const prima = (req: Parameters<typeof chi>[0] & { params: { id: string } }) => {
+      const u = chi(req)
+      incarichi.richiediIncarico(db, u, tipo, req.params.id)
+      return u
+    }
+    app.post<ConId>(`${base}/prendi`, async (req) => {
+      const u = prima(req)
+      const d = valida(SchemaPrendi, req.body)
+      return incarichi.prendi(db, u, tipo, req.params.id, d.versione, d.togliDallaSpesa)
+    })
+    app.post<ConId>(`${base}/rinuncia`, async (req) => {
+      const u = prima(req)
+      return incarichi.rinuncia(db, u, tipo, req.params.id, valida(SchemaQueryVersione, req.body).versione)
+    })
+    app.post<ConId>(`${base}/assegna`, async (req) => {
+      const u = chi(req)
+      // Assegnare spetta a chi organizza: controllo prima di leggere il corpo.
+      richiediEvento(db, u, incarichi.richiediIncarico(db, u, tipo, req.params.id), 'modifica')
+      const d = valida(SchemaAssegna, req.body)
+      return incarichi.assegna(db, u, tipo, req.params.id, d.versione, d.utenteId)
+    })
+    app.post<ConId>(`${base}/completa`, async (req) => {
+      const u = prima(req)
+      const d = valida(SchemaCompleta, req.body)
+      return incarichi.completa(db, u, tipo, req.params.id, d.versione, d.completato)
+    })
+  }
+
+  // ── Valutazioni ──
+  app.get<ConId>(`${P}/eventi/:id/valutazioni`, async (req) => valutazioni.dellEvento(db, chi(req), req.params.id))
+  app.put<ConId>(`${P}/voci/:id/valutazione`, async (req) => {
+    const u = chi(req)
+    richiediVoce(db, u, req.params.id, 'lettura')
+    return valutazioni.valuta(db, u, req.params.id, valida(SchemaValuta, req.body).stelle)
+  })
+  app.delete<ConId>(`${P}/voci/:id/valutazione`, async (req) => {
+    const u = chi(req)
+    richiediVoce(db, u, req.params.id, 'lettura')
+    return valutazioni.togli(db, u, req.params.id)
+  })
+  app.get(`${P}/classifica`, async (req) => valutazioni.classifica(db, chi(req), valida(SchemaFiltriClassifica, req.query)))
 }

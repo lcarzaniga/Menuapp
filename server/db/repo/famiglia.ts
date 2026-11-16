@@ -332,3 +332,15 @@ export function scriviPreferenze(db: Db, utenteId: string, disattivate: string[]
   esegui(db, 'DELETE FROM preferenze_notifiche WHERE utente_id = ?', utenteId)
   for (const t of disattivate) esegui(db, 'INSERT INTO preferenze_notifiche (utente_id, tipo, attiva) VALUES (?, ?, 0)', utenteId, t)
 }
+
+/**
+ * Dopo una modifica a mano di «A cura di»: se il testo non è più il nome dell'utente
+ * incaricato, la voce non è più sua (resta il testo scritto).
+ */
+export const allineaIncaricato = (db: Db, voceId: string) =>
+  esegui(
+    db,
+    `UPDATE voci_menu SET incaricato_id = NULL, incarico_completato = CASE WHEN incaricato = '' THEN 0 ELSE incarico_completato END
+     WHERE id = ? AND incaricato_id IS NOT NULL AND incaricato <> coalesce((SELECT nome FROM utenti WHERE id = voci_menu.incaricato_id), '')`,
+    voceId,
+  )
