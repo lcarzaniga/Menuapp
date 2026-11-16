@@ -11,9 +11,15 @@ import { copiaFotoPiatto } from './foto.ts'
 import { avvisa } from './notifiche.ts'
 import { puoPartecipare, richiediEvento, richiediPiatto, type UtenteCorrente } from './permessi.ts'
 
-function personaAttiva(db: Db, id: string): repo.RigaUtente {
+/**
+ * Destinatario di una nuova condivisione: attivo e della stessa Famiglia di chi condivide
+ * (altrimenti «non trovato», come se non esistesse). Le condivisioni già esistenti restano
+ * valide e modificabili anche se il destinatario non è (più) nella stessa Famiglia.
+ */
+function personaAttiva(db: Db, chi: UtenteCorrente, id: string, giaCondiviso = false): repo.RigaUtente {
   const u = repo.leggiUtente(db, id)
   if (!u || u.stato !== 'attivo') throw nonTrovato('Utente')
+  if (!giaCondiviso && !repo.stessaFamiglia(db, chi.id, id)) throw nonTrovato('Utente')
   return u
 }
 
@@ -45,8 +51,8 @@ export function condividiEvento(
   return transazione(db, () => {
     richiediEvento(db, u, eventoId, 'proprietario')
     if (utenteId === u.id) throw regolaViolata('condividi_con_te', 'L\'evento è già tuo')
-    personaAttiva(db, utenteId)
     const nuova = !repo.condivisioniEvento(db, eventoId).some((c) => c.utente_id === utenteId)
+    personaAttiva(db, u, utenteId, !nuova)
     repo.impostaCondivisioneEvento(db, eventoId, utenteId, permesso, adesso, partecipa)
     if (nuova) {
       const evento = repoEventi.leggiEvento(db, eventoId)!
@@ -77,7 +83,7 @@ export function trasferisciEvento(db: Db, cartellaFoto: string, u: UtenteCorrent
     const evento = repoEventi.leggiEvento(db, eventoId)!
     if (evento.versione !== versione) throw conflittoVersione(evento)
     if (nuovoId === u.id) throw regolaViolata('gia_proprietario', 'L\'evento è già tuo')
-    const nuovo = personaAttiva(db, nuovoId)
+    const nuovo = personaAttiva(db, u, nuovoId)
     repoEventi.cambiaProprietario(db, eventoId, nuovoId, adesso)
     const copie = new Map<string, string>()
     for (const v of repoEventi.vociEvento(db, eventoId)) {
@@ -116,8 +122,8 @@ export function impostaCondivisioniPiatto(db: Db, u: UtenteCorrente, piattoId: s
   return transazione(db, () => {
     richiediPiatto(db, u, piattoId, 'proprietario')
     const unici = [...new Set(utenti)].filter((id) => id !== u.id)
-    for (const id of unici) personaAttiva(db, id)
     const prima = new Set(repo.condivisioniPiatto(db, piattoId).map((c) => c.utente_id))
+    for (const id of unici) personaAttiva(db, u, id, prima.has(id))
     repo.sostituisciCondivisioniPiatto(db, piattoId, unici, adesso)
     const nome = repoRic.leggiPiatto(db, piattoId)?.nome ?? 'una ricetta'
     avvisa(db, { tipo: 'condivisione', attoreId: u.id, destinatari: unici.filter((id) => !prima.has(id)), chiave: `condivisione-piatto:${piattoId}`, piattoId, testo: `Ricetta condivisa con te: «${nome}»` }, adesso)

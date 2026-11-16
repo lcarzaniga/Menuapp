@@ -156,8 +156,9 @@ export function rotteSessione(app: FastifyInstance, ctx: Contesto, ingresso: Ing
     return identita.elencaUtenti(db)
   })
   app.post(`${P}/admin/utenti`, async (req, reply) => {
-    admin(req)
-    return reply.code(201).send(identita.creaUtente(db, valida(SchemaNuovoUtente, req.body)))
+    const u = admin(req)
+    // Il nuovo familiare entra nella Famiglia di chi lo crea.
+    return reply.code(201).send(identita.creaUtente(db, valida(SchemaNuovoUtente, req.body), Date.now(), identita.famigliaDi(db, u.id)))
   })
   app.put<{ Params: { id: string } }>(`${P}/admin/utenti/:id`, async (req) => identita.aggiornaUtente(db, admin(req), req.params.id, valida(SchemaAggiornaUtente, req.body)))
   app.post<{ Params: { id: string } }>(`${P}/admin/utenti/:id/inviti`, async (req, reply) =>

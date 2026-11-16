@@ -1866,12 +1866,24 @@ breve «Ricette & Co.» (manifest, titoli, testi); restano `menuapp` repository,
 database, servizi, URL e identificativi (l'`id` del manifest non cambia: le installazioni si
 aggiornano da sole). Migrazione `0007_famiglia.sql`.
 
-### 20.1 Gruppi familiari e bacheca della famiglia
+### 20.1 La Famiglia (famiglia allargata) e la sua bacheca
 
-- `gruppi`, `membri_gruppo` (ruolo `amministratore|membro`): appartenenza esplicita. La
-  migrazione crea «Famiglia» con gli utenti esistenti; un utente nuovo vi entra se lo sceglie
-  l'amministratore (casella predefinita). Il modello ammette più gruppi; l'interfaccia ne usa uno.
-- Il ricettario di famiglia (§19.4) è visibile ai membri dello stesso gruppo del proprietario.
+- **Una sola grande Famiglia**: persone di nuclei diversi (fratelli, sorelle, cognati, figli,
+  altri parenti) nello stesso gruppo, senza sottogruppi né nuclei né gerarchie (precisazione di
+  Loris del 16/11/2026). Tabelle `gruppi` e `membri_gruppo`: l'unico ruolo distinto,
+  `amministratore`, serve solo a moderare la bacheca (fissare, eliminare messaggi altrui).
+  La migrazione `0007` crea «Famiglia» con tutti gli utenti esistenti; un nuovo utente entra
+  nella Famiglia di chi lo crea (casella predefinita), o resta fuori.
+- **Dentro la Famiglia**: ricette di famiglia visibili a tutti i membri (salvo le private,
+  §19.4), bacheca generale comune. **Gli eventi restano a condivisione selettiva**: chi organizza
+  sceglie partecipanti e permessi (§19.3).
+- **Più Famiglie indipendenti (apertura futura)**: il modello le ammette già, isolate fra loro:
+  bacheca, ricettario di famiglia, notifiche e persone con cui condividere (`/persone`) sono
+  limitati alla propria Famiglia; nuove condivisioni di eventi e ricette e passaggi di proprietà
+  solo verso persone della stessa Famiglia (altrimenti «non trovato»). Le condivisioni già
+  esistenti restano valide e modificabili. Oggi l'interfaccia mostra una Famiglia sola. Da
+  rivedere prima di un'apertura pubblica: catalogo ingredienti e reparti, impostazioni comuni e
+  ruolo di amministratore dell'app sono ancora unici per tutte le Famiglie.
 - Bacheca del gruppo (`#/famiglia`): messaggi dal più recente, fissati in cima (li fissa chi
   amministra il gruppo), commenti, reazioni (👍 ❤️ 😄 😋 👏), fino a 4 foto, ricetta segnalata
   (mostrata solo a chi può leggerla, altrimenti «non disponibile» senza nome), sondaggi. Autore,

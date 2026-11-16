@@ -309,3 +309,50 @@ describe('notifiche', () => {
     expect(menu).toEqual([expect.objectContaining({ conteggio: 2, testo: 'Aggiunto «Lasagne» al menù', collegamento: '/eventi/ev/menu' })])
   })
 })
+
+describe('una Famiglia allargata, isolata dalle altre', () => {
+  it('si condivide solo con chi è nella stessa Famiglia; chi è fuori non compare e non esiste', async () => {
+    expect(corpo(await t.leggi(`${P}/persone`)).map((p: { nome: string }) => p.nome)).toEqual(['Anna', 'Bruno'])
+    expect(corpo(await estraneo.leggi(`${P}/persone`))).toEqual([])
+    const ev = await evento()
+    expect((await t.scrivi('PUT', `${P}/eventi/ev/condivisioni/${estraneo.id}`, { permesso: 'lettura' })).statusCode).toBe(404)
+    expect((await t.scrivi('POST', `${P}/eventi/ev/trasferisci`, { utenteId: estraneo.id, versione: ev.versione })).statusCode).toBe(404)
+    await ok(t.scrivi('POST', `${P}/piatti`, { id: 'p-priv', nome: 'Segreta', ingredienti: [], visibilita: 'privata' }))
+    expect((await t.scrivi('PUT', `${P}/piatti/p-priv/condivisioni`, { utenti: [estraneo.id] })).statusCode).toBe(404)
+    // Il ricettario di famiglia non arriva fuori dalla Famiglia.
+    await ok(t.scrivi('POST', `${P}/piatti`, { id: 'p-fam', nome: 'Ragù della nonna', ingredienti: [] }))
+    expect((await estraneo.leggi(`${P}/piatti/p-fam`)).statusCode).toBe(404)
+    expect((await anna.leggi(`${P}/piatti/p-fam`)).statusCode).toBe(200)
+  })
+
+  it('le condivisioni già esistenti con chi è fuori dalla Famiglia restano valide e modificabili', async () => {
+    await evento()
+    esegui(t.db, `INSERT INTO condivisioni_evento (evento_id, utente_id, permesso, creato_il) VALUES ('ev', '${estraneo.id}', 'lettura', 1)`)
+    expect((await estraneo.leggi(`${P}/eventi/ev`)).statusCode).toBe(200)
+    const r = await ok(t.scrivi('PUT', `${P}/eventi/ev/condivisioni/${estraneo.id}`, { permesso: 'modifica' }))
+    expect(r.condivisioni.find((c: { utenteId: string }) => c.utenteId === estraneo.id).permesso).toBe('modifica')
+  })
+
+  it('un nuovo utente entra nella Famiglia di chi lo crea; nessun sottogruppo', async () => {
+    const u = await ok(t.scrivi('POST', `${P}/admin/utenti`, { id: 'u-zia', nome: 'Zia Pina' }))
+    expect(uno(t.db, `SELECT gruppo_id FROM membri_gruppo WHERE utente_id = '${u.id}'`)).toEqual({ gruppo_id: 'gruppo-famiglia' })
+    expect(uno(t.db, 'SELECT count(*) AS n FROM gruppi')).toEqual({ n: 1 })
+    const fuori = await ok(t.scrivi('POST', `${P}/admin/utenti`, { id: 'u-ospite', nome: 'Ospite', famiglia: false }))
+    expect(uno(t.db, `SELECT count(*) AS n FROM membri_gruppo WHERE utente_id = '${fuori.id}'`)).toEqual({ n: 0 })
+  })
+
+  it('una seconda Famiglia è completamente separata: bacheca, ricette, persone', async () => {
+    esegui(t.db, "INSERT INTO gruppi (id, nome, creato_il, aggiornato_il) VALUES ('altra', 'Altra famiglia', 1, 1)")
+    esegui(t.db, `INSERT INTO membri_gruppo (gruppo_id, utente_id, ruolo, creato_il) VALUES ('altra', '${estraneo.id}', 'amministratore', 1)`)
+    await ok(estraneo.scrivi('POST', `${P}/gruppi/altra/messaggi`, { id: 'm-altra', testo: 'Solo per noi' }))
+    await ok(estraneo.scrivi('POST', `${P}/piatti`, { id: 'p-altra', nome: 'Ricetta dell\'altra famiglia', ingredienti: [] }))
+    await ok(anna.scrivi('POST', `${P}/gruppi/${G}/messaggi`, { id: 'm-nostra', testo: 'Per la nostra famiglia' }))
+    expect((await anna.leggi(`${P}/gruppi/altra/bacheca`)).statusCode).toBe(404)
+    expect((await anna.leggi(`${P}/messaggi/m-altra`)).statusCode).toBe(404)
+    expect((await anna.leggi(`${P}/piatti/p-altra`)).statusCode).toBe(404)
+    expect((await estraneo.leggi(`${P}/messaggi/m-nostra`)).statusCode).toBe(404)
+    expect(corpo(await estraneo.leggi(`${P}/gruppi`)).map((g: { nome: string }) => g.nome)).toEqual(['Altra famiglia'])
+    expect(corpo(await estraneo.leggi(`${P}/persone`))).toEqual([])
+    expect(corpo(await anna.leggi(`${P}/notifiche`)).map((n: { testo: string }) => n.testo)).not.toContain('Solo per noi')
+  })
+})

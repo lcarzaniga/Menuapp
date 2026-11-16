@@ -64,22 +64,20 @@ export function leggiUtente(db: Db, id: string): Utente {
 
 export const elencaUtenti = (db: Db): Utente[] => repo.elencaUtenti(db).map(daRigaUtente)
 
-/** Persone attive con cui condividere (escluso chi chiede). */
-export const elencaPersone = (db: Db, escluso: string): Persona[] =>
-  repo
-    .elencaUtenti(db)
-    .filter((u) => u.stato === 'attivo' && u.id !== escluso)
-    .map((u) => ({ id: u.id, nome: u.nome }))
+export const famigliaDi = (db: Db, utenteId: string) => repo.famigliaDi(db, utenteId)
 
-export function creaUtente(db: Db, d: NuovoUtente, adesso = Date.now()): Utente {
+/** Persone della stessa Famiglia con cui condividere (escluso chi chiede). */
+export const elencaPersone = (db: Db, utenteId: string): Persona[] => repo.personeDellaFamiglia(db, utenteId)
+
+/** Nuovo utente; con `famiglia` entra nella Famiglia indicata (quella di chi lo crea). */
+export function creaUtente(db: Db, d: NuovoUtente, adesso = Date.now(), famigliaId?: string): Utente {
   return transazione(db, () => {
     const nome = d.nome.trim()
     if (repo.leggiUtente(db, d.id)) throw new ErroreApi(409, 'id_esistente', 'Esiste già un utente con questo identificativo')
     if (repo.utentePerNome(db, norm(nome))) throw regolaViolata('nome_utente_duplicato', 'Esiste già un utente con questo nome')
     repo.inserisciUtente(db, { id: d.id, nome, nome_norm: norm(nome), ruolo: d.ruolo }, adesso)
-    // Un solo gruppo per ora: la famiglia (il modello ne ammette altri).
-    const famiglia = repo.elencaGruppi(db)[0]
-    if (d.famiglia !== false && famiglia) repo.aggiungiMembro(db, famiglia.id, d.id, d.ruolo === 'amministratore' ? 'amministratore' : 'membro', adesso)
+    const famiglia = famigliaId ?? repo.elencaGruppi(db)[0]?.id
+    if (d.famiglia !== false && famiglia) repo.aggiungiMembro(db, famiglia, d.id, d.ruolo === 'amministratore' ? 'amministratore' : 'membro', adesso)
     incrementaRevisione(db)
     return leggiUtente(db, d.id)
   })

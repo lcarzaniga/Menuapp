@@ -148,7 +148,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   del database di produzione (conteggi invariati, 36 ricette di famiglia, chiavi esterne e
   integrità ok). Filtro «Solo le mie», «Utenti e dispositivi» in Impostazioni.
 
-## Spazio della famiglia e nuovo nome (16/11/2026, ramo `famiglia`, da rilasciare)
+## Spazio della famiglia e nuovo nome (16/11/2026, in produzione: `20261116-1126-eee3afc`, schema v7)
 
 - SPEC 4.0 / §20. Milestone completate: C1 bacheche (famiglia ed eventi) con commenti, reazioni,
   foto, ricette segnalate; C2 sondaggi; C3 proposte di piatti con inserimento nel menù (copia
@@ -164,3 +164,15 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   estesa); `npm run test:e2e` 35 verdi (nuovo `famiglia.spec.ts` con due browser; schermate in
   `test-results/famiglia/`).
 - Rilascio: `! scripts/rilascia.sh famiglia` (migrazione 0007 con backup verificato).
+- Rilasciato il 16/11 alle 11:27 (backup `pre-migrazione-20261116-112703-v6.db`); verificati
+  file del rilascio completi, salute su 9870 e Funnel, 401 senza sessione, 404 delle funzioni di
+  amministrazione dall'esterno, manifest «Ricette & Co.», dati invariati, 4 utenti nella
+  Famiglia, chiavi esterne ok, altri servizi attivi.
+
+## Famiglia allargata unica, isolata (16/11/2026, ramo `famiglia-unica`, da rilasciare)
+
+- Precisazione di Loris: una sola grande Famiglia, nessun sottogruppo; eventi selettivi; in
+  futuro più Famiglie isolate. Il modello esistente era già compatibile (nessuna migrazione).
+  Chiusi tre punti che con più Famiglie non sarebbero stati isolati: elenco `/persone`, nuove
+  condivisioni e passaggi di proprietà verso chi è fuori dalla Famiglia, Famiglia di un nuovo
+  utente. Condivisioni esistenti invariate. SPEC §20.1 aggiornata; 4 test nuovi.

@@ -271,6 +271,27 @@ export const membriGruppo = (db: Db, gruppoId: string) =>
     gruppoId,
   )
 
+/**
+ * Persone attive che stanno in una stessa Famiglia dell'utente (lui escluso): le uniche con cui
+ * condividere. Con più Famiglie, ognuna resta isolata dalle altre.
+ */
+export const personeDellaFamiglia = (db: Db, utenteId: string) =>
+  tutti<{ id: string; nome: string }>(
+    db,
+    `SELECT DISTINCT u.id, u.nome, u.nome_norm FROM membri_gruppo a
+     JOIN membri_gruppo b ON b.gruppo_id = a.gruppo_id JOIN utenti u ON u.id = b.utente_id
+     WHERE a.utente_id = ? AND b.utente_id <> ? AND u.stato = 'attivo' ORDER BY u.nome_norm`,
+    utenteId,
+    utenteId,
+  ).map((r) => ({ id: r.id, nome: r.nome }))
+
+export const stessaFamiglia = (db: Db, a: string, b: string) =>
+  uno(db, 'SELECT 1 FROM membri_gruppo x JOIN membri_gruppo y ON y.gruppo_id = x.gruppo_id WHERE x.utente_id = ? AND y.utente_id = ?', a, b) !== undefined
+
+/** La Famiglia di un utente (oggi una sola per persona). */
+export const famigliaDi = (db: Db, utenteId: string) =>
+  uno<{ gruppo_id: string }>(db, 'SELECT gruppo_id FROM membri_gruppo WHERE utente_id = ? ORDER BY creato_il LIMIT 1', utenteId)?.gruppo_id
+
 export const elencaGruppi = (db: Db) => tutti<{ id: string; nome: string }>(db, 'SELECT id, nome FROM gruppi ORDER BY nome')
 
 export function aggiungiMembro(db: Db, gruppoId: string, utenteId: string, ruolo: 'amministratore' | 'membro', adesso: number): void {
