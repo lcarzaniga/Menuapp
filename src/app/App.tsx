@@ -35,7 +35,9 @@ export function App() {
         closeButton
         offset={{ bottom: 24 }}
         mobileOffset={{ bottom: 'calc(4.75rem + env(safe-area-inset-bottom))' }}
-        toastOptions={{ className: 'text-[0.9375rem]' }}
+        // Non bloccano ciò che sta sotto (es. «Salva» in fondo a un modulo): si toccano solo i
+        // loro pulsanti (Annulla, Aggiorna, chiudi).
+        toastOptions={{ className: 'text-[0.9375rem] pointer-events-none [&_button]:pointer-events-auto' }}
       />
     </QueryClientProvider>
   )

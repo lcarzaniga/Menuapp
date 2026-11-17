@@ -69,7 +69,7 @@ Incluso:
 ## 3. Funzionalità rinviate (dopo il 15 dicembre)
 
 Modifiche offline (con coda di sincronizzazione) · consultazione offline dei dati già
-visti · account, login e ruoli · duplicazione di eventi · foto di piatti ed eventi ·
+visti · foto degli eventi ·
 budget e prezzi · importazione ricette da URL · valori nutrizionali e allergeni · timer
 di cucina · stampa di ricette e lista della spesa con layout dedicato · cronologia delle
 versioni dei piatti · conversioni peso↔volume per densità · statistiche · aggiornamenti
@@ -1427,7 +1427,7 @@ mostrare il conflitto.
   restano visibili; i moduli aperti conservano il testo (bozza in `sessionStorage`).
 - Avvio senza server: il guscio si apre dalla cache e mostra «Server non raggiungibile:
   verifica che Tailscale sia attivo» con *Riprova*.
-- Manifest: `name` e `short_name` «Menù & Co.», `id`, `scope` e `start_url` uguali a `/`,
+- Manifest: `name` «Ricette di famiglia & Co.» e `short_name` «Ricette & Co.» (§20), `id`, `scope` e `start_url` uguali a `/`,
   `lang: 'it'`, `display: 'standalone'`, icone 64/192/512 + maskable, `shortcuts` (M4).
 - Installazione: Chrome su Android, PC e tablet nel tailnet → `https://loris-srv01.dala-tortoise.ts.net:9870/`
   → *Installa app*.
@@ -2068,9 +2068,7 @@ Richiesta di Loris (16/11/2026): affidare piatti e cose da portare anche a chi n
 - **Quantità e unità** delle cose da portare (`quantita_numero`, `unita` libera: «4
   bottiglie»); per i piatti la quantità sono le porzioni della voce («per 10»). La vecchia
   quantità testuale resta e si mostra se manca quella strutturata.
-- **Proposta (non implementata)**: un elenco di partecipanti dell'evento (con l'app e senza,
-  adulti e bambini) da cui calcolare i coperti, con conferma di presenza; oggi i coperti restano
-  i due numeri dell'evento, indipendenti dagli incarichi.
+- L'elenco dei partecipanti, proposto qui, è stato poi realizzato (§24, presenze solo manuali §29.2).
 - Test: `server/api/esterni.test.ts`, e2e `test/e2e/esterni.spec.ts`.
 
 ## 23. Ricerca delle ricette per nome e ingredienti
@@ -2361,6 +2359,120 @@ secondo sistema: le ricorrenze della Famiglia restano come sono.
   Famiglia («Vigilia di Natale») la conserva come scelta manuale.
 - Test: `server/api/ricorrenze-standard.test.ts`, e2e `ricorrenze-standard.spec.ts`.
 
+## 31. Riorganizzazione della navigazione (6.4)
+
+Richiesta di Loris (17/11/2026), proposta A dell'audit `docs/AUDIT-UX-ARCHITETTURA.md` con le sue
+decisioni. Nessuna migrazione; API invariate salvo `GET /per-te` (nuova, sola lettura) e
+`menu.voci` nel riepilogo.
+
+### 31.1 Navigazione principale e Famiglia attiva
+
+```
+Barra (telefono in basso, PC a sinistra): Eventi · Ricettario · Famiglia · Notifiche · Impostazioni
+Eventi #/ ── In programma │ Conclusi (?vista=conclusi) │ Archivio (?vista=archivio; #/eventi/archivio → qui)
+   · Prossimo evento · Per te · Condivisi con me · eventi nelle altre Famiglie · [Duplica] [Nuovo]
+   └─ Evento #/eventi/:id ── Riepilogo │ Menù │ Persone │ Prepara │ Bacheca
+         Riepilogo (#/eventi/:id, /confronto): A che punto siamo · [Stampa menù] [Azioni ▾]
+                    · informazioni · archivio · Ricorrenza ed edizioni (Confronta) · Condivisione
+         Menù (/menu): portate, piatti, ricette, porzioni, A cura di (in sola lettura), [Portate] [Stampa],
+                    vista cucina sulla riga (/voci/:v/cucina)
+         Persone: Presenze (/partecipanti) · Chi porta (/chi-porta)
+         Prepara: Spesa (/spesa) · Piano (/piano) · vista cucina dei piatti con ricetta
+         Bacheca (/bacheca): messaggi, commenti, sondaggi, proposte
+Ricettario #/ricettario ── ricerca (?q=) · portate · rubrica → Ricetta: nome e foto, porzioni,
+   Vista cucina, ingredienti, procedimento, usato in, poi «Gestione della ricetta» (provenienza,
+   visibilità, copia in altra Famiglia, esporta, condividi, elimina)
+Famiglia #/famiglia ── Bacheca │ Apprezzati │ Persone (con l'app, inviti, senza app) │
+   Gestione (ricorrenze standard e della Famiglia, nome, esci, nuova Famiglia); ?scheda=membri → Persone
+Notifiche #/notifiche (?preferenze=1 apre le preferenze)
+Impostazioni ── Personali: Account, Notifiche, Aspetto │ Ricettario e spesa: Ingredienti │
+   Amministrazione (solo chi amministra): Nuovi eventi (#/impostazioni/eventi), Reparti
+   (#/impostazioni/reparti), Utenti e dispositivi*, Dati e backup*   (* solo dall'ingresso privato)
+```
+
+- Le sei pagine dell'evento restano agli stessi indirizzi: le schede Persone e Prepara li
+  raggruppano con un interruttore a segmenti. Notifiche, segnalibri e collegamenti interni
+  continuano a funzionare, anche ricaricando.
+- **Famiglia attiva**: la sceglie solo l'utente (selettore) ed è ricordata sul dispositivo; l'app
+  non la cambia in base agli eventi. Il selettore compare sul telefono solo dove conta
+  (Eventi, Ricettario, Famiglia). Dentro un evento l'intestazione mostra la Famiglia dell'evento e,
+  se diversa da quella attiva, un avviso con «Passa a «X»». Nella pagina Eventi gli eventi delle
+  altre Famiglie sono segnalati con lo stesso pulsante. Il nuovo evento mostra il campo
+  «Famiglia» (con due o più Famiglie), proposto sulla Famiglia attiva.
+- **Indietro** (`PulsanteIndietro`): torna alla pagina precedente dell'app; aperta da fuori o dopo
+  un ricaricamento, va alla pagina indicata (es. l'elenco degli eventi o l'archivio).
+- **Messaggi temporanei** in basso, sopra la barra del telefono: non coprono titoli e schede.
+
+### 31.2 Evento
+
+- **Riepilogo**: «A che punto siamo?» distingue problemi, cose da completare (anche «Menù ancora
+  vuoto» e «Coperti non indicati»), parti facoltative non usate («Non ancora usati»: elenco dei
+  partecipanti, chi porta, piano) e cose a posto; «Tutto pronto» solo senza cose in sospeso. Poi
+  le informazioni (tipo, coperti una volta sola, menù, note), l'archivio, Ricorrenza ed edizioni
+  con «Confronta», la condivisione.
+- **Azioni** (menù): Modifica evento, Duplica evento, Concludi o Riapri, Archivia, Elimina;
+  ciascuna solo a chi può usarla. **Duplica** basta poter leggere l'evento (§25): chi è in sola
+  lettura vede solo questa azione. «Stampa menù» resta un pulsante.
+- **A cura di** e **Chi porta** sono lo stesso incarico della voce (`incaricato`,
+  `incaricato_id`, `incaricato_esterno_id`, completato, spesa): si gestisce in Chi porta; nella
+  finestra del piatto si legge, con «Affida/Cambia in Chi porta». L'API `PUT /voci/:id` accetta
+  ancora `incaricato` (compatibilità), con le regole di §20.5.
+- **Chi porta** compatto: una riga per piatto o cosa; «Me ne occupo io» e «Affida» in vista per
+  ciò che è libero; per ciò che è affidato il responsabile e «Fatto», «Cambia responsabile» e
+  rinuncia nel menù della riga. Permessi invariati (§20.5).
+- **Prepara**: Spesa e Piano, con i piatti con ricetta a un tocco dalla vista cucina.
+
+### 31.3 Altre sezioni
+
+- **Eventi**: segmenti In programma · Conclusi · Archivio; «Per te» (`GET /per-te`): piatti e cose
+  affidati all'utente non ancora fatti negli eventi non archiviati che vede, e sondaggi aperti a
+  cui non ha risposto (nelle sue Famiglie e negli eventi dove partecipa), ciascuno con il
+  collegamento; «Duplica» sceglie l'evento (anche concluso o archiviato) e apre la solita finestra.
+- **Ricetta**, **Famiglia**, **Impostazioni**: come nella mappa §31.1. Portate predefinite e
+  reparti, comuni a tutti, si vedono e si cambiano solo da chi amministra.
+
+### 31.4 Permessi
+
+Nessuna regola cambiata: il server resta l'autorità (`autorizzazione.test.ts`). L'interfaccia
+nasconde le azioni non permesse invece di spegnerle; Duplica non dipende più dalla sola lettura
+dell'evento d'origine.
+
+### 31.5 Codice
+
+Componenti condivisi in `src/components/Navigazione.tsx` (`Schede`, `Segmenti`,
+`PulsanteIndietro`, `TitoloSezione`, `RigaLink`, `ElencoLink`); regole spostate nel dominio
+(`src/domain/edizioni.ts`: `nomeEdizione`, `annoDopo`; `confermaParziale` in
+`src/domain/partecipanti.ts`); hook `useEdizioni`, `useRicorrenze`, `usePerTe` in
+`src/api/query.ts`.
+
+### 31.6 Grafica e accessibilità
+
+Schede sempre visibili (larghe uguali) e segmenti con `aria-current`; pulsanti di almeno 36 px;
+verde di «confermato» scurito (4,98:1 sul suo sfondo, AA); nessuno scorrimento orizzontale nelle
+pagine collaudate; messaggi in basso.
+
+### 31.7 Differenze rispetto alla proposta A (motivate)
+
+- La quinta sezione resta **Impostazioni** (non «Altro»): decisione di Loris.
+- In **Chi porta** le azioni frequenti restano in vista (non nel menù «⋯» del prototipo):
+  richiesta di Loris.
+- Nessun cambio automatico della **Famiglia attiva** in base al prossimo evento (l'audit lo
+  proponeva per P0-1): la Famiglia la sceglie l'utente; gli eventi delle altre Famiglie sono
+  segnalati.
+- **«Per te»** senza il conteggio delle notifiche (già nella barra).
+- Rinviati: due colonne su PC (P2-7), «Altri dettagli» comprimibili nel nuovo evento (P1-14),
+  divisione dei servizi misti e alias `/famiglie/:id/bacheca` (P3-2, P3-3), e2e indipendenti
+  dall'ordine (P3-7).
+
+### 31.8 Test
+
+`server/api/per-te.test.ts`, `src/features/eventi/Riepilogo.test.tsx` (menù vuoto, parti
+facoltative), `server/api/riepilogo.test.ts`; e2e `riorganizzazione.spec.ts` (barra, Famiglia
+ricordata, evento di un'altra Famiglia, nuovo evento nella Famiglia giusta, schede e vecchi
+indirizzi dopo il ricaricamento, vista cucina, indietro, azioni per ruolo, duplicazione in sola
+lettura, Me ne occupo e Per te, archivio, ricetta, Famiglia, impostazioni) e gli e2e esistenti
+aggiornati alla nuova navigazione.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2386,3 +2498,4 @@ secondo sistema: le ricorrenze della Famiglia restano come sono.
 | 17/11/2026 | 6.2 — **Rifinitura UX** (§29): notifiche con categoria, gruppi apribili e apertura del contenuto preciso; **presenze solo manuali** da chi può modificare l'evento (rettifica: tolta la conferma personale anche dalle API); riepilogo con le cose in sospeso e «Tutto pronto»; duplicazione e confronto più chiari; ritorno alla posizione e ricerca nell'indirizzo; suggerimenti da tastiera; collaudo dell'aggiornamento PWA; migrazione `0014_dettagli_notifiche.sql` |
 | 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |
 | 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |
+| 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |

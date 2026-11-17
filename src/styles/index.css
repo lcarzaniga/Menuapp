@@ -19,7 +19,7 @@
   --salvia: #5f7556;
   --salvia-tenue: #e3eadc;
   --oro: #b08a47;
-  --successo: #3b7a4f;
+  --successo: #33704a; /* 4,98:1 sul verde tenue: AA per i testi piccoli dei badge (SPEC §31.6) */
   --successo-tenue: #dff0e3;
   --avviso: #95600a;
   --avviso-tenue: #fbecd0;

@@ -1,5 +1,7 @@
 # Audit di architettura, interfaccia e usabilità — Ricette di famiglia & Co.
 
+*Esito: proposta A implementata con le decisioni di Loris nel ramo `riorganizzazione` (SPEC §31; differenze motivate in §31.7).*
+
 *17 novembre 2026 · produzione `20261117-1420-ce7a017` (schema 15) · solo analisi: nessuna modifica
 all'app, al database o alla produzione.*
 

@@ -310,7 +310,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   salute (schema 15), nessuna associazione standard assegnata, 6 eventi e 74 ricette, chiavi
   esterne e integrità ok.
 
-## Partecipanti in tabella (17/11/2026, ramo `partecipanti-tabella`, da rilasciare)
+## Partecipanti in tabella (17/11/2026, in produzione: `20261117-1420-ce7a017`)
 
 - Richiesta di Loris: elenco meno dispersivo. Tabella Nome / Risposta con gli accompagnatori
   sotto l'invito; in consultazione solo nome e risposta («parziale» se le risposte differiscono);
@@ -321,4 +321,30 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   non partecipa ma ha un incarico.
 - Test: `npm run check` 382 verdi, `npm run test:e2e` 46 verdi (`partecipanti.spec.ts` rifatto
   sulla tabella e sulla modalità di modifica).
-- Rilascio: `! scripts/rilascia.sh partecipanti-tabella`.
+- Rilasciato il 17/11 alle 14:20; verificati salute (schema 15), 15 partecipanti e 6 eventi invariati.
+
+## Audit UX e riorganizzazione (17/11/2026, ramo `riorganizzazione`, da rilasciare)
+
+- `docs/AUDIT-UX-ARCHITETTURA.md` (con schermate e prototipi in `docs/audit/`); implementata la
+  proposta A con le decisioni di Loris: SPEC 6.4 / §31 (mappa della navigazione in §31.1).
+- Cosa cambia per chi usa l'app:
+  - evento in cinque schede: **Riepilogo** (con «Azioni» e «Stampa menù»), **Menù**, **Persone**
+    (Presenze · Chi porta), **Prepara** (Spesa · Piano), **Bacheca**;
+  - **Eventi**: In programma · Conclusi · Archivio, «Per te», «Duplica»;
+  - **Famiglia**: Bacheca · Apprezzati · Persone · Gestione (le ricorrenze sono in Gestione);
+  - **Impostazioni**: personali, ingredienti, amministrazione (solo per chi amministra);
+  - ricetta: il contenuto prima, «Gestione della ricetta» in fondo (e dal pulsante in alto);
+  - «A cura di» si affida in Chi porta;
+  - messaggi temporanei in basso.
+- Problemi dell'audit corretti:
+  - P0: evento di un'altra Famiglia segnalato; selettore solo dove conta; Duplica anche in sola
+    lettura; Famiglia visibile nel nuovo evento;
+  - P1: «Menù ancora vuoto» non è «Tutto pronto»; schede tutte visibili; Panoramica alleggerita;
+    Chi porta compatto; un solo posto per il responsabile; vista cucina a un tocco; archivio;
+    indietro con la cronologia; messaggi in basso; Famiglia e Impostazioni riordinate.
+- Nessuna migrazione. Nuova lettura `GET /per-te`; `menu.voci` nel riepilogo.
+- Test: `npm run check` (unitari e server) e `npm run test:e2e` (nuovo `riorganizzazione.spec.ts`,
+  e2e esistenti aggiornati); risultati nella relazione del rilascio.
+- Da verificare su dispositivi fisici: barra e messaggi con la tastiera aperta su Android, area
+  sicura in basso su iPhone/PWA installata, Echo Show 15 (testo grande).
+- Rilascio: `! scripts/rilascia.sh riorganizzazione`.

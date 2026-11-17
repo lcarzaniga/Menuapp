@@ -103,7 +103,6 @@ function SenzaFamiglia() {
   )
 }
 
-/** Membri e gestione semplice: invito, ruoli, passaggio dell'amministrazione, uscita. */
 /**
  * Persone (membri con l'app, inviti, persone senza app) o Gestione (ricorrenze, nome, uscita,
  * nuova Famiglia) della Famiglia attiva (SPEC §31.3).

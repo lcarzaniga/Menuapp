@@ -123,7 +123,7 @@ export function PaginaPanoramica() {
               <dt className="text-testo-tenue">Coperti</dt>
               <dd className="flex flex-wrap items-center gap-x-1.5">
                 <Link to={`/eventi/${e.id}/partecipanti`} className="flex items-center gap-1.5 font-semibold text-primario underline-offset-2 hover:underline">
-                  <Users className="size-4" /> {formattaCoperti(coperti)}
+                  <Users className="size-4" /> {formattaCoperti(coperti)} coperti
                 </Link>
                 <span className="text-testo-tenue">
                   · {plurale(e.adulti, 'adulto', 'adulti')}, {plurale(e.bambini, 'bambino', 'bambini')}
