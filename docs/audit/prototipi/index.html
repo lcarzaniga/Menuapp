@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipi riorganizzazione</title>
+<style>
+  /* Bozze statiche per l'audit (docs/AUDIT-UX-ARCHITETTURA.md §9): stessi colori e caratteri
+     dell'app, dati dimostrativi, nessun collegamento al server. */
+  :root {
+    --sfondo: #f6f0e7; --testo: #2b211b; --carta: #fffdf9; --tenue: #efe6da; --testo-tenue: #6e6057;
+    --bordo: #e2d6c6; --primario: #a5412a; --primario-tenue: #f5dfd5; --successo: #3b7a4f; --successo-tenue: #dff0e3;
+    --avviso: #95600a; --avviso-tenue: #fbecd0; --pericolo: #b42318; --pericolo-tenue: #fde4e1; --info: #2f5a9e; --info-tenue: #e2ebf9;
+    --serif: 'Fraunces', 'Iowan Old Style', Palatino, Georgia, serif; --sans: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --sfondo: #16120f; --testo: #f1e8de; --carta: #211a16; --tenue: #2b231e; --testo-tenue: #b2a397; --bordo: #3b3029;
+      --primario: #e08467; --primario-tenue: #45261c; --successo: #6cc391; --successo-tenue: #1d3a29; --avviso: #f0b54a; --avviso-tenue: #3f3015;
+      --pericolo: #f2786b; --pericolo-tenue: #4a201c; --info: #8fb2ea; --info-tenue: #1c2a40;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9e1d6; color: var(--testo); font: 15px/1.4 var(--sans); }
+  @media (prefers-color-scheme: dark) { body { background: #0d0b09; } }
+  header.doc { max-width: 1200px; margin: 0 auto; padding: 24px 16px 8px; }
+  header.doc h1 { font-family: var(--serif); font-size: 28px; margin: 0 0 6px; }
+  header.doc p { margin: 0; color: var(--testo-tenue); max-width: 70ch; }
+  .griglia { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; padding: 20px 16px 48px; max-width: 1400px; margin: 0 auto; }
+  figure { margin: 0; }
+  figcaption { font-weight: 600; margin: 0 0 8px; }
+  figcaption small { display: block; font-weight: 400; color: var(--testo-tenue); max-width: 360px; }
+  .tel { width: 360px; max-width: calc(100vw - 32px); height: 740px; background: var(--sfondo); border: 1px solid var(--bordo); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: 0 20px 40px -24px rgb(0 0 0 / .35); }
+  .schermo { flex: 1; overflow: auto; padding: 14px 14px 12px; }
+  .barra { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--bordo); background: var(--carta); }
+  .barra span { text-align: center; font-size: 11px; padding: 8px 0 10px; color: var(--testo-tenue); }
+  .barra span.on { color: var(--primario); font-weight: 600; }
+  .barra i { display: block; font-style: normal; font-size: 18px; margin-bottom: 2px; }
+  h2.t { font-family: var(--serif); font-size: 26px; margin: 4px 0 2px; }
+  .sotto { color: var(--testo-tenue); font-size: 13px; }
+  .card { background: var(--carta); border: 1px solid var(--bordo); border-radius: 16px; padding: 12px; margin: 10px 0; }
+  .card h3 { margin: 0 0 8px; font-size: 15px; }
+  .riga { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--tenue); font-size: 14px; }
+  .riga:last-child { border-bottom: 0; }
+  .riga .f { flex: 1; min-width: 0; }
+  .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--tenue); white-space: nowrap; }
+  .ok { background: var(--successo-tenue); color: var(--successo); }
+  .warn { background: var(--avviso-tenue); color: var(--avviso); }
+  .no { background: var(--pericolo-tenue); color: var(--pericolo); }
+  .pri { background: var(--primario-tenue); color: var(--primario); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--bordo); background: var(--carta); border-radius: 12px; padding: 7px 12px; font-size: 13px; }
+  .btn.p { background: var(--primario); border-color: var(--primario); color: #fff; }
+  .schede { display: flex; gap: 2px; border-bottom: 1px solid var(--bordo); margin: 8px -14px 0; padding: 0 8px; }
+  .schede span { flex: 1; text-align: center; font-size: 12.5px; padding: 8px 0; color: var(--testo-tenue); border-bottom: 2px solid transparent; }
+  .schede span.on { color: var(--primario); border-color: var(--primario); font-weight: 600; }
+  .segmenti { display: flex; background: var(--tenue); border-radius: 12px; padding: 3px; margin: 10px 0; }
+  .segmenti span { flex: 1; text-align: center; padding: 6px; font-size: 13px; border-radius: 9px; color: var(--testo-tenue); }
+  .segmenti span.on { background: var(--carta); color: var(--testo); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+  .fam { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--testo-tenue); }
+  .fam b { color: var(--testo); }
+  .hero { background: var(--carta); border: 1px solid var(--bordo); border-radius: 20px; padding: 14px; margin: 10px 0; }
+  .hero .nome { font-family: var(--serif); font-size: 22px; }
+  .meter { display: flex; gap: 6px; margin-top: 8px; }
+  .meter div { flex: 1; text-align: center; border-radius: 10px; padding: 6px 2px; font-size: 11px; }
+  .meter b { display: block; font-size: 17px; }
+  .lettere { position: absolute; right: 4px; top: 160px; display: flex; flex-direction: column; font-size: 10px; color: var(--primario); gap: 1px; }
+  .chip { display: inline-block; border: 1px solid var(--bordo); border-radius: 99px; padding: 4px 10px; font-size: 12px; margin: 0 4px 6px 0; background: var(--carta); }
+  .chip.on { background: var(--primario); color: #fff; border-color: var(--primario); }
+  .nota { font-size: 12px; color: var(--testo-tenue); }
+  .menu-azioni { float: right; font-size: 18px; color: var(--testo-tenue); }
+  .elenco-azioni .riga { color: var(--testo); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th { text-align: left; font-size: 11px; color: var(--testo-tenue); font-weight: 500; padding: 4px 0; border-bottom: 1px solid var(--bordo); }
+  td { padding: 6px 0; border-bottom: 1px solid var(--tenue); }
+  .indent { padding-left: 16px; color: var(--testo-tenue); }
+  .mappa { max-width: 1200px; margin: 0 auto; padding: 0 16px 40px; }
+  .mappa pre { background: var(--carta); border: 1px solid var(--bordo); border-radius: 12px; padding: 12px; overflow: auto; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<header class="doc">
+  <h1>Ricette di famiglia &amp; Co. — bozze della struttura proposta</h1>
+  <p>Proposta raccomandata dell'audit (§8): barra Eventi · Ricette · Famiglia · Notifiche · Altro; evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca); azioni di gestione raccolte in un menù. Dati dimostrativi.</p>
+</header>
+
+<div class="griglia">
+
+<!-- 1. Home / Eventi -->
+<figure>
+  <figcaption>1. Eventi (pagina iniziale)<small>Famiglia attiva in testa, prossimo evento con lo stato, «Per te» con ciò che riguarda l'utente; gli eventi delle altre Famiglie sono segnalati.</small></figcaption>
+  <div class="tel"><div class="schermo">
+    <div class="fam"><span>Famiglia attiva: <b>Famiglia Rossi</b></span><span class="btn">Cambia ▾</span></div>
+    <h2 class="t">Eventi</h2>
+    <div class="hero">
+      <div class="sotto">Prossimo · tra 38 giorni</div>
+      <div class="nome">Natale 2026</div>
+      <div class="sotto">Venerdì 25 dicembre · ore 13 · 11 coperti</div>
+      <div class="meter">
+        <div class="ok"><b>8</b>confermati</div><div style="background:var(--tenue)"><b>2</b>in attesa</div><div class="warn"><b>3</b>cose da fare</div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:6px"><span class="btn p">Apri</span><span class="btn">Menù</span><span class="btn">Spesa</span></div>
+    </div>
+    <div class="card"><h3>Per te</h3>
+      <div class="riga"><span class="f">Porti <b>Tiramisù</b> · Natale 2026</span><span class="badge warn">da fare</span></div>
+      <div class="riga"><span class="f">Sondaggio: «A che ora ci troviamo?»</span><span class="badge pri">vota</span></div>
+      <div class="riga"><span class="f">2 notifiche da leggere</span><span>›</span></div>
+    </div>
+    <div class="card"><h3>In programma</h3>
+      <div class="riga"><span class="f">Compleanno di Sofia<div class="nota">10 feb · di Anna · sola lettura</div></span><span>›</span></div>
+      <div class="riga"><span class="f">Pasqua 2027<div class="nota">28 mar · bozza</div></span><span>›</span></div>
+    </div>
+    <div class="nota">1 evento in «Amici del mare» · Archivio · Nuovo evento</div>
+  </div>
+  <div class="barra"><span class="on"><i>📅</i>Eventi</span><span><i>📖</i>Ricette</span><span><i>👪</i>Famiglia</span><span><i>🔔</i>Notifiche</span><span><i>☰</i>Altro</span></div></div>
+</figure>
+
+<!-- 2. Elenco eventi -->
+<figure>
+  <figcaption>2. Elenco eventi<small>Una riga per evento con data, ruolo e stato; filtri In programma / Conclusi / Archivio al posto di una pagina separata.</small></figcaption>
+  <div class="tel"><div class="schermo">
+    <h2 class="t">Eventi</h2>
+    <div class="segmenti"><span class="on">In programma</span><span>Conclusi</span><span>Archivio</span></div>
+    <div class="card" style="padding:4px 12px">
+      <div class="riga"><span class="f"><b>Natale 2026</b><div class="nota">25 dic · 11 coperti · 7 piatti</div></span><span class="badge warn">3 da fare</span></div>
+      <div class="riga"><span class="f"><b>Compleanno di Sofia</b><div class="nota">10 feb · di Anna · sola lettura</div></span><span class="badge">pronto</span></div>
+      <div class="riga"><span class="f"><b>Pasqua 2027</b><div class="nota">28 mar · Pasqua · standard</div></span><span class="badge">menù vuoto</span></div>
+    </div>
+    <div style="display:flex;gap:6px"><span class="btn p">+ Nuovo evento</span><span class="btn">Duplica dall'anno scorso</span></div>
+  </div>
+  <div class="barra"><span class="on"><i>📅</i>Eventi</span><span><i>📖</i>Ricette</span><span><i>👪</i>Famiglia</span><span><i>🔔</i>Notifiche</span><span><i>☰</i>Altro</span></div></div>
+</figure>
+
+<!-- 3. Panoramica -->
+<figure>
+  <figcaption>3. Riepilogo dell'evento<small>Cinque schede sempre visibili. Prima ciò che manca; i dati in una riga; le azioni di gestione nel menù ⋯ (vedi 3b).</small></figcaption>
+  <div class="tel"><div class="schermo">
+    <div class="sotto">← Eventi</div>
+    <div style="display:flex;justify-content:space-between;align-items:start"><h2 class="t">Natale 2026</h2><span class="btn">⋯</span></div>
+    <div class="sotto">Ven 25 dic · 13:00 · Pranzo · Natale (standard) · 11 coperti</div>
+    <div class="schede"><span class="on">Riepilogo</span><span>Menù</span><span>Persone</span><span>Prepara</span><span>Bacheca</span></div>
+    <div class="card"><h3>A che punto siamo? <span class="badge warn" style="float:right">3 da fare</span></h3>
+      <div class="riga">⚠️<span class="f">1 cosa da portare senza nessuno</span>›</div>
+      <div class="riga">◉<span class="f">2 in attesa di conferma</span>›</div>
+      <div class="riga">◉<span class="f">Spesa: 11 da comprare</span>›</div>
+      <div class="nota">Già a posto: menù (7 piatti), coperti manuali, piano</div>
+    </div>
+    <div class="card"><h3>Edizioni · Natale</h3>
+      <div class="riga"><span class="f">Natale 2025 · archiviato</span><span class="btn">Confronta</span></div>
+    </div>
+    <div class="card"><h3>Persone con accesso</h3><div class="nota">Anna (modifica) · Marco (lettura) · Famiglia Rossi</div></div>
+  </div>
+  <div class="barra"><span class="on"><i>📅</i>Eventi</span><span><i>📖</i>Ricette</span><span><i>👪</i>Famiglia</span><span><i>🔔</i>Notifiche</span><span><i>☰</i>Altro</span></div></div>
+</figure>
+
+<!-- 3b. Menu azioni -->
+<figure>
+  <figcaption>3b. Menù ⋯ dell'evento<small>Gestione raccolta in un posto e mostrata solo a chi può usarla; per chi legge restano Stampa, Duplica e Lascia.</small></figcaption>
+  <div class="tel"><div class="schermo" style="background:rgb(0 0 0 / .25)">
+    <div class="card elenco-azioni" style="margin-top:320px">
+      <div class="riga">✏️<span class="f">Modifica dati</span></div>
+      <div class="riga">🖨️<span class="f">Stampa il menù</span></div>
+      <div class="riga">📄<span class="f">Duplica come nuova edizione</span></div>
+      <div class="riga">🔁<span class="f">Ricorrenza: Natale (standard)</span></div>
+      <div class="riga">👥<span class="f">Condivisione e Famiglia</span></div>
+      <div class="riga">✅<span class="f">Segna concluso</span></div>
+      <div class="riga">🗄️<span class="f">Archivia</span></div>
+      <div class="riga" style="color:var(--pericolo)">🗑️<span class="f">Elimina</span></div>
+    </div>
+  </div>
+  <div class="barra"><span class="on"><i>📅</i>Eventi</span><span><i>📖</i>Ricette</span><span><i>👪</i>Famiglia</span><span><i>🔔</i>Notifiche</span><span><i>☰</i>Altro</span></div></div>
+</figure>
+
+<!-- 4. Navigazione interna: Persone -->
+<figure>
+  <figcaption>4. Scheda «Persone»<small>Presenze e «Chi porta» insieme: le stesse persone, due viste. Tabella compatta, comandi solo in modifica.</small></figcaption>
+  <div class="tel"><div class="schermo">
+    <div class="sotto">← Eventi</div>
+    <h2 class="t" style="font-size:22px">Natale 2026</h2>
+    <div class="schede"><span>Riepilogo</span><span>Menù</span><span class="on">Persone</span><span>Prepara</span><span>Bacheca</span></div>
+    <div class="segmenti"><span class="on">Presenze</span><span>Chi porta</span></div>
+    <div class="nota" style="margin-bottom:6px"><b style="color:var(--testo)">11 coperti</b> per porzioni e spesa · manuali</div>
+    <div class="card">
+      <div style="text-align:right;margin-bottom:6px"><span class="btn">✏️ Modifica elenco</span></div>
+      <table>
+        <tr><th>Nome</th><th style="width:100px">Risposta</th></tr>
+        <tr><td>Anna</td><td><span class="badge ok">confermato</span></td></tr>
+        <tr><td class="indent">↳ Sofia · bambino</td><td><span class="badge ok">confermato</span></td></tr>
+        <tr><td>Marco</td><td><span class="badge">in attesa</span></td></tr>
+        <tr><td>Nonna Lina</td><td><span class="badge ok">confermato</span></td></tr>
+        <tr><td>Zio Ugo</td><td><span class="badge no">non partecipa</span></td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="barra"><span class="on"><i>📅</i>Eventi</span><span><i>📖</i>Ricette</span><span><i>👪</i>Famiglia</span><span><i>🔔</i>Notifiche</span><span><i>☰</i>Altro</span></div></div>
+</figure>
+
+<!-- 4b. Chi porta compatto -->
+<figure>
+  <figcaption>4b. «Chi porta» compatto<small>Una riga per piatto o cosa; «Me ne occupo» e «Affida» nel menù della riga invece di due pulsanti grandi per ciascuna.</small></figcaption>
+  <div class="tel"><div class="schermo">
+    <div class="sotto">← Eventi</div>
+    <h2 class="t" style="font-size:22px">Natale 2026</h2>
+    <div class="schede"><span>Riepilogo</span><span>Menù</span><span class="on">Persone</span><span>Prepara</span><span>Bacheca</span></div>
+    <div class="segmenti"><span>Presenze</span><span class="on">Chi porta</span></div>
+    <div class="card">
+      <table>
+        <tr><th>Cosa</th><th style="width:110px">Chi</th><th style="width:20px"></th></tr>
+        <tr><td>Crostini toscani<div class="nota">Antipasti</div></td><td><span class="badge warn">nessuno</span></td><td>⋮</td></tr>
+        <tr><td>Tortellini in brodo<div class="nota">Primi</div></td><td>Nonna Lina</td><td>⋮</td></tr>
+        <tr><td>Tiramisù<div class="nota">Dolci</div></td><td>Anna ✓</td><td>⋮</td></tr>
+        <tr><td>Vino rosso · 4 bottiglie</td><td>Anna</td><td>⋮</td></tr>
+        <tr><td>Pane</td><td><span class="badge warn">nessuno</span></td><td>⋮</td></tr>
+      </table>
+      <div style="margin-top:8px"><span class="btn">+ Cosa da portare</span></div>
+    </div>
+  </div>
+  <div class="barra"><span class="on"><i>📅</i>Eventi</span><span><i>📖</i>Ricette</span><span><i>👪</i>Famiglia</span><span><i>🔔</i>Notifiche</span><span><i>☰</i>Altro</span></div></div>
+</figure>
+
+<!-- 5. Ricettario -->
+<figure>
+  <figcaption>5. Ricette<small>Ricerca in testa, portate come filtri, rubrica a lato. La scheda ricetta mette il contenuto prima della gestione (visibilità e copia nel menù ⋯).</small></figcaption>
+  <div class="tel"><div class="schermo" style="position:relative">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2 class="t">Ricette</h2><span class="btn p">+ Nuova</span></div>
+    <div class="card" style="padding:8px 12px;color:var(--testo-tenue)">🔍 Cerca per nome o ingredienti</div>
+    <div><span class="chip on">Tutte</span><span class="chip">Antipasti</span><span class="chip">Primi</span><span class="chip">Secondi</span><span class="chip">Dolci</span><span class="chip">Solo mie</span></div>
+    <div class="sotto" style="font-family:var(--serif);color:var(--primario);font-size:20px">C</div>
+    <div class="card" style="padding:4px 12px">
+      <div class="riga"><span class="f">Cappone ripieno<div class="nota">Secondi · di Loris</div></span>›</div>
+      <div class="riga"><span class="f">Crostini toscani<div class="nota">Antipasti · di Anna</div></span>›</div>
+    </div>
+    <div class="sotto" style="font-family:var(--serif);color:var(--primario);font-size:20px">L</div>
+    <div class="card" style="padding:4px 12px">
+      <div class="riga"><span class="f">Lasagne alla bolognese<div class="nota">Primi · usata a Natale 2025</div></span>›</div>
+    </div>
+    <div class="lettere"><span>A</span><span>B</span><b>C</b><span>F</span><span>G</span><b>L</b><span>P</span><span>T</span></div>
+  </div>
+  <div class="barra"><span><i>📅</i>Eventi</span><span class="on"><i>📖</i>Ricette</span><span><i>👪</i>Famiglia</span><span><i>🔔</i>Notifiche</span><span><i>☰</i>Altro</span></div></div>
+</figure>
+
+<!-- 6. Famiglia -->
+<figure>
+  <figcaption>6. Famiglia<small>Bacheca, Apprezzati, Persone (membri, inviti, «senza app»), Gestione (nome, ricorrenze, esci, nuova Famiglia).</small></figcaption>
+  <div class="tel"><div class="schermo">
+    <div class="fam"><span>Famiglia attiva: <b>Famiglia Rossi</b></span><span class="btn">Cambia ▾</span></div>
+    <h2 class="t">Famiglia Rossi</h2>
+    <div class="schede" style="margin-top:6px"><span>Bacheca</span><span>Apprezzati</span><span class="on">Persone</span><span>Gestione</span></div>
+    <div class="card"><h3>Con l'app</h3>
+      <div class="riga"><span class="f">Loris (tu)</span><span class="badge pri">amministra</span></div>
+      <div class="riga"><span class="f">Anna</span><span class="menu-azioni">⋮</span></div>
+      <div class="riga"><span class="f">Marco</span><span class="menu-azioni">⋮</span></div>
+      <div style="margin-top:8px"><span class="btn">+ Invita nella Famiglia</span></div>
+    </div>
+    <div class="card"><h3>Senza app</h3>
+      <div class="riga"><span class="f">Nonna Lina<div class="nota">porta sempre i tortellini</div></span><span class="menu-azioni">⋮</span></div>
+      <div class="riga"><span class="f">Zia Carla</span><span class="menu-azioni">⋮</span></div>
+      <div style="margin-top:8px"><span class="btn">+ Aggiungi</span></div>
+    </div>
+  </div>
+  <div class="barra"><span><i>📅</i>Eventi</span><span><i>📖</i>Ricette</span><span class="on"><i>👪</i>Famiglia</span><span><i>🔔</i>Notifiche</span><span><i>☰</i>Altro</span></div></div>
+</figure>
+
+<!-- 7. Altro -->
+<figure>
+  <figcaption>7. Altro<small>Al posto di «Impostazioni»: account, preferenze del dispositivo, catalogo; ciò che è solo dell'amministratore in un gruppo a parte.</small></figcaption>
+  <div class="tel"><div class="schermo">
+    <h2 class="t">Altro</h2>
+    <div class="card" style="padding:4px 12px">
+      <div class="riga">👤<span class="f">Il mio account · Loris<div class="nota">dispositivi, i miei dati, esci</div></span>›</div>
+      <div class="riga">🎨<span class="f">Aspetto su questo dispositivo<div class="nota">tema, dimensione del testo</div></span>›</div>
+      <div class="riga">🥕<span class="f">Ingredienti<div class="nota">catalogo comune</div></span>›</div>
+    </div>
+    <div class="sotto" style="margin-top:14px">AMMINISTRAZIONE</div>
+    <div class="card" style="padding:4px 12px">
+      <div class="riga">🍽️<span class="f">Portate e coefficiente predefiniti</span>›</div>
+      <div class="riga">🛒<span class="f">Reparti del supermercato</span>›</div>
+      <div class="riga">🔑<span class="f">Utenti e dispositivi</span>›</div>
+      <div class="riga">💾<span class="f">Dati e backup</span>›</div>
+    </div>
+  </div>
+  <div class="barra"><span><i>📅</i>Eventi</span><span><i>📖</i>Ricette</span><span><i>👪</i>Famiglia</span><span><i>🔔</i>Notifiche</span><span class="on"><i>☰</i>Altro</span></div></div>
+</figure>
+
+</div>
+
+<section class="mappa">
+  <h2 style="font-family:var(--serif)">Mappa della struttura proposta</h2>
+<pre>
+Eventi (iniziale) ── Prossimo evento · Per te · In programma │ Conclusi │ Archivio
+  └─ Evento ── Riepilogo │ Menù │ Persone (Presenze · Chi porta) │ Prepara (Spesa · Piano) │ Bacheca
+               ⋯ Modifica · Stampa · Duplica · Ricorrenza/Confronto · Condivisione e Famiglia · Concludi · Archivia · Elimina
+               Menù → voce → Vista cucina          Riepilogo → Edizioni → Confronto
+Ricette ── ricerca · portate · rubrica → Ricetta (contenuto, poi ⋯ Visibilità · Copia in altra Famiglia · Esporta · Elimina) → Vista cucina
+Famiglia ── Bacheca │ Apprezzati │ Persone (con l'app · senza app · inviti) │ Gestione (nome · ricorrenze · nuova Famiglia · esci)
+Notifiche ── Da leggere │ Già lette · preferenze
+Altro ── Account · Aspetto · Ingredienti │ Amministrazione: Portate · Reparti · Utenti · Dati e backup
+</pre>
+</section>
+</body>
+</html>
