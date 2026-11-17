@@ -1,7 +1,15 @@
-// Home: prossimi eventi, conclusi, archivio (SPEC §5).
-import { Archive, CalendarPlus, ChefHat, ChevronRight, ListTodo, ShoppingBasket, Users, UtensilsCrossed } from 'lucide-react'
-import { Link } from 'react-router'
-import { useEventi } from '@/api/query'
+// Eventi, la pagina iniziale: prossimo evento, «Per te», in programma, conclusi, archivio (SPEC §5, §31.3).
+import { useQuery } from '@tanstack/react-query'
+import { BarChart3, CalendarPlus, ChefHat, ChevronRight, Copy, HandHelping, House, ShoppingBasket, Users, UtensilsCrossed } from 'lucide-react'
+import { useState } from 'react'
+import { Link, Navigate, useSearchParams } from 'react-router'
+import { api } from '@/api/client'
+import { useEventi, usePerTe } from '@/api/query'
+import { Segmenti, TitoloSezione } from '@/components/Navigazione'
+import { Campo, Select } from '@/components/ui/campi'
+import { Finestra } from '@/components/ui/dialog'
+import type { Evento, StatoEvento } from '@/domain/tipi.ts'
+import { DuplicaEvento } from './Edizioni'
 import { IllustrazioneEvento } from '@/components/Illustrazioni'
 import { Caricamento, Pagina, Vuoto } from '@/components/Pagina'
 import { Badge } from '@/components/ui/badge'
@@ -9,7 +17,7 @@ import { Button } from '@/components/ui/button'
 import type { RiepilogoEvento } from '@/contratto/eventi.ts'
 import { formattaCoperti } from '@/domain/porzioni.ts'
 import { daConcludere } from '@/domain/regole/evento.ts'
-import { dataLunga, differenzaGiorni, oggiISO } from '@/domain/tempo.ts'
+import { dataBreve, dataLunga, differenzaGiorni, oggiISO } from '@/domain/tempo.ts'
 import { plurale } from '@/lib/formato'
 import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 
@@ -84,13 +92,13 @@ function Prossimo({ e }: { e: RiepilogoEvento }) {
               </Link>
             </Button>
             <Button asChild variante="contorno">
-              <Link to={`/eventi/${e.id}/spesa`}>
-                <ShoppingBasket /> Spesa
+              <Link to={`/eventi/${e.id}/partecipanti`}>
+                <Users /> Persone
               </Link>
             </Button>
             <Button asChild variante="contorno">
-              <Link to={`/eventi/${e.id}/piano`}>
-                <ListTodo /> Piano
+              <Link to={`/eventi/${e.id}/spesa`}>
+                <ShoppingBasket /> Prepara
               </Link>
             </Button>
           </div>
@@ -101,90 +109,200 @@ function Prossimo({ e }: { e: RiepilogoEvento }) {
   )
 }
 
+type Vista = 'programma' | 'conclusi' | 'archivio'
+const VISTE: { vista: Vista; etichetta: string; stato: StatoEvento }[] = [
+  { vista: 'programma', etichetta: 'In programma', stato: 'attivo' },
+  { vista: 'conclusi', etichetta: 'Conclusi', stato: 'concluso' },
+  { vista: 'archivio', etichetta: 'Archivio', stato: 'archiviato' },
+]
+
+/**
+ * Pagina iniziale (SPEC §31.3): prossimo evento, «Per te», eventi in programma, conclusi e
+ * archivio della Famiglia attiva; creazione e duplicazione subito a portata di mano.
+ */
 export function PaginaEventi() {
-  const { attiva } = useFamigliaAttiva()
-  const tuttiAttivi = useEventi('attivo', attiva?.id)
-  const conclusi = useEventi('concluso', attiva?.id)
-  // Prima i propri eventi; quelli condivisi con me in una sezione a parte.
-  const attivi = { ...tuttiAttivi, data: tuttiAttivi.data?.filter((e) => e.permesso === 'proprietario') ?? [] }
-  const condivisi = tuttiAttivi.data?.filter((e) => e.permesso !== 'proprietario') ?? []
+  const [parametri] = useSearchParams()
+  const vista = VISTE.find((v) => v.vista === parametri.get('vista')) ?? VISTE[0]!
+  const { attiva, famiglie, multiple, scegli } = useFamigliaAttiva()
+  const eventi = useEventi(vista.stato, attiva?.id)
+  // Gli stessi eventi in tutte le Famiglie: per dire quanti ce ne sono nelle altre.
+  const tutti = useEventi(vista.stato)
+  const [duplica, setDuplica] = useState(false)
+  const lista = vista.vista === 'archivio' ? [...(eventi.data ?? [])].reverse() : (eventi.data ?? [])
+  const propri = vista.vista === 'programma' ? lista.filter((e) => e.permesso === 'proprietario') : lista
+  const condivisi = vista.vista === 'programma' ? lista.filter((e) => e.permesso !== 'proprietario') : []
+  const prossimo = vista.vista === 'programma' ? (propri.find((x) => x.data >= oggiISO()) ?? propri[0]) : undefined
+  const altre = multiple && attiva ? altreFamiglie(tutti.data ?? [], attiva.id, famiglie) : []
   return (
     <Pagina
       titolo="Eventi"
       azioni={
-        <Button asChild>
-          <Link to="/eventi/nuovo">
-            <CalendarPlus /> Nuovo
-          </Link>
-        </Button>
+        <>
+          <Button variante="contorno" onClick={() => setDuplica(true)} aria-label="Duplica un evento">
+            <Copy /> <span className="max-sm:sr-only">Duplica</span>
+          </Button>
+          <Button asChild>
+            <Link to="/eventi/nuovo">
+              <CalendarPlus /> Nuovo
+            </Link>
+          </Button>
+        </>
       }
     >
-      {tuttiAttivi.isPending ? (
+      <Segmenti
+        etichetta="Quali eventi"
+        className="mb-4"
+        voci={VISTE.map((v) => ({ a: v.vista === 'programma' ? '/' : `/?vista=${v.vista}`, etichetta: v.etichetta, attiva: () => v.vista === vista.vista }))}
+      />
+      {eventi.isPending ? (
         <Caricamento />
-      ) : tuttiAttivi.isError ? (
+      ) : eventi.isError ? (
         <Vuoto titolo="Impossibile caricare gli eventi" testo="Controlla la connessione al server." />
-      ) : attivi.data.length === 0 && condivisi.length === 0 && !conclusi.data?.length ? (
-        <Vuoto
-          illustrazione="tavola"
-          titolo="Crea il tuo primo evento"
-          testo="Un pranzo, una cena, una festa: indica quando e quanti siete, poi componi il menù."
-          azione={
-            <Button asChild>
-              <Link to="/eventi/nuovo">Nuovo evento</Link>
-            </Button>
-          }
-        />
       ) : (
         <div className="flex flex-col gap-3">
-          {attivi.data.length ? <Prossimo e={attivi.data.find((x) => x.data >= oggiISO()) ?? attivi.data[0]!} /> : null}
-          {attivi.data
-            .filter((x) => x.id !== (attivi.data.find((y) => y.data >= oggiISO()) ?? attivi.data[0])?.id)
+          {vista.vista === 'programma' ? <PerTe /> : null}
+          {lista.length === 0 ? (
+            <Vuoto
+              illustrazione={vista.vista === 'archivio' ? 'taccuino' : 'tavola'}
+              titolo={
+                vista.vista === 'programma'
+                  ? multiple && attiva ? `Nessun evento in programma in «${attiva.nome}»` : 'Crea il tuo primo evento'
+                  : vista.vista === 'conclusi' ? 'Nessun evento concluso' : 'Nessun evento archiviato'
+              }
+              testo={
+                vista.vista === 'programma'
+                  ? 'Un pranzo, una cena, una festa: indica quando e quanti siete, poi componi il menù.'
+                  : vista.vista === 'conclusi' ? 'Gli eventi passati compaiono qui finché non li archivi.' : 'Archivia un evento concluso per conservarne menù, ricette e spesa.'
+              }
+              azione={
+                vista.vista === 'programma' ? (
+                  <Button asChild>
+                    <Link to="/eventi/nuovo">Nuovo evento</Link>
+                  </Button>
+                ) : undefined
+              }
+            />
+          ) : null}
+          {prossimo ? <Prossimo e={prossimo} /> : null}
+          {propri
+            .filter((x) => x.id !== prossimo?.id)
             .map((e) => (
               <SchedaEvento key={e.id} e={e} />
             ))}
           {condivisi.length ? (
             <section aria-label="Condivisi con me" className="flex flex-col gap-3">
-              <h2 className="mt-4 flex items-center gap-3 text-sm font-semibold uppercase tracking-wide text-testo-tenue">
-                Condivisi con me <span className="filetto flex-1" />
-              </h2>
+              <TitoloSezione className="mt-4">Condivisi con me</TitoloSezione>
               {condivisi.map((e) => (
                 <SchedaEvento key={e.id} e={e} />
               ))}
             </section>
           ) : null}
-          {conclusi.data?.length ? (
-            <>
-              <h2 className="mt-4 flex items-center gap-3 text-sm font-semibold uppercase tracking-wide text-testo-tenue">Conclusi <span className="filetto flex-1" /></h2>
-              {conclusi.data.map((e) => (
-                <SchedaEvento key={e.id} e={e} />
+          {altre.length ? (
+            <div className="mt-2 flex flex-col gap-2 rounded-2xl border border-dashed border-bordo p-3 text-sm" data-testid="altre-famiglie">
+              {altre.map((f) => (
+                <p key={f.id} className="flex flex-wrap items-center gap-2">
+                  <House className="size-4 text-testo-tenue" aria-hidden />
+                  <span className="flex-1">
+                    {plurale(f.eventi, 'evento', 'eventi')} in «{f.nome}»
+                  </span>
+                  <Button variante="contorno" misura="piccolo" onClick={() => scegli(f.id)}>
+                    Passa a «{f.nome}»
+                  </Button>
+                </p>
               ))}
-            </>
+            </div>
           ) : null}
         </div>
       )}
-      <Link to="/eventi/archivio" className="mt-6 flex items-center gap-2 text-sm text-testo-tenue hover:text-testo">
-        <Archive className="size-4" /> Eventi archiviati
-      </Link>
+      {duplica ? <ScegliDaDuplicare gruppoId={attiva?.id} onChiudi={() => setDuplica(false)} /> : null}
     </Pagina>
   )
 }
 
-export function PaginaArchivio() {
-  const { attiva } = useFamigliaAttiva()
-  const archiviati = useEventi('archiviato', attiva?.id)
+/** Quanti eventi ci sono nelle altre Famiglie dell'utente (per non farli «sparire»). */
+function altreFamiglie(eventi: RiepilogoEvento[], attiva: string, famiglie: { id: string; nome: string }[]) {
+  return famiglie
+    .filter((f) => f.id !== attiva)
+    .map((f) => ({ id: f.id, nome: f.nome, eventi: eventi.filter((e) => e.gruppo?.id === f.id).length }))
+    .filter((f) => f.eventi > 0)
+}
+
+/** «Per te»: cose da portare affidate a me e sondaggi a cui non ho risposto. */
+function PerTe() {
+  const q = usePerTe()
+  const d = q.data
+  if (!d || (!d.incarichi.length && !d.sondaggi.length)) return null
   return (
-    <Pagina titolo="Archivio" indietro="/">
-      {archiviati.isPending ? (
-        <Caricamento />
-      ) : !archiviati.data?.length ? (
-        <Vuoto illustrazione="taccuino" titolo="Nessun evento archiviato" testo="Archivia un evento concluso per conservarne menù, ricette e spesa." />
-      ) : (
-        <div className="flex flex-col gap-3">
-          {[...archiviati.data].reverse().map((e) => (
-            <SchedaEvento key={e.id} e={e} />
-          ))}
-        </div>
-      )}
-    </Pagina>
+    <section aria-label="Per te" className="rounded-2xl border border-bordo/70 bg-carta p-3 shadow-carta">
+      <h2 className="mb-1 px-1 text-sm font-semibold">Per te</h2>
+      <ul className="flex flex-col">
+        {d.incarichi.map((i) => (
+          <li key={`${i.tipo}-${i.id}`}>
+            <Link to={i.collegamento} className="flex min-h-11 items-center gap-3 rounded-xl px-1 py-1.5 hover:bg-tenue">
+              <HandHelping className="size-4 shrink-0 text-primario" aria-hidden />
+              <span className="min-w-0 flex-1">
+                Porti <strong>{i.nome}</strong>
+                <span className="block text-xs text-testo-tenue">
+                  {i.evento} · {dataBreve(i.data)}
+                </span>
+              </span>
+              <ChevronRight className="size-4 text-testo-tenue" aria-hidden />
+            </Link>
+          </li>
+        ))}
+        {d.sondaggi.map((x) => (
+          <li key={x.id}>
+            <Link to={x.collegamento} className="flex min-h-11 items-center gap-3 rounded-xl px-1 py-1.5 hover:bg-tenue">
+              <BarChart3 className="size-4 shrink-0 text-primario" aria-hidden />
+              <span className="min-w-0 flex-1 break-words">
+                Sondaggio: {x.testo}
+                <span className="block text-xs text-testo-tenue">{x.dove} · non hai ancora risposto</span>
+              </span>
+              <ChevronRight className="size-4 text-testo-tenue" aria-hidden />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
+}
+
+/** Duplica dalla pagina iniziale: si sceglie l'evento (anche concluso o archiviato), poi la solita finestra. */
+function ScegliDaDuplicare({ gruppoId, onChiudi }: { gruppoId?: string; onChiudi: () => void }) {
+  const eventi = useEventi(undefined, gruppoId)
+  const [scelto, setScelto] = useState('')
+  const [conferma, setConferma] = useState(false)
+  const evento = useQuery({ queryKey: ['evento', scelto], queryFn: () => api.leggi<Evento>(`/eventi/${scelto}`), enabled: conferma && Boolean(scelto) })
+  if (conferma && evento.data) return <DuplicaEvento evento={evento.data} onChiudi={onChiudi} />
+  const elenco = [...(eventi.data ?? [])].sort((a, b) => b.data.localeCompare(a.data))
+  return (
+    <Finestra
+      aperta
+      onCambia={(a) => !a && onChiudi()}
+      titolo="Duplica un evento"
+      descrizione="Scegli l'evento da cui partire, anche dell'anno scorso o archiviato: menù, porzioni e piano si copiano nel nuovo."
+      piede={
+        <Button disabled={!scelto} onClick={() => setConferma(true)}>
+          Continua
+        </Button>
+      }
+    >
+      <Campo etichetta="Evento da duplicare" htmlFor="dup-scegli">
+        <Select id="dup-scegli" value={scelto} onChange={(ev) => setScelto(ev.target.value)}>
+          <option value="">Scegli…</option>
+          {elenco.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.nome} · {dataBreve(e.data)}
+              {e.stato === 'archiviato' ? ' (archiviato)' : e.stato === 'concluso' ? ' (concluso)' : ''}
+            </option>
+          ))}
+        </Select>
+      </Campo>
+    </Finestra>
+  )
+}
+
+/** Vecchio indirizzo dell'archivio: ora è una vista della pagina Eventi. */
+export function PaginaArchivio() {
+  return <Navigate to="/?vista=archivio" replace />
 }

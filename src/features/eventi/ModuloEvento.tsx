@@ -57,7 +57,9 @@ export function ModuloEvento({
   // Ricorrenza: segue l'occasione («Vigilia di Natale» → la standard) finché non la si sceglie.
   const [ricorrenzaScelta, setRicorrenzaScelta] = useState<ValoreRicorrenza | null>(null)
   const automatica = standardPerOccasione(d.occasione)
-  const ricorrenza = ricorrenzaScelta ?? (automatica ? `standard:${automatica.id}` : '')
+  const proposta = ricorrenzaScelta ?? (automatica ? `standard:${automatica.id}` : '')
+  // Una ricorrenza della Famiglia vale solo se è fra quelle della Famiglia scelta per l'evento.
+  const ricorrenza = proposta.startsWith('famiglia:') && !ricorrenze?.some((r) => `famiglia:${r.id}` === proposta) ? '' : proposta
 
   function cambia<K extends keyof DatiModuloEvento>(k: K, v: DatiModuloEvento[K]) {
     setD((x) => {
@@ -74,7 +76,7 @@ export function ModuloEvento({
       className="flex flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault()
-        if (!nomeVuoto) onSalva({ ...d, nome: d.nome.trim() }, ricorrenze && ricorrenzaScelta !== null ? sceltaDi(ricorrenzaScelta) : undefined)
+        if (!nomeVuoto) onSalva({ ...d, nome: d.nome.trim() }, ricorrenze && ricorrenzaScelta !== null ? sceltaDi(ricorrenza) : undefined)
       }}
     >
       <div className="grid gap-4 sm:grid-cols-2">

@@ -1,4 +1,4 @@
-// Famiglia attiva: bacheca, piatti più apprezzati, membri e inviti (SPEC §20, §21).
+// Famiglia attiva: bacheca, piatti più apprezzati, persone (con e senza app), gestione (SPEC §20, §21, §31).
 import { useQuery } from '@tanstack/react-query'
 import { LogOut, Medal, Plus, Star, Trophy, UserPlus } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -17,6 +17,7 @@ import type { AnteprimaInvito, Esterno, Gruppo, InvitoFamigliaCreato } from '@/c
 import { useStatoConnessione } from '@/connessione/stato'
 import { useUtenteCorrente } from '@/features/accesso/sessione'
 import { cn } from '@/lib/utils'
+import { Schede } from '@/components/Navigazione'
 import { Bacheca } from './Bacheca'
 import { useClassifica, useGruppi } from './api'
 import { useFamigliaAttiva } from './attiva'
@@ -25,7 +26,9 @@ import { RicorrenzeFamiglia } from './RicorrenzeFamiglia'
 export function PaginaFamiglia() {
   const { attiva, famiglie, caricamento, scegli } = useFamigliaAttiva()
   const [parametri, setParametri] = useSearchParams()
-  const scheda = (['apprezzati', 'membri'] as const).find((x) => x === parametri.get('scheda')) ?? 'bacheca'
+  // «membri» è il nome precedente di «persone» (collegamenti già salvati).
+  const richiestaScheda = parametri.get('scheda') === 'membri' ? 'persone' : parametri.get('scheda')
+  const scheda = (['apprezzati', 'persone', 'gestione'] as const).find((x) => x === richiestaScheda) ?? 'bacheca'
   // Da una notifica: si apre la Famiglia da cui viene, che diventa quella attiva (se se ne fa
   // parte). Il parametro serve una volta sola: poi il selettore torna libero.
   const richiesta = parametri.get('famiglia')
@@ -53,31 +56,24 @@ export function PaginaFamiglia() {
   if (!attiva) return <SenzaFamiglia />
   return (
     <Pagina titolo={attiva.nome} sottotitolo={attiva.membri.map((m) => m.nome).join(' · ')}>
-      <nav aria-label="Sezioni della famiglia" className="-mx-1 mb-4 flex gap-1 overflow-x-auto border-b border-bordo/70">
-        {(
+      <Schede
+        etichetta="Sezioni della famiglia"
+        className="-mx-1 mb-4 border-b border-bordo/70"
+        schede={(
           [
             ['bacheca', 'Bacheca'],
-            ['apprezzati', 'I più apprezzati'],
-            ['membri', 'Membri'],
+            ['apprezzati', 'Apprezzati'],
+            ['persone', 'Persone'],
+            ['gestione', 'Gestione'],
           ] as const
-        ).map(([k, nome]) => (
-          <button
-            key={k}
-            type="button"
-            aria-current={scheda === k ? 'page' : undefined}
-            onClick={() => setParametri(k === 'bacheca' ? {} : { scheda: k }, { replace: true })}
-            className={cn('whitespace-nowrap border-b-2 border-transparent px-3 pb-2.5 pt-1.5 text-sm font-medium text-testo-tenue', scheda === k && 'border-primario text-primario')}
-          >
-            {nome}
-          </button>
-        ))}
-      </nav>
+        ).map(([k, etichetta]) => ({ a: k === 'bacheca' ? '/famiglia' : `/famiglia?scheda=${k}`, etichetta, attiva: () => scheda === k }))}
+      />
       {scheda === 'bacheca' ? (
         <Bacheca key={attiva.id} ambito={{ tipo: 'gruppo', id: attiva.id }} segnaposto="Un'idea per il prossimo pranzo, una ricetta da provare, una comunicazione…" />
       ) : scheda === 'apprezzati' ? (
         <Classifica gruppo={attiva.id} />
       ) : (
-        <Membri famiglia={attiva} />
+        <Membri key={scheda} famiglia={attiva} parte={scheda} />
       )}
     </Pagina>
   )
@@ -108,7 +104,11 @@ function SenzaFamiglia() {
 }
 
 /** Membri e gestione semplice: invito, ruoli, passaggio dell'amministrazione, uscita. */
-function Membri({ famiglia }: { famiglia: Gruppo }) {
+/**
+ * Persone (membri con l'app, inviti, persone senza app) o Gestione (ricorrenze, nome, uscita,
+ * nuova Famiglia) della Famiglia attiva (SPEC §31.3).
+ */
+function Membri({ famiglia, parte }: { famiglia: Gruppo; parte: 'persone' | 'gestione' }) {
   const { utente } = useUtenteCorrente()
   const naviga = useNavigate()
   const connesso = useStatoConnessione() === 'connesso'
@@ -125,9 +125,11 @@ function Membri({ famiglia }: { famiglia: Gruppo }) {
   const esci = useScrittura(() => api.crea(`/famiglie/${famiglia.id}/esci`, {}), { successo: `Sei uscito da ${famiglia.nome}`, dopo: () => naviga('/') })
   return (
     <div className="flex flex-col gap-4">
+      {parte === 'persone' ? (
+      <>
       <Card>
         <CardHeader>
-          <CardTitle>Membri</CardTitle>
+          <CardTitle>Con l&apos;app</CardTitle>
         </CardHeader>
         <CardContent>
           <ul className="flex flex-col divide-y divide-bordo/60" aria-label="Membri della Famiglia">
@@ -187,9 +189,11 @@ function Membri({ famiglia }: { famiglia: Gruppo }) {
         </CardContent>
       </Card>
 
-      <RicorrenzeFamiglia famiglia={famiglia} />
-
       <RubricaFamiglia famiglia={famiglia} />
+      </>
+      ) : (
+      <>
+      <RicorrenzeFamiglia famiglia={famiglia} />
 
       {admin ? (
         <Card>
@@ -217,6 +221,8 @@ function Membri({ famiglia }: { famiglia: Gruppo }) {
           <Plus /> Crea un'altra Famiglia
         </Button>
       </div>
+      </>
+      )}
       {nuova ? <NuovaFamiglia onChiudi={() => setNuova(false)} /> : null}
       <Conferma
         aperta={conferma !== null}

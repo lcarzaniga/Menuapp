@@ -1,5 +1,4 @@
 // Duplica evento e ricorrenza dell'evento (SPEC §25, §28, §30).
-import { useQuery } from '@tanstack/react-query'
 import { Copy, Repeat } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
@@ -11,27 +10,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Campo, Casella, Input, Select } from '@/components/ui/campi'
 import { Finestra } from '@/components/ui/dialog'
 import { usePuoScrivere } from '@/connessione/stato'
-import type { Edizioni, EsitoDuplica, Ricorrenza } from '@/contratto/edizioni.ts'
+import type { Edizioni, EsitoDuplica } from '@/contratto/edizioni.ts'
+import { useEdizioni, useRicorrenze } from '@/api/query'
 import { etichettaRicorrenza, SelettoreRicorrenza, sceltaDi, type ValoreRicorrenza, valoreDi } from './SceltaRicorrenza'
+import { annoDopo, nomeEdizione } from '@/domain/edizioni.ts'
 import { dataBreve } from '@/domain/tempo.ts'
 import type { Evento } from '@/domain/tipi.ts'
 import { useAccessoEvento } from '@/features/accesso/sessione'
 import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 
-export const useEdizioni = (eventoId: string) =>
-  useQuery({ queryKey: ['edizioni', eventoId], queryFn: () => api.leggi<Edizioni>(`/eventi/${eventoId}/edizioni`) })
-export const useRicorrenze = (gruppoId: string | null) =>
-  useQuery({ queryKey: ['ricorrenze', gruppoId], queryFn: () => api.leggi<Ricorrenza[]>(`/famiglie/${gruppoId}/ricorrenze`), enabled: Boolean(gruppoId) })
 
-/** «Natale 2026» → «Natale 2027» quando la data passa all'anno dopo. */
-export function nomeEdizione(nome: string, dataOrigine: string, dataNuova: string): string {
-  const da = dataOrigine.slice(0, 4)
-  const a = dataNuova.slice(0, 4)
-  return da !== a && nome.includes(da) ? nome.replaceAll(da, a) : nome
-}
-
-/** Lo stesso giorno l'anno dopo (il 29 febbraio diventa il 28). */
-const annoDopo = (data: string) => `${Number(data.slice(0, 4)) + 1}${data.slice(4) === '-02-29' ? '-02-28' : data.slice(4)}`
 
 export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiudi: () => void }) {
   const naviga = useNavigate()
@@ -198,7 +186,7 @@ export function PannelloRicorrenza({ evento: e }: { evento: Evento }) {
         {d.puoAssociare ? (
           <p className="text-xs text-testo-tenue">
             Le ricorrenze standard (Natale, Pasqua…) sono già pronte; le altre (un compleanno…) si creano in{' '}
-            <Link to="/famiglia?scheda=membri" className="underline">
+            <Link to="/famiglia?scheda=gestione" className="underline">
               Famiglia
             </Link>
             .

@@ -1,5 +1,6 @@
-// Evento — Panoramica: dati, coperti, stato e azioni (SPEC §5, F9).
-import { CalendarCheck, Copy, Pencil, Printer, RotateCcw, Trash2, Users } from 'lucide-react'
+// Evento — Riepilogo: a che punto siamo, dati, ricorrenza ed edizioni, condivisione; le azioni
+// di gestione nel menù «Azioni», ciascuna solo per chi può usarla (SPEC §5, F9, §31.2).
+import { Archive, CalendarCheck, Copy, MoreHorizontal, Pencil, Printer, RotateCcw, Trash2, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { api } from '@/api/client'
@@ -8,7 +9,8 @@ import { useScrittura } from '@/api/scrittura'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Conferma, Finestra } from '@/components/ui/dialog'
-import { SolaLettura, usePuoScrivere } from '@/connessione/stato'
+import { SolaLettura, usePuoScrivere, useStatoConnessione } from '@/connessione/stato'
+import { MenuAzioni, type VoceMenuAzioni } from '@/components/ui/menu'
 import { CondivisioneEvento } from '@/features/accesso/CondivisioneEvento'
 import { useAccessoEvento } from '@/features/accesso/sessione'
 import { copertiEquivalenti, formattaCoperti } from '@/domain/porzioni.ts'
@@ -35,7 +37,9 @@ export function PaginaPanoramica() {
   const [spostamento, setSpostamento] = useState(0)
   const attivita = useAttivita(e.id)
   const archiviato = e.stato === 'archiviato'
-  const proprietario = useAccessoEvento(e.id).data?.permesso === 'proprietario'
+  const accesso = useAccessoEvento(e.id)
+  const proprietario = accesso.data?.permesso === 'proprietario'
+  const [archivia, setArchivia] = useState(false)
 
   const salva = useScrittura(
     (d: DatiModuloEvento & { versione: number }) =>
@@ -63,10 +67,40 @@ export function PaginaPanoramica() {
   const sposta = useScrittura((giorni: number) => api.crea(`/eventi/${e.id}/attivita/sposta`, { giorni }), { successo: 'Attività spostate' })
   const voci = menu.data?.portate.reduce((n, p) => n + p.voci.length, 0) ?? 0
   const coperti = copertiEquivalenti(e)
+  // Azioni dell'evento: ognuna solo a chi può usarla (il server verifica comunque). Duplicare
+  // chiede solo di poter leggere l'evento: la copia è di chi la crea (SPEC §25, §31.4).
+  const connesso = useStatoConnessione() === 'connesso'
+  const permesso = accesso.data?.permesso
+  const modifica_ = permesso === 'proprietario' || permesso === 'modifica'
+  const azioni: VoceMenuAzioni[] = [
+    { etichetta: 'Modifica evento', icona: <Pencil />, onSelect: () => setModifica(true), nascosta: !modifica_ || archiviato, disabilitata: !connesso },
+    { etichetta: 'Duplica evento', icona: <Copy />, onSelect: () => setDuplica(true), disabilitata: !connesso },
+    { etichetta: 'Concludi', icona: <CalendarCheck />, onSelect: () => void stato.esegui('concludi'), nascosta: !modifica_ || e.stato !== 'attivo', disabilitata: !connesso },
+    { etichetta: 'Riapri', icona: <RotateCcw />, onSelect: () => void stato.esegui('riapri'), nascosta: !modifica_ || e.stato !== 'concluso', disabilitata: !connesso },
+    { etichetta: 'Archivia', icona: <Archive />, onSelect: () => setArchivia(true), nascosta: !proprietario || archiviato, disabilitata: !connesso },
+    { etichetta: 'Elimina evento', icona: <Trash2 />, onSelect: () => setElimina(true), nascosta: !proprietario, pericolosa: true, disabilitata: !connesso },
+  ]
   return (
     <CorpoScheda>
       <div className="flex flex-col gap-4">
-        {daConcludere(e, oggiISO()) ? (
+        <div className="non-stampare flex flex-wrap items-center gap-2" data-testid="azioni-evento">
+          <Button variante="contorno" misura="piccolo" asChild>
+            <Link to={`/eventi/${e.id}/stampa`}>
+              <Printer /> Stampa menù
+            </Link>
+          </Button>
+          <span className="flex-1" />
+          <MenuAzioni
+            etichetta="Azioni dell'evento"
+            voci={azioni}
+            trigger={
+              <Button variante="contorno" misura="piccolo" aria-label="Azioni dell'evento">
+                <MoreHorizontal /> Azioni
+              </Button>
+            }
+          />
+        </div>
+        {daConcludere(e, oggiISO()) && modifica_ ? (
           <Card className="border-avviso/40 bg-avviso-tenue">
             <CardContent className="flex flex-wrap items-center gap-3 pt-4 text-sm text-avviso">
               <p className="flex-1">La data è passata. Vuoi segnare l'evento come concluso?</p>
@@ -78,33 +112,28 @@ export function PaginaPanoramica() {
         ) : null}
 
         <RiepilogoEvento eventoId={e.id} />
-
         <Card>
           <CardContent className="pt-4">
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm" aria-label="Informazioni dell'evento">
               <dt className="text-testo-tenue">Tipo</dt>
               <dd>
                 {NOMI_TIPO[e.tipo]}
                 {e.occasione ? ` · ${e.occasione}` : ''}
               </dd>
-              <dt className="text-testo-tenue">Persone</dt>
-              <dd>
-                {plurale(e.adulti, 'adulto', 'adulti')}, {plurale(e.bambini, 'bambino', 'bambini')}
-                {e.bambini > 0 ? <span className="text-testo-tenue"> (contano {new Intl.NumberFormat('it-IT').format(e.coefficienteBambini)})</span> : null}
-              </dd>
               <dt className="text-testo-tenue">Coperti</dt>
-              <dd className="flex flex-wrap items-center gap-1.5">
-                <span className="flex items-center gap-1.5 font-semibold text-primario">
-                  <Users className="size-4" /> {formattaCoperti(coperti)} equivalenti
-                </span>
-                <Link to={`/eventi/${e.id}/partecipanti`} className="text-xs text-testo-tenue underline-offset-2 hover:underline">
-                  {e.copertiAutomatici ? 'calcolati dai partecipanti' : 'manuali'}
+              <dd className="flex flex-wrap items-center gap-x-1.5">
+                <Link to={`/eventi/${e.id}/partecipanti`} className="flex items-center gap-1.5 font-semibold text-primario underline-offset-2 hover:underline">
+                  <Users className="size-4" /> {formattaCoperti(coperti)}
                 </Link>
+                <span className="text-testo-tenue">
+                  · {plurale(e.adulti, 'adulto', 'adulti')}, {plurale(e.bambini, 'bambino', 'bambini')}
+                  {e.bambini > 0 ? ` (contano ${new Intl.NumberFormat('it-IT').format(e.coefficienteBambini)})` : ''} · {e.copertiAutomatici ? 'dai partecipanti' : 'manuali'}
+                </span>
               </dd>
               <dt className="text-testo-tenue">Menù</dt>
               <dd>
                 <Link to={`/eventi/${e.id}/menu`} className="text-primario underline-offset-2 hover:underline">
-                  {plurale(voci, 'voce', 'voci')} in {plurale(e.portate.length, 'portata', 'portate')}
+                  {plurale(voci, 'piatto', 'piatti')} in {plurale(e.portate.length, 'portata', 'portate')}
                 </Link>
               </dd>
               {e.note ? (
@@ -116,41 +145,9 @@ export function PaginaPanoramica() {
             </dl>
           </CardContent>
         </Card>
-
-        <div className="flex flex-wrap gap-2">
-          {!archiviato ? (
-            <Button variante="contorno" disabled={!puoScrivere} onClick={() => setModifica(true)}>
-              <Pencil /> Modifica
-            </Button>
-          ) : null}
-          <Button variante="contorno" asChild>
-            <Link to={`/eventi/${e.id}/stampa`}>
-              <Printer /> Stampa menù
-            </Link>
-          </Button>
-          <Button variante="contorno" disabled={!puoScrivere} onClick={() => setDuplica(true)}>
-            <Copy /> Duplica evento
-          </Button>
-          {e.stato === 'attivo' ? (
-            <Button variante="contorno" disabled={!puoScrivere} onClick={() => void stato.esegui('concludi')}>
-              <CalendarCheck /> Concludi
-            </Button>
-          ) : null}
-          {e.stato === 'concluso' ? (
-            <Button variante="contorno" disabled={!puoScrivere} onClick={() => void stato.esegui('riapri')}>
-              <RotateCcw /> Riapri
-            </Button>
-          ) : null}
-          {proprietario ? (
-            <Button variante="fantasma" className="text-pericolo" disabled={!puoScrivere} onClick={() => setElimina(true)}>
-              <Trash2 /> Elimina
-            </Button>
-          ) : null}
-        </div>
-
         {/* Archiviare e riaprire un archiviato spettano al proprietario. */}
         <SolaLettura motivo={proprietario ? null : 'Solo il proprietario archivia l\'evento'}>
-          <PannelloArchivio evento={e} />
+          <PannelloArchivio evento={e} archivia={archivia} onArchivia={setArchivia} />
         </SolaLettura>
         <PannelloRicorrenza evento={e} />
         <CondivisioneEvento evento={e} />

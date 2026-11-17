@@ -13,7 +13,7 @@ test('ricorrenze: creare, rinominare, eliminare senza perdere gli eventi', async
   test.skip(info.project.name !== 'telefono', 'una sola esecuzione')
   const famiglia = (await apiLeggi<{ id: string; nome: string }[]>(request, '/gruppi')).find((g) => g.nome === 'Famiglia')!
   await page.addInitScript((id) => localStorage.setItem('menuapp.famiglia', id), famiglia.id)
-  await page.goto('/#/famiglia?scheda=membri')
+  await page.goto('/#/famiglia?scheda=gestione')
   await page.getByLabel('Nuova ricorrenza').fill('Ferragosto')
   await page.getByRole('button', { name: 'Aggiungi', exact: true }).first().click()
   const elenco = page.getByRole('list', { name: 'Ricorrenze della Famiglia' })

@@ -3,7 +3,7 @@
 // «Chi porta» con un partecipante che non viene.
 import { mkdirSync } from 'node:fs'
 import { expect, type Page, test } from '@playwright/test'
-import { apiLeggi, apiScrivi, senzaScorrimentoOrizzontale } from './aiuti'
+import { apiLeggi, apiScrivi, schedaEvento, senzaScorrimentoOrizzontale } from './aiuti'
 
 const CARTELLA = 'test-results/partecipanti'
 const foto = async (page: Page, nome: string) => {
@@ -92,22 +92,22 @@ test('partecipanti, accompagnatori e coperti calcolati', async ({ page, request 
 
   // ── «Chi porta»: il vino a Zio Marco, che poi non viene
   await apiScrivi(request, 'post', '/eventi/ev-part/cose', { id: 'c-vino-part', nome: 'Vino', quantitaNumero: 4, unita: 'bottiglie' })
-  await page.getByRole('navigation', { name: 'Schede dell\'evento' }).getByRole('link', { name: 'Chi porta' }).click()
+  await schedaEvento(page, 'Persone', 'Chi porta')
   const vino = page.getByTestId('incarico').filter({ hasText: 'Vino' })
   await vino.getByRole('button', { name: 'Affida' }).click()
   await page.getByRole('dialog').getByLabel('Persona').selectOption({ label: 'Zio Marco' })
   await page.getByRole('dialog').getByRole('button', { name: 'Affida', exact: true }).click()
   await expect(vino).toContainText('Zio Marco')
-  await page.getByRole('navigation', { name: 'Schede dell\'evento' }).getByRole('link', { name: 'Partecipanti' }).click()
+  await schedaEvento(page, 'Persone', 'Presenze')
   await page.getByRole('button', { name: 'Modifica elenco' }).click()
   await page.getByLabel('Presenza di Zio Marco').selectOption('assente')
   await expect(marco.getByRole('note')).toContainText('Non partecipa ma ha un incarico: Vino')
-  await page.getByRole('navigation', { name: 'Schede dell\'evento' }).getByRole('link', { name: 'Chi porta' }).click()
+  await schedaEvento(page, 'Persone', 'Chi porta')
   await expect(vino.getByRole('note')).toContainText('non partecipa')
   await expect(vino).toContainText('4 bottiglie')
 
   // Panoramica: coperti dai confermati (Marco non c'è più): 3 adulti + 1 bambino × 0,5.
-  await page.getByRole('navigation', { name: 'Schede dell\'evento' }).getByRole('link', { name: 'Panoramica' }).click()
-  await expect(page.getByText('3,5 equivalenti')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'calcolati dai partecipanti', exact: true })).toBeVisible()
+  await schedaEvento(page, 'Riepilogo')
+  await expect(page.getByLabel('Informazioni dell\'evento')).toContainText('3,5')
+  await expect(page.getByLabel('Informazioni dell\'evento')).toContainText('dai partecipanti')
 })

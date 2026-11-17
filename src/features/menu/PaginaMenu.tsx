@@ -1,6 +1,7 @@
 // Evento — Menù: portate, voci, inserimento rapido, riordino (SPEC F2, §7.2).
-import { ArrowDown, ArrowUp, ChefHat, FolderInput, ListOrdered, Pencil, Plus, ShoppingCart, Trash2, User } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChefHat, CookingPot, FolderInput, ListOrdered, Pencil, Plus, Printer, ShoppingCart, Trash2, User } from 'lucide-react'
 import { type ClipboardEvent, type KeyboardEvent, useId, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { api, nuovoId } from '@/api/client'
 import { useMenu } from '@/api/query'
@@ -51,11 +52,18 @@ export function PaginaMenu() {
         <p className="text-sm text-testo-tenue">
           {totale === 0 ? 'Scrivi i piatti nelle portate: bastano i nomi.' : `${totale} ${totale === 1 ? 'voce' : 'voci'} · porzioni per ${formattaCoperti(menu.copertiEquivalenti)} coperti`}
         </p>
-        {!solaLettura ? (
-          <Button variante="fantasma" misura="piccolo" disabled={!puoScrivere} onClick={() => setPortate(true)}>
-            <ListOrdered /> Portate
+        <div className="flex shrink-0 items-center gap-1">
+          {!solaLettura ? (
+            <Button variante="fantasma" misura="piccolo" disabled={!puoScrivere} onClick={() => setPortate(true)}>
+              <ListOrdered /> Portate
+            </Button>
+          ) : null}
+          <Button variante="fantasma" misura="piccolo" asChild>
+            <Link to={`/eventi/${e.id}/stampa`}>
+              <Printer /> Stampa
+            </Link>
           </Button>
-        ) : null}
+        </div>
       </div>
       <div className="flex flex-col gap-5">
         {menu.portate.map((p, i) => (
@@ -285,6 +293,14 @@ function RigaVoce({
       ) : (
         <span className={cn('w-2')} />
       )}
+      {/* Con una ricetta: la vista cucina a un tocco (SPEC §31.2). */}
+      {voce.piattoId ? (
+        <Button variante="fantasma" misura="iconaPiccola" asChild>
+          <Link to={`/eventi/${evento.id}/voci/${voce.id}/cucina`} aria-label={`Vista cucina: ${voce.nome}`} title="Vista cucina">
+            <CookingPot />
+          </Link>
+        </Button>
+      ) : null}
       <ValutaVoce eventoId={evento.id} voceId={voce.id} nome={voce.nome} />
     </li>
   )

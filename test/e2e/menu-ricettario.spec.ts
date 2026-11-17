@@ -50,13 +50,23 @@ test('evento, menù veloce, ricetta e vista cucina', async ({ page, request }, i
   expect(piatti.filter((p) => ['Crostini toscani', 'Tortellini in brodo', 'Cappone ripieno'].includes(p.nome))).toEqual([])
   await screenshot(page, '02-menu')
 
-  // Modifica di una voce: porzioni e incaricato
+  // Modifica di una voce: porzioni; «A cura di» si affida in Chi porta (un solo incarico, SPEC §31.2)
   await page.getByRole('button', { name: 'Tortellini in brodo: apri dettagli' }).click()
   await page.getByLabel('Porzioni').fill('12')
-  await page.getByLabel('Chi lo prepara').fill('Zia Anna')
   await page.getByRole('button', { name: 'Salva' }).click()
   await expect(page.getByText('12 porzioni')).toBeVisible()
-  await expect(page.getByText('Zia Anna')).toBeVisible()
+  await page.getByRole('button', { name: 'Tortellini in brodo: apri dettagli' }).click()
+  await expect(page.getByTestId('a-cura-di')).toContainText('Nessuno')
+  await page.getByRole('link', { name: 'Affida in Chi porta' }).click()
+  const tortellini = page.getByTestId('incarico').filter({ hasText: 'Tortellini in brodo' })
+  await expect(tortellini).toHaveClass(/ring-2/)
+  await tortellini.getByRole('button', { name: 'Affida' }).click()
+  await page.getByRole('dialog').getByLabel('Persona').selectOption({ label: 'Un altro nome…' })
+  await page.getByRole('dialog').getByLabel('Nome', { exact: true }).fill('Zia Anna')
+  await page.getByRole('dialog').getByRole('button', { name: 'Affida', exact: true }).click()
+  await expect(tortellini).toContainText('Zia Anna')
+  await page.goBack()
+  await expect(page.getByRole('button', { name: 'Tortellini in brodo: apri dettagli' })).toContainText('Zia Anna')
 
   // Spostamento: il crostino passa ai primi e torna su
   await page.getByRole('button', { name: 'Azioni per Tortellini in brodo' }).click()

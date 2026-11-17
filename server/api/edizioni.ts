@@ -6,7 +6,7 @@ import { SchemaAggiornaRicorrenza, SchemaAssociaRicorrenza, SchemaDuplica, Schem
 import { z } from 'zod'
 import { confronta } from '../servizi/confronto.ts'
 import * as duplicazione from '../servizi/duplicazione.ts'
-import { riepilogo } from '../servizi/riepilogo.ts'
+import { perTe, riepilogo } from '../servizi/riepilogo.ts'
 import * as ricorrenze from '../servizi/ricorrenze.ts'
 import { richiediEvento, richiediGruppo } from '../servizi/permessi.ts'
 import { chi, type Contesto, valida } from './aiuti.ts'
@@ -28,6 +28,7 @@ export function rotteEdizioni(app: FastifyInstance, ctx: Contesto): void {
     return confronta(db, u, req.params.id, valida(z.object({ con: z.string().min(1).max(100) }), req.query).con)
   })
   app.get<ConId>(`${P}/eventi/:id/riepilogo`, async (req) => riepilogo(db, chi(req), req.params.id))
+  app.get(`${P}/per-te`, async (req) => perTe(db, chi(req)))
   app.get<ConId>(`${P}/eventi/:id/edizioni`, async (req) => duplicazione.edizioni(db, chi(req), req.params.id))
   app.put<ConId>(`${P}/eventi/:id/ricorrenza`, async (req) => {
     const u = chi(req)

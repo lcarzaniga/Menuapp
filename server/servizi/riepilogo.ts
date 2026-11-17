@@ -1,6 +1,6 @@
 // «A che punto siamo?» (SPEC §26): un colpo d'occhio che aggrega dati già esistenti, senza
 // nuovi obblighi né scadenze. Le parti non usate nell'evento sono null (nessun falso allarme).
-import type { RiepilogoOrganizzativo } from '../../src/contratto/edizioni.ts'
+import type { PerTe, RiepilogoOrganizzativo } from '../../src/contratto/edizioni.ts'
 import { contaPresenze } from '../../src/domain/partecipanti.ts'
 import { copertiEquivalenti } from '../../src/domain/porzioni.ts'
 import { oggiISO } from '../../src/domain/tempo.ts'
@@ -9,7 +9,7 @@ import * as repoPart from '../db/repo/partecipanti.ts'
 import * as repo from '../db/repo/riepilogo.ts'
 import { elenca as elencaIncarichi } from './incarichi.ts'
 import { leggiEvento } from './eventi.ts'
-import { richiediEvento, type UtenteCorrente } from './permessi.ts'
+import { permessoEvento, puoPartecipare, richiediEvento, type UtenteCorrente } from './permessi.ts'
 import { listaSpesa } from './spesa.ts'
 
 export function riepilogo(db: Db, u: UtenteCorrente, eventoId: string, adesso = Date.now(), oggi = oggiISO()): RiepilogoOrganizzativo {
@@ -20,6 +20,7 @@ export function riepilogo(db: Db, u: UtenteCorrente, eventoId: string, adesso = 
     const righe = repoPart.partecipantiEvento(db, eventoId)
     const c = contaPresenze(righe.map(repoPart.presenza))
     const base = {
+      menu: { voci: repo.vociMenu(db, eventoId) },
       coperti: { equivalenti: copertiEquivalenti(e), adulti: e.adulti, bambini: e.bambini, automatici: e.copertiAutomatici },
       partecipanti: righe.length
         ? { confermati: c.adulti.confermati + c.bambini.confermati, inAttesa: c.adulti.inAttesa + c.bambini.inAttesa, assenti: c.adulti.assenti + c.bambini.assenti }
@@ -54,4 +55,28 @@ export function riepilogo(db: Db, u: UtenteCorrente, eventoId: string, adesso = 
       spesa: articoli ? { daComprare: s.contatori.da_comprare, daVerificare: s.contatori.da_verificare, avvisi: s.avvisi.length } : null,
     }
   })
+}
+
+/**
+ * «Per te» (SPEC §31.3): cose da portare affidate all'utente e sondaggi a cui non ha risposto,
+ * fra tutti gli eventi in corso e le sue Famiglie. Solo ciò che può ancora vedere e votare.
+ */
+export function perTe(db: Db, u: UtenteCorrente, adesso = Date.now()): PerTe {
+  return lettura(db, () => ({
+    incarichi: repo
+      .incarichiMiei(db, u.id)
+      .filter((r) => permessoEvento(db, u, r.evento_id) !== null)
+      .map((r) => ({ tipo: r.tipo, id: r.id, nome: r.nome, evento: r.evento, data: r.data, collegamento: `/eventi/${r.evento_id}/chi-porta?incarico=${encodeURIComponent(`${r.tipo}:${r.id}`)}` })),
+    sondaggi: repo
+      .sondaggiDaVotare(db, u.id, adesso)
+      .filter((r) => (r.evento_id ? puoPartecipare(db, u, r.evento_id) : true))
+      .map((r) => ({
+        id: r.id,
+        testo: r.testo,
+        dove: r.dove,
+        collegamento: r.evento_id
+          ? `/eventi/${r.evento_id}/bacheca?messaggio=${encodeURIComponent(r.id)}`
+          : `/famiglia?famiglia=${encodeURIComponent(r.gruppo_id!)}&messaggio=${encodeURIComponent(r.id)}`,
+      })),
+  }))
 }

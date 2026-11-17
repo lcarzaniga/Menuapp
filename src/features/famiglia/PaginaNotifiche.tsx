@@ -3,7 +3,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { BarChart3, Bell, BellOff, CheckCheck, CheckCircle2, ChefHat, ChevronDown, ChevronUp, House, type LucideIcon, MessageCircle, MessageSquare, Package, Share2, Star, UtensilsCrossed } from 'lucide-react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { api } from '@/api/client'
 import { useScrittura } from '@/api/scrittura'
 import { Caricamento, Pagina, Vuoto } from '@/components/Pagina'
@@ -36,7 +36,9 @@ export function PaginaNotifiche() {
   const n = useNotifiche()
   const naviga = useNavigate()
   const client = useQueryClient()
-  const [preferenze, setPreferenze] = useState(false)
+  // Da Impostazioni → Notifiche (?preferenze=1) si aprono subito le preferenze.
+  const [parametri] = useSearchParams()
+  const [preferenze, setPreferenze] = useState(parametri.has('preferenze'))
   const tutte = useScrittura(() => api.crea('/notifiche/lette', {}), { successo: 'Tutte lette' })
   const apri = async (x: Notifica, collegamento = x.collegamento) => {
     if (!x.letta) {

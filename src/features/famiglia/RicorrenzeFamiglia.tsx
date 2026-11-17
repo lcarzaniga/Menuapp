@@ -13,7 +13,7 @@ import { useStatoConnessione } from '@/connessione/stato'
 import type { Ricorrenza } from '@/contratto/edizioni.ts'
 import type { Gruppo } from '@/contratto/famiglia.ts'
 import { RICORRENZE_STANDARD } from '@/domain/ricorrenze.ts'
-import { useRicorrenze } from '@/features/eventi/Edizioni'
+import { useRicorrenze } from '@/api/query'
 import { plurale } from '@/lib/formato'
 
 export function RicorrenzeFamiglia({ famiglia }: { famiglia: Gruppo }) {

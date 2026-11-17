@@ -1,12 +1,11 @@
 // «A che punto siamo?» (SPEC §26, §29.3): prima ciò che manca, poi ciò che è a posto; ogni
 // indicatore porta alla sezione che lo risolve. Niente in sospeso: «Tutto pronto».
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, CheckCircle2, ChevronRight, Circle, CircleDot, PartyPopper } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronRight, Circle, CircleDashed, CircleDot, PartyPopper } from 'lucide-react'
 import { Link } from 'react-router'
 import { api } from '@/api/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { RiepilogoOrganizzativo } from '@/contratto/edizioni.ts'
-import { formattaCoperti } from '@/domain/porzioni.ts'
 import { plurale } from '@/lib/formato'
 import { cn } from '@/lib/utils'
 
@@ -17,19 +16,22 @@ interface Indicatore {
   testo: string
   dettaglio?: string
   /**
-   * attenzione: un problema da risolvere; da_fare: qualcosa ancora in sospeso; nota: da sapere,
-   * facoltativo; ok: a posto. I primi due formano «In sospeso», gli altri «Già a posto».
+   * attenzione: un problema da risolvere; da_fare: qualcosa ancora in sospeso; facoltativo: una
+   * parte non usata (non è un problema); nota: da sapere; ok: a posto. I primi due formano
+   * «In sospeso», «facoltativo» va in «Non ancora usati», gli altri in «Già a posto».
    */
-  livello: 'attenzione' | 'da_fare' | 'nota' | 'ok'
+  livello: 'attenzione' | 'da_fare' | 'facoltativo' | 'nota' | 'ok'
   a: string
 }
 
-const ORDINE = { attenzione: 0, da_fare: 1, nota: 2, ok: 3 } as const
+const ORDINE = { attenzione: 0, da_fare: 1, nota: 2, ok: 3, facoltativo: 4 } as const
 export const inSospeso = (x: Indicatore) => x.livello === 'attenzione' || x.livello === 'da_fare'
 
 /** Indicatori dal più urgente: problemi, cose in sospeso (prima le conferme mancanti), note, cose a posto. */
 export function indicatori(r: RiepilogoOrganizzativo): Indicatore[] {
   const lista: Indicatore[] = []
+  // Dati essenziali mancanti: senza menù o senza coperti l'evento non è pronto (SPEC §31.2).
+  if (!r.archiviato && r.menu.voci === 0) lista.push({ testo: 'Menù ancora vuoto', dettaglio: 'aggiungi i piatti per avere porzioni e spesa', livello: 'da_fare', a: 'menu' })
   if (r.partecipanti) {
     const p = r.partecipanti
     const altri = [plurale(p.confermati, 'confermato', 'confermati'), p.assenti ? `${p.assenti} non ${p.assenti === 1 ? 'partecipa' : 'partecipano'}` : ''].filter(Boolean).join(', ')
@@ -39,12 +41,15 @@ export function indicatori(r: RiepilogoOrganizzativo): Indicatore[] {
         : { testo: altri, dettaglio: 'tutti hanno risposto', livello: 'ok', a: 'partecipanti' },
     )
   }
-  lista.push({
-    testo: `${formattaCoperti(r.coperti.equivalenti)} coperti`,
-    dettaglio: r.coperti.automatici ? 'calcolati dai partecipanti confermati' : 'manuali',
-    livello: 'ok',
-    a: 'partecipanti',
-  })
+  // I coperti si leggono nelle informazioni dell'evento: qui solo se mancano.
+  if (r.coperti.equivalenti <= 0) {
+    lista.push({ testo: 'Coperti non indicati', dettaglio: r.coperti.automatici ? 'nessun partecipante confermato' : 'indica quanti siete', livello: 'da_fare', a: 'partecipanti' })
+  }
+  if (!r.archiviato) {
+    if (!r.partecipanti) lista.push({ testo: 'Elenco dei partecipanti', dettaglio: 'facoltativo: per segnare chi viene', livello: 'facoltativo', a: 'partecipanti' })
+    if (!r.incarichi && r.menu.voci > 0) lista.push({ testo: 'Chi porta cosa', dettaglio: 'facoltativo: per affidare piatti e cose da portare', livello: 'facoltativo', a: 'chi-porta' })
+    if (!r.attivita) lista.push({ testo: 'Piano delle attività', dettaglio: 'facoltativo: cosa preparare e quando', livello: 'facoltativo', a: 'piano' })
+  }
   if (r.incarichi) {
     const i = r.incarichi
     if (i.responsabiliAssenti) lista.push({ testo: `${plurale(i.responsabiliAssenti, 'incarico', 'incarichi')} di chi non partecipa`, livello: 'attenzione', a: 'chi-porta' })
@@ -78,6 +83,7 @@ export function indicatori(r: RiepilogoOrganizzativo): Indicatore[] {
 const ICONA = {
   attenzione: <AlertTriangle className="size-4 text-avviso" />,
   da_fare: <CircleDot className="size-4 text-primario" />,
+  facoltativo: <CircleDashed className="size-4 text-testo-tenue" />,
   nota: <Circle className="size-4 text-testo-tenue" />,
   ok: <CheckCircle2 className="size-4 text-successo" />,
 }
@@ -109,7 +115,8 @@ export function RiepilogoEvento({ eventoId }: { eventoId: string }) {
   if (!q.data || q.data.archiviato) return null
   const lista = indicatori(q.data)
   const sospese = lista.filter(inSospeso)
-  const resto = lista.filter((x) => !inSospeso(x))
+  const facoltativi = lista.filter((x) => x.livello === 'facoltativo')
+  const resto = lista.filter((x) => !inSospeso(x) && x.livello !== 'facoltativo')
   return (
     <Card>
       <CardHeader>
@@ -128,10 +135,18 @@ export function RiepilogoEvento({ eventoId }: { eventoId: string }) {
             <PartyPopper className="size-5" /> Tutto pronto
           </p>
         )}
-        <div>
-          {sospese.length ? <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-testo-tenue">Già a posto</p> : null}
-          <Elenco eventoId={eventoId} voci={resto} nome="Già a posto" />
-        </div>
+        {resto.length ? (
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-testo-tenue">Già a posto</p>
+            <Elenco eventoId={eventoId} voci={resto} nome="Già a posto" />
+          </div>
+        ) : null}
+        {facoltativi.length ? (
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-testo-tenue">Non ancora usati</p>
+            <Elenco eventoId={eventoId} voci={facoltativi} nome="Non ancora usati" />
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )

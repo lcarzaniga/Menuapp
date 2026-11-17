@@ -8,7 +8,6 @@ import { Caricamento, Vuoto } from '@/components/Pagina'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Campo, Casella, Input, Select } from '@/components/ui/campi'
-import { Card, CardContent } from '@/components/ui/card'
 import { Finestra } from '@/components/ui/dialog'
 import { MenuAzioni } from '@/components/ui/menu'
 import type { Incarichi, Incarico } from '@/contratto/famiglia.ts'
@@ -74,11 +73,9 @@ function Sezione({ titolo, incarichi, d, evidenziato }: { titolo: string; incari
       <h2 className="mb-2 flex items-center gap-3 text-sm font-semibold uppercase tracking-wide text-testo-tenue">
         {titolo} <span className="filetto flex-1" />
       </h2>
-      <ul className="flex flex-col gap-2">
+      <ul className="flex flex-col divide-y divide-bordo/60 overflow-hidden rounded-2xl border border-bordo/70 bg-carta shadow-carta" aria-label={titolo}>
         {incarichi.map((i) => (
-          <li key={`${i.tipo}-${i.id}`} id={`incarico-${i.tipo}:${i.id}`}>
-            <Riga i={i} d={d} evidenziato={evidenziato === `${i.tipo}:${i.id}`} />
-          </li>
+          <Riga key={`${i.tipo}-${i.id}`} i={i} d={d} evidenziato={evidenziato === `${i.tipo}:${i.id}`} />
         ))}
       </ul>
     </section>
@@ -97,12 +94,15 @@ function Riga({ i, d, evidenziato }: { i: Incarico; d: Incarichi; evidenziato: b
   const elimina = useScrittura(() => api.elimina(percorso(i), i.versione), { successo: 'Eliminata' })
   const mio = i.incaricatoId !== null && i.incaricatoId === utente?.id
   return (
-    <Card className={cn(i.stato === 'completato' && 'opacity-75', evidenziato && 'ring-2 ring-primario/50')} data-testid="incarico">
-      <CardContent className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-3">
+    <li
+      id={`incarico-${i.tipo}:${i.id}`}
+      className={cn('flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2.5', i.stato === 'completato' && 'bg-tenue/40', evidenziato && 'ring-2 ring-inset ring-primario/50')}
+      data-testid="incarico"
+    >
         {i.stato === 'completato' ? <CheckCircle2 className="size-5 shrink-0 text-successo" /> : <Circle className={cn('size-5 shrink-0', i.stato === 'assegnato' ? 'text-primario' : 'text-bordo')} />}
-        {/* Su telefono i comandi vanno a capo sotto il testo, che resta leggibile. */}
-        <div className="min-w-0 flex-1 basis-[calc(100%-2.5rem)] sm:basis-auto">
-          <p className="font-medium">
+        {/* Su telefono i comandi possono andare a capo sotto il testo, che resta leggibile. */}
+        <div className="min-w-0 flex-1 basis-40">
+          <p className={cn('font-medium', i.stato === 'completato' && 'text-testo-tenue line-through decoration-1')}>
             {i.nome}
             {quantita(i) ? <span className="text-testo-tenue"> · {quantita(i)}</span> : null}
           </p>
@@ -130,7 +130,7 @@ function Riga({ i, d, evidenziato }: { i: Incarico; d: Incarichi; evidenziato: b
             {i.note ? <span>· {i.note}</span> : null}
           </p>
         </div>
-        <div className="flex w-full flex-wrap items-center justify-end gap-1.5 sm:w-auto">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
           {i.puoPrendere ? (
             <Button misura="piccolo" disabled={!connesso || azione.inCorso} onClick={() => (i.tipo === 'voce' && i.inSpesa ? setPrendi(true) : void azione.esegui({ verbo: 'prendi', corpo: {} }))}>
               <HandHeart /> Me ne occupo io
@@ -141,14 +141,15 @@ function Riga({ i, d, evidenziato }: { i: Incarico; d: Incarichi; evidenziato: b
               <CheckCircle2 /> Fatto
             </Button>
           ) : null}
-          {d.puoAssegnare ? (
+          {d.puoAssegnare && !i.incaricato ? (
             <Button misura="piccolo" variante="contorno" disabled={!connesso} onClick={() => setAffida(true)}>
-              <UserRound /> {i.incaricato ? 'Cambia' : 'Affida'}
+              <UserRound /> Affida
             </Button>
           ) : null}
           <MenuAzioni
             etichetta={`Altre azioni su «${i.nome}»`}
             voci={[
+              { etichetta: 'Cambia responsabile', icona: <UserRound />, onSelect: () => setAffida(true), nascosta: !d.puoAssegnare || !i.incaricato, disabilitata: !connesso },
               { etichetta: 'Rinuncio', icona: <Undo2 />, onSelect: () => void azione.esegui({ verbo: 'rinuncia', corpo: {} }), nascosta: !i.puoRinunciare || !mio },
               { etichetta: 'Libera l\'incarico', icona: <Undo2 />, onSelect: () => void azione.esegui({ verbo: 'rinuncia', corpo: {} }), nascosta: !i.puoRinunciare || mio },
               { etichetta: 'Non ancora fatto', onSelect: () => void azione.esegui({ verbo: 'completa', corpo: { completato: false } }), nascosta: !i.puoCompletare || i.stato !== 'completato' },
@@ -157,7 +158,6 @@ function Riga({ i, d, evidenziato }: { i: Incarico; d: Incarichi; evidenziato: b
             ]}
           />
         </div>
-      </CardContent>
       {affida ? <Affida i={i} d={d} onChiudi={() => setAffida(false)} /> : null}
       {modifica ? <ModificaCosa i={i} onChiudi={() => setModifica(false)} /> : null}
       <Finestra
@@ -180,7 +180,7 @@ function Riga({ i, d, evidenziato }: { i: Incarico; d: Incarichi; evidenziato: b
           <Casella checked={togli} onChange={(ev) => setTogli(ev.target.checked)} /> Porto tutto io: togli gli ingredienti dalla spesa
         </label>
       </Finestra>
-    </Card>
+    </li>
   )
 }
 

@@ -12,7 +12,7 @@ import type { Confronto } from '@/contratto/edizioni.ts'
 import { formattaCoperti } from '@/domain/porzioni.ts'
 import { dataBreve } from '@/domain/tempo.ts'
 import { plurale } from '@/lib/formato'
-import { useEdizioni } from './Edizioni'
+import { useEdizioni } from '@/api/query'
 import { CorpoScheda, useEventoCorrente } from './LayoutEvento'
 
 type Piatto = Confronto['aggiunti'][number] | Confronto['mantenuti'][number]['ora']

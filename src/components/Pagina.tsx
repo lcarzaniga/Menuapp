@@ -1,8 +1,7 @@
-import { ArrowLeft } from 'lucide-react'
 import { type ReactNode, useEffect } from 'react'
-import { Link } from 'react-router'
 import { cn } from '@/lib/utils'
 import { ILLUSTRAZIONI, type NomeIllustrazione } from './Illustrazioni'
+import { PulsanteIndietro } from './Navigazione'
 
 /** Intestazione e contenuto di una schermata. */
 export function Pagina({
@@ -28,11 +27,7 @@ export function Pagina({
   return (
     <div className={cn('mx-auto w-full px-4 pb-28 pt-4 md:pb-12', larga ? 'max-w-5xl' : 'max-w-3xl', className)}>
       <header className="non-stampare mb-4 flex items-start gap-2">
-        {indietro ? (
-          <Link to={indietro} aria-label="Indietro" className="-ml-2 mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl hover:bg-tenue">
-            <ArrowLeft className="size-5" />
-          </Link>
-        ) : null}
+        {indietro ? <PulsanteIndietro a={indietro} /> : null}
         <div className="min-w-0 flex-1">
           <h1 className="titolo text-[1.75rem] font-semibold leading-tight">{titolo}</h1>
           {sottotitolo ? <div className="mt-0.5 text-sm text-testo-tenue">{sottotitolo}</div> : null}

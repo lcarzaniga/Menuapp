@@ -28,7 +28,15 @@ export function App() {
       <RouterProvider router={router} />
       <ConflittoVersione />
       <Aggiornamento />
-      <Toaster position="top-center" richColors closeButton offset={12} toastOptions={{ className: 'text-[0.9375rem]' }} />
+      {/* In basso, sopra la barra di navigazione del telefono: non coprono titoli e schede (SPEC §31.6). */}
+      <Toaster
+        position="bottom-center"
+        richColors
+        closeButton
+        offset={{ bottom: 24 }}
+        mobileOffset={{ bottom: 'calc(4.75rem + env(safe-area-inset-bottom))' }}
+        toastOptions={{ className: 'text-[0.9375rem]' }}
+      />
     </QueryClientProvider>
   )
 }

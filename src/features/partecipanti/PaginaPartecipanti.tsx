@@ -15,7 +15,7 @@ import { MenuAzioni } from '@/components/ui/menu'
 import { useStatoConnessione } from '@/connessione/stato'
 import type { Invito, Partecipante, Partecipanti } from '@/contratto/partecipanti.ts'
 import type { Evento } from '@/domain/tipi.ts'
-import { type Anonimi, type CategoriaPersona, type StatoPresenza, totaleAnonimi } from '@/domain/partecipanti.ts'
+import { type Anonimi, type CategoriaPersona, confermaParziale, type StatoPresenza, totaleAnonimi } from '@/domain/partecipanti.ts'
 import { copertiEquivalenti, formattaCoperti } from '@/domain/porzioni.ts'
 import { plurale } from '@/lib/formato'
 import { cn } from '@/lib/utils'
@@ -146,13 +146,6 @@ function Totale({ etichetta, adulti, bambini, classe }: { etichetta: string; adu
   )
 }
 
-/** Invito con risposte diverse fra titolare e accompagnatori (es. lui sì, la figlia ancora no). */
-export function confermaParziale(i: Invito): boolean {
-  const stati = new Set<StatoPresenza>([i.stato, ...i.accompagnatori.map((a) => a.stato)])
-  if (i.anonimi.adultiConfermati + i.anonimi.bambiniConfermati) stati.add('confermato')
-  if (i.anonimi.adultiInAttesa + i.anonimi.bambiniInAttesa) stati.add('in_attesa')
-  return stati.size > 1
-}
 
 const corpoPersona = (p: Partecipante, extra: Partial<Pick<Partecipante, 'stato' | 'categoria' | 'nome' | 'note'>> = {}) => ({
   nome: p.nome,

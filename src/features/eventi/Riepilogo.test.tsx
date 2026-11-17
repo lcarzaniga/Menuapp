@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { RiepilogoOrganizzativo } from '@/contratto/edizioni.ts'
-import { nomeEdizione } from './Edizioni'
+import { nomeEdizione } from '@/domain/edizioni.ts'
 import { indicatori, inSospeso } from './Riepilogo'
 
 const base: RiepilogoOrganizzativo = {
+  menu: { voci: 5 },
   coperti: { equivalenti: 7, adulti: 6, bambini: 2, automatici: false },
   partecipanti: null,
   incarichi: null,
@@ -15,8 +16,22 @@ const base: RiepilogoOrganizzativo = {
 }
 
 describe('a che punto siamo: indicatori', () => {
-  it('evento senza funzioni collaborative: solo i coperti, nessun allarme', () => {
-    expect(indicatori(base)).toEqual([{ testo: '7 coperti', dettaglio: 'manuali', livello: 'ok', a: 'partecipanti' }])
+  it('evento senza funzioni collaborative: i coperti a posto, le parti facoltative non usate, nessun allarme', () => {
+    const l = indicatori(base)
+    expect(l.filter(inSospeso)).toEqual([])
+    expect(l.filter((x) => x.livello === 'ok')).toEqual([])
+    expect(l.filter((x) => x.livello === 'facoltativo').map((x) => x.a)).toEqual(['partecipanti', 'chi-porta', 'piano'])
+  })
+
+  it('menù vuoto o coperti a zero: non è «tutto pronto»; un archiviato non ha cose da fare', () => {
+    const vuoto = indicatori({ ...base, menu: { voci: 0 }, coperti: { equivalenti: 0, adulti: 0, bambini: 0, automatici: false } })
+    expect(vuoto.filter(inSospeso).map((x) => [x.testo, x.a])).toEqual([
+      ['Menù ancora vuoto', 'menu'],
+      ['Coperti non indicati', 'partecipanti'],
+    ])
+    // Senza menù «Chi porta» non si propone.
+    expect(vuoto.some((x) => x.a === 'chi-porta')).toBe(false)
+    expect(indicatori({ ...base, menu: { voci: 0 }, archiviato: true }).filter(inSospeso)).toEqual([])
   })
 
   it('piatti non affidati sono solo un\'informazione; cose senza nessuno e responsabili assenti chiedono attenzione', () => {
@@ -40,9 +55,9 @@ describe('a che punto siamo: indicatori', () => {
       ['2 in attesa di conferma', 'partecipanti', 'da_fare'],
       ['1 proposta da decidere', 'bacheca', 'da_fare'],
       ['2 sondaggi aperti', 'bacheca', 'da_fare'],
-      ['7 coperti', 'partecipanti', 'ok'],
       ['Piano completato', 'piano', 'ok'],
       ['Spesa fatta', 'spesa', 'ok'],
+      ['Chi porta cosa', 'chi-porta', 'facoltativo'],
     ])
   })
 
@@ -51,7 +66,7 @@ describe('a che punto siamo: indicatori', () => {
     expect(pronto.filter(inSospeso)).toEqual([])
     expect(pronto[0]).toMatchObject({ testo: '8 confermati, 1 non partecipa', dettaglio: 'tutti hanno risposto', livello: 'ok' })
     const ritardo = indicatori({ ...base, partecipanti: { confermati: 1, inAttesa: 1, assenti: 0 }, attivita: { daFare: 3, inRitardo: 1 } })
-    expect(ritardo.map((x) => x.livello)).toEqual(['attenzione', 'da_fare', 'ok'])
+    expect(ritardo.map((x) => x.livello)).toEqual(['attenzione', 'da_fare', 'facoltativo'])
   })
 })
 

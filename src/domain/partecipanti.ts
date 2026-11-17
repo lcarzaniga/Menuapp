@@ -97,3 +97,11 @@ export function stessaPersona(
   if (responsabile.esternoId && persona.esternoId) return responsabile.esternoId === persona.esternoId
   return responsabile.nomeNorm === persona.nomeNorm
 }
+
+/** Invito con risposte diverse fra titolare e accompagnatori (es. lui sì, la figlia ancora no). */
+export function confermaParziale(i: { stato: StatoPresenza; accompagnatori: { stato: StatoPresenza }[]; anonimi: Anonimi }): boolean {
+  const stati = new Set<StatoPresenza>([i.stato, ...i.accompagnatori.map((a) => a.stato)])
+  if (i.anonimi.adultiConfermati + i.anonimi.bambiniConfermati) stati.add('confermato')
+  if (i.anonimi.adultiInAttesa + i.anonimi.bambiniInAttesa) stati.add('in_attesa')
+  return stati.size > 1
+}

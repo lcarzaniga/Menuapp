@@ -36,7 +36,6 @@ export function EditorVoce({ evento, menu, voce, onChiudi }: { evento: Evento; m
   })
   const [preparazione, setPreparazione] = useState(false)
   const [porzioniTesto, setPorzioniTesto] = useState(voce.porzioni === null ? '' : String(voce.porzioni).replace('.', ','))
-  const incaricati = [...new Set(menu.portate.flatMap((p) => p.voci.map((v) => v.incaricato)).filter(Boolean))]
   const salva = useScrittura((x: Dati & { versione: number }) => api.modifica<VoceMenu>(`/voci/${voce.id}`, x), {
     oggetto: `«${voce.nome}»`,
     dopo: onChiudi,
@@ -78,14 +77,17 @@ export function EditorVoce({ evento, menu, voce, onChiudi }: { evento: Evento; m
                 }}
               />
             </Campo>
-            <Campo etichetta="Chi lo prepara" htmlFor="voce-incaricato">
-              <Input id="voce-incaricato" list="incaricati" value={d.incaricato} placeholder="Facoltativo" onChange={(e) => setD({ ...d, incaricato: e.target.value })} />
-              <datalist id="incaricati">
-                {incaricati.map((i) => (
-                  <option key={i} value={i} />
-                ))}
-              </datalist>
-            </Campo>
+            {/* «A cura di» è lo stesso incarico di «Chi porta» (persona, spesa, fatto): si gestisce
+                là, qui si legge. Un solo posto, nessun incarico scritto due volte (SPEC §31.2). */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium">A cura di</span>
+              <p className="flex min-h-11 flex-wrap items-center gap-2 text-sm" data-testid="a-cura-di">
+                <span className="flex-1">{voce.incaricato || <span className="text-testo-tenue">Nessuno</span>}</span>
+                <Link to={`/eventi/${evento.id}/chi-porta?incarico=${encodeURIComponent(`voce:${voce.id}`)}`} className="text-primario underline-offset-2 hover:underline" onClick={onChiudi}>
+                  {voce.incaricato ? 'Cambia in Chi porta' : 'Affida in Chi porta'}
+                </Link>
+              </p>
+            </div>
           </div>
           <label className="flex items-center gap-3 rounded-xl border border-bordo px-3 py-3 text-sm">
             <Casella checked={d.inSpesa} onChange={(e) => setD({ ...d, inSpesa: e.target.checked })} />

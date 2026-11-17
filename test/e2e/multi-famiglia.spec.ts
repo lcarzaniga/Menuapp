@@ -25,13 +25,13 @@ test('una Famiglia senza selettore, poi due Famiglie con selettore e contenuti s
   await foto(page, '01-una-famiglia')
 
   // ── Loris crea una seconda Famiglia: compare il selettore, attiva la nuova
-  await page.getByRole('button', { name: 'Membri' }).click()
+  await page.getByRole('link', { name: 'Gestione', exact: true }).click()
   await page.getByRole('button', { name: 'Crea un\'altra Famiglia' }).click()
   await page.getByRole('dialog').getByLabel('Nome', { exact: true }).fill('Famiglia Bianchi')
   await page.getByRole('button', { name: 'Crea', exact: true }).click()
   await expect(selettore(page)).toHaveValue(/.+/)
   await expect(page.getByRole('heading', { name: 'Famiglia Bianchi' })).toBeVisible()
-  await page.getByRole('button', { name: 'Bacheca' }).click()
+  await page.getByRole('link', { name: 'Bacheca', exact: true }).click()
   await page.getByRole('textbox', { name: 'Messaggio', exact: true }).fill('Solo per i Bianchi')
   await page.getByRole('button', { name: 'Pubblica' }).click()
   await expect(page.getByText('Solo per i Bianchi')).toBeVisible()
@@ -58,7 +58,7 @@ test('una Famiglia senza selettore, poi due Famiglie con selettore e contenuti s
   await selettore(page).selectOption({ label: 'Famiglia Bianchi' })
 
   // ── Invito ad aderire per una persona con un account ma senza Famiglie
-  await page.goto('/#/famiglia?scheda=membri')
+  await page.goto('/#/famiglia?scheda=persone')
   await page.getByRole('button', { name: 'Invita nella Famiglia' }).click()
   const link = await page.getByLabel('Link d\'invito alla Famiglia').inputValue()
   expect(link).toMatch(/#\/unisciti\//)

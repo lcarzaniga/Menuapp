@@ -1,7 +1,7 @@
 // Duplica evento, ricorrenze (SPEC §25, §28), riepilogo e confronto, dal telefono.
 import { mkdirSync } from 'node:fs'
 import { expect, type Page, test } from '@playwright/test'
-import { apiLeggi, apiScrivi } from './aiuti'
+import { apiLeggi, apiScrivi, azioneEvento } from './aiuti'
 
 const CARTELLA = 'test-results/edizioni'
 const foto = async (page: Page, nome: string) => {
@@ -28,7 +28,7 @@ test('duplica Natale come nuova edizione, con i partecipanti da riconfermare', a
   await expect(page.getByLabel('Ricorrenza dell\'evento')).toHaveValue('standard:natale')
   await page.getByLabel('Ricorrenza dell\'evento').selectOption({ label: 'Natale dai nonni (della Famiglia)' })
   await expect(page.getByText('Ricorrenza: Natale dai nonni · della Famiglia')).toBeVisible()
-  await page.getByRole('button', { name: 'Duplica evento' }).click()
+  await azioneEvento(page, 'Duplica evento')
   const dialogo = page.getByRole('dialog')
   await expect(dialogo.getByLabel('Nome del nuovo evento')).toHaveValue('Natale dai nonni 2027')
   await expect(dialogo.getByLabel('Data')).toHaveValue('2027-12-25')
@@ -77,10 +77,11 @@ test('a che punto siamo: indicatori aggiornati e collegamenti alle sezioni', asy
   const famiglia = (await apiLeggi<{ id: string; nome: string }[]>(request, '/gruppi')).find((g) => g.nome === 'Famiglia')!
   await apiScrivi(request, 'post', '/eventi', { id: 'ed-riep', nome: 'Compleanno di Giulia', data: '2030-05-10', oraServizio: '16:00', tipo: 'aperitivo', occasione: '', adulti: 8, bambini: 6, coefficienteBambini: 0.5, note: '', gruppoId: famiglia.id })
   await page.goto('/#/eventi/ed-riep')
-  // Evento semplice: niente in sospeso, solo i coperti fra le cose a posto.
-  await expect(page.getByTestId('stato-preparazione')).toHaveText('Tutto pronto')
-  await expect(page.getByRole('list', { name: 'Già a posto' }).getByRole('listitem')).toHaveCount(1)
-  await expect(page.getByRole('list', { name: 'Già a posto' })).toContainText('11 coperti')
+  // Evento appena creato: il menù vuoto non è «tutto pronto»; le parti facoltative a parte.
+  await expect(page.getByTestId('stato-preparazione')).toHaveText('Manca ancora una cosa')
+  await expect(page.getByRole('list', { name: 'In sospeso' })).toHaveText(/Menù ancora vuoto/)
+  await expect(page.getByRole('list', { name: 'Non ancora usati' })).toContainText('Elenco dei partecipanti')
+  await expect(page.getByLabel('Informazioni dell\'evento')).toContainText('11')
 
   await apiScrivi(request, 'post', '/eventi/ed-riep/cose', { id: 'ed-c1', nome: 'Palloncini' })
   await apiScrivi(request, 'post', '/eventi/ed-riep/partecipanti', { id: 'ed-r1', nome: 'Nonna Lina', stato: 'confermato' })
@@ -88,10 +89,11 @@ test('a che punto siamo: indicatori aggiornati e collegamenti alle sezioni', asy
   await page.reload()
   // Prima ciò che manca: la cosa senza nessuno (un problema), poi la conferma che manca.
   const sospese = page.getByRole('list', { name: 'In sospeso' })
-  await expect(page.getByTestId('stato-preparazione')).toHaveText('Mancano ancora 2 cose')
+  await expect(page.getByTestId('stato-preparazione')).toHaveText('Mancano ancora 3 cose')
   await expect(sospese.getByRole('listitem').nth(0)).toContainText('1 cosa da portare senza nessuno')
-  await expect(sospese.getByRole('listitem').nth(1)).toContainText('1 in attesa di conferma')
-  await expect(sospese.getByRole('listitem').nth(1)).toContainText('1 confermato')
+  await expect(sospese.getByRole('listitem').nth(1)).toContainText('Menù ancora vuoto')
+  await expect(sospese.getByRole('listitem').nth(2)).toContainText('1 in attesa di conferma')
+  await expect(sospese.getByRole('listitem').nth(2)).toContainText('1 confermato')
   await foto(page, '03-a-che-punto')
   await sospese.getByRole('link', { name: /1 cosa da portare senza nessuno/ }).click()
   await expect(page).toHaveURL(/\/eventi\/ed-riep\/chi-porta$/)

@@ -30,6 +30,7 @@ afterEach(() => t.chiudi())
 describe('a che punto siamo', () => {
   it('evento semplice: solo i coperti; piatti preparati da chi organizza non sono un allarme', async () => {
     expect(await riepilogo()).toEqual({
+      menu: { voci: 0 },
       coperti: { equivalenti: 7, adulti: 6, bambini: 2, automatici: false },
       partecipanti: null,
       incarichi: null,
@@ -40,7 +41,8 @@ describe('a che punto siamo', () => {
       archiviato: false,
     })
     await ok(t.scrivi('POST', `${P}/eventi/ev/voci`, { voci: [{ id: 'v1', portataId: portate[1]!.id, nome: 'Risotto' }, { id: 'v2', portataId: portate[2]!.id, nome: 'Arrosto' }] }))
-    expect((await riepilogo()).incarichi).toBeNull()
+    // Il menù non è più vuoto: due piatti (SPEC §31.2).
+    expect(await riepilogo()).toMatchObject({ menu: { voci: 2 }, incarichi: null })
     // Chi non vede l'evento non ne vede il riepilogo.
     expect((await estraneo.leggi(`${P}/eventi/ev/riepilogo`)).statusCode).toBe(404)
   })

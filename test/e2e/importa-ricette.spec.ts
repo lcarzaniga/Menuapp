@@ -85,7 +85,11 @@ test('import di un pacchetto con foto, foto aggiunta dalla scheda, esportazione'
   await expect(page.locator('ol li').first().getByRole('img')).toHaveCount(1)
   await page.screenshot({ path: 'test-results/import/scheda.png', fullPage: true })
 
-  // esportazione nel formato v1
+  // esportazione nel formato v1 (in «Gestione della ricetta»; prima si chiude il messaggio in basso)
+  await page.getByRole('button', { name: 'Close toast' }).first().click()
+  await expect(page.getByText('Foto aggiunta al passaggio 1')).toBeHidden()
+  await page.getByRole('button', { name: 'Gestione della ricetta' }).click()
+  await expect(page.getByRole('region', { name: 'Gestione della ricetta' })).toBeInViewport()
   const download = page.waitForEvent('download')
   await page.getByRole('link', { name: 'Esporta ricetta' }).click()
   expect((await download).suggestedFilename()).toBe('tiramisu-di-natale.menuapp-ricetta')

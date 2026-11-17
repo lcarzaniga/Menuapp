@@ -21,6 +21,9 @@ const SEZIONI = [
   { a: '/impostazioni', etichetta: 'Impostazioni', icona: Settings, attiva: (p: string) => p.startsWith('/impostazioni') || p.startsWith('/account') },
 ]
 
+/** Pagine in cui conta la Famiglia attiva (elenchi), con il selettore in cima sul telefono. */
+const CON_SELETTORE = ['/', '/eventi/archivio', '/ricettario', '/famiglia']
+
 /** L'app si apre solo con una sessione valida; altrimenti la schermata di accesso. */
 export function Layout() {
   const client = useQueryClient()
@@ -96,10 +99,13 @@ function Guscio({ nome }: { nome: string }) {
         </NavLink>
       </nav>
       <main>
-        {/* Su telefono, chi ha più Famiglie vede in cima quella attiva e la cambia da lì. */}
-        <div className="non-stampare mx-auto max-w-3xl px-4 pt-3 md:hidden [&:empty]:hidden">
-          <SelettoreFamiglia />
-        </div>
+        {/* Su telefono, chi ha più Famiglie vede in cima quella attiva e la cambia da lì: solo nelle
+            pagine principali. Dentro un evento conta la Famiglia dell'evento (SPEC §31.1). */}
+        {CON_SELETTORE.includes(pathname) ? (
+          <div className="non-stampare mx-auto max-w-3xl px-4 pt-3 md:hidden [&:empty]:hidden">
+            <SelettoreFamiglia />
+          </div>
+        ) : null}
         <Outlet />
       </main>
       <nav

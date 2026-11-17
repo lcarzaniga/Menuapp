@@ -3,7 +3,7 @@
 // con la spesa, valutazioni e classifica.
 import { mkdirSync } from 'node:fs'
 import { expect, type Page, test } from '@playwright/test'
-import { apiLeggi, apiScrivi, familiare } from './aiuti'
+import { apiLeggi, apiScrivi, familiare, schedaEvento } from './aiuti'
 
 test.describe.configure({ mode: 'serial' })
 const CARTELLA = 'test-results/famiglia'
@@ -82,7 +82,7 @@ test('famiglia: bacheca e sondaggio, evento con proposta, chi porta cosa, stelle
   await foto(lucia.page, '03-proposta')
 
   // Lucia si offre per il tiramisù, che porta già pronto: esce dalla spesa.
-  await lucia.page.getByRole('navigation', { name: 'Schede dell\'evento' }).getByRole('link', { name: 'Chi porta' }).click()
+  await schedaEvento(lucia.page, 'Persone', 'Chi porta')
   const riga = lucia.page.getByTestId('incarico').filter({ hasText: 'Tiramisù' })
   await riga.getByRole('button', { name: 'Me ne occupo io' }).click()
   await lucia.page.getByRole('dialog').getByRole('button', { name: 'Me ne occupo io' }).click()

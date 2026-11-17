@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { SchemaStatoBackup } from '@/contratto/backup.ts'
 import { SchemaSalute } from '@/contratto/comune.ts'
+import type { Edizioni, PerTe, Ricorrenza } from '@/contratto/edizioni.ts'
 import type { Menu, RiepilogoEvento } from '@/contratto/eventi.ts'
 import type { DettaglioPiatto, RiepilogoPiatto } from '@/contratto/ricettario.ts'
 import type { InfoRiapertura, Snapshot } from '@/contratto/archivio.ts'
@@ -61,3 +62,10 @@ export const useSnapshot = (id: string, attivo = true) =>
   useQuery({ queryKey: ['snapshot', id], queryFn: () => api.leggi<Snapshot[]>(`/eventi/${id}/snapshot`), enabled: attivo })
 export const useRiapertura = (id: string, attivo: boolean) =>
   useQuery({ queryKey: ['riapertura', id], queryFn: () => api.leggi<InfoRiapertura>(`/eventi/${id}/riapertura`), enabled: attivo })
+
+// ── Edizioni, ricorrenze, «Per te» (SPEC §28, §30, §31) ──────
+export const useEdizioni = (eventoId: string) =>
+  useQuery({ queryKey: ['edizioni', eventoId], queryFn: () => api.leggi<Edizioni>(`/eventi/${eventoId}/edizioni`) })
+export const useRicorrenze = (gruppoId: string | null) =>
+  useQuery({ queryKey: ['ricorrenze', gruppoId], queryFn: () => api.leggi<Ricorrenza[]>(`/famiglie/${gruppoId}/ricorrenze`), enabled: Boolean(gruppoId) })
+export const usePerTe = () => useQuery({ queryKey: ['per-te'], queryFn: () => api.leggi<PerTe>('/per-te') })

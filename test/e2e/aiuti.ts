@@ -90,3 +90,15 @@ export async function apiDa(page: Page, metodo: 'POST' | 'PUT' | 'DELETE', url: 
 export async function senzaScorrimentoOrizzontale(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
 }
+
+/** Riepilogo dell'evento → menù «Azioni» → voce (SPEC §31.2). */
+export async function azioneEvento(page: Page, voce: string) {
+  await page.getByRole('button', { name: 'Azioni dell\'evento' }).click()
+  await page.getByRole('menuitem', { name: voce }).click()
+}
+
+/** Passa alla scheda (e al segmento) dell'evento: Riepilogo, Menù, Persone, Prepara, Bacheca. */
+export async function schedaEvento(page: Page, scheda: string, segmento?: string) {
+  await page.getByRole('navigation', { name: 'Schede dell\'evento' }).getByRole('link', { name: scheda, exact: true }).click()
+  if (segmento) await page.getByRole('navigation', { name: scheda }).getByRole('link', { name: segmento, exact: true }).click()
+}

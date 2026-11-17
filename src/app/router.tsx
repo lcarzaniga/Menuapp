@@ -56,6 +56,8 @@ export const router = createHashRouter([
       { path: '/ricettario/:id/cucina', element: pigra(() => import('@/features/cucina/VistaCucina'), (m) => m.PaginaCucinaPiatto) },
       { path: '/ingredienti', element: pigra(() => import('@/features/ingredienti/PaginaIngredienti'), (m) => m.PaginaIngredienti) },
       { path: '/impostazioni', element: pigra(() => import('@/features/impostazioni/PaginaImpostazioni'), (m) => m.PaginaImpostazioni) },
+      { path: '/impostazioni/eventi', element: pigra(() => import('@/features/impostazioni/PaginaImpostazioni'), (m) => m.PaginaImpostazioniEventi) },
+      { path: '/impostazioni/reparti', element: pigra(() => import('@/features/impostazioni/PaginaImpostazioni'), (m) => m.PaginaReparti) },
       { path: '/impostazioni/dati', element: pigra(() => import('@/features/impostazioni/PaginaDati'), (m) => m.PaginaDati) },
       { path: '/impostazioni/utenti', element: pigra(() => import('@/features/accesso/PaginaUtenti'), (m) => m.PaginaUtenti) },
       { path: '/famiglia', element: pigra(() => import('@/features/famiglia/PaginaFamiglia'), (m) => m.PaginaFamiglia) },

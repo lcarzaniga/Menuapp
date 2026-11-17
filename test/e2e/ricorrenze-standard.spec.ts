@@ -3,7 +3,7 @@
 // edizioni si confrontano; una ricorrenza della Famiglia con lo stesso nome resta distinta.
 import { mkdirSync } from 'node:fs'
 import { expect, type Page, test } from '@playwright/test'
-import { apiLeggi, apiScrivi, senzaScorrimentoOrizzontale } from './aiuti'
+import { apiLeggi, apiScrivi, azioneEvento, senzaScorrimentoOrizzontale } from './aiuti'
 
 const CARTELLA = 'test-results/ricorrenze-standard'
 const foto = async (page: Page, nome: string) => {
@@ -52,7 +52,7 @@ test('vigilia di Natale: ricorrenza automatica, modificabile, duplicata e confro
   await foto(page, '02-panoramica')
 
   // ── Duplica per il 2027: stessa ricorrenza, nessuna definizione nuova
-  await page.getByRole('button', { name: 'Duplica evento' }).click()
+  await azioneEvento(page, 'Duplica evento')
   const dialogo = page.getByRole('dialog')
   await expect(dialogo.getByLabel('Ricorrenza')).toHaveValue('standard:vigilia-natale')
   await dialogo.getByRole('button', { name: 'Duplica' }).click()

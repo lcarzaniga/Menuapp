@@ -1,11 +1,12 @@
-// Impostazioni: portate predefinite, coefficiente bambini, reparti, tema del dispositivo (SPEC §5).
-import { ArrowDown, ArrowUp, Carrot, ChevronRight, CircleUserRound, Database, Plus, Trash2, UsersRound } from 'lucide-react'
+// Impostazioni (SPEC §5, §31.3): personali (account, notifiche, aspetto del dispositivo), catalogo
+// degli ingredienti, amministrazione (portate e reparti comuni, utenti, backup) solo per chi amministra.
+import { ArrowDown, ArrowUp, BellRing, Carrot, CircleUserRound, Database, Plus, ShoppingBasket, Trash2, UsersRound, UtensilsCrossed } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router'
 import { api, nuovoId } from '@/api/client'
 import { useImpostazioni, useReparti } from '@/api/query'
 import { useScrittura } from '@/api/scrittura'
 import { Caricamento, Pagina } from '@/components/Pagina'
+import { ElencoLink, RigaLink, TitoloSezione } from '@/components/Navigazione'
 import { Button } from '@/components/ui/button'
 import { Campo, Input, Select } from '@/components/ui/campi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -61,48 +62,12 @@ export function PaginaImpostazioni() {
   return (
     <Pagina titolo="Impostazioni">
       <div className="flex flex-col gap-4">
-        <Link to="/account" className="flex items-center gap-3 rounded-2xl border border-bordo bg-carta p-4 hover:bg-tenue/60">
-          <CircleUserRound className="size-5 text-primario" />
-          <span className="flex-1">
-            <span className="block font-medium">Il mio account · {utente?.nome}</span>
-            <span className="text-sm text-testo-tenue">Dispositivi autorizzati, nuovo dispositivo, i miei dati</span>
-          </span>
-          <ChevronRight className="size-5 text-testo-tenue" />
-        </Link>
-        <Link to="/ingredienti" className="flex items-center gap-3 rounded-2xl border border-bordo bg-carta p-4 hover:bg-tenue/60">
-          <Carrot className="size-5 text-primario" />
-          <span className="flex-1">
-            <span className="block font-medium">Ingredienti</span>
-            <span className="text-sm text-testo-tenue">Catalogo comune: reparti, sinonimi, unità</span>
-          </span>
-          <ChevronRight className="size-5 text-testo-tenue" />
-        </Link>
-        {amministratore && ingressoPrivato ? (
-          <Link to="/impostazioni/utenti" className="flex items-center gap-3 rounded-2xl border border-bordo bg-carta p-4 hover:bg-tenue/60">
-            <UsersRound className="size-5 text-primario" />
-            <span className="flex-1">
-              <span className="block font-medium">Utenti e dispositivi</span>
-              <span className="text-sm text-testo-tenue">Nuovi utenti e inviti, approvazioni, dispositivi di tutti</span>
-            </span>
-            <ChevronRight className="size-5 text-testo-tenue" />
-          </Link>
-        ) : null}
-        {amministratore && ingressoPrivato ? (
-          <Link to="/impostazioni/dati" className="flex items-center gap-3 rounded-2xl border border-bordo bg-carta p-4 hover:bg-tenue/60">
-            <Database className="size-5 text-primario" />
-            <span className="flex-1">
-              <span className="block font-medium">Dati e backup</span>
-              <span className="text-sm text-testo-tenue">Stato del server, backup, esportazione, ripristino</span>
-            </span>
-            <ChevronRight className="size-5 text-testo-tenue" />
-          </Link>
-        ) : null}
-        {/* Impostazioni comuni a tutti: le cambia l'amministratore. */}
-        <SolaLettura motivo={amministratore ? null : 'Le cambia l\'amministratore'}>
-          {!amministratore ? <p className="-mb-2 text-sm text-testo-tenue">Portate proposte e reparti sono comuni a tutti: li cambia l&apos;amministratore.</p> : null}
-          <ImpostazioniEventi />
-          <GestioneReparti />
-        </SolaLettura>
+        {/* Personali: valgono per me (account) o per questo dispositivo (aspetto). */}
+        <TitoloSezione>Personali</TitoloSezione>
+        <ElencoLink etichetta="Impostazioni personali">
+          <RigaLink a="/account" icona={CircleUserRound} titolo={`Il mio account · ${utente?.nome ?? ''}`} descrizione="Dispositivi autorizzati, nuovo dispositivo, i miei dati, esci" />
+          <RigaLink a="/notifiche?preferenze=1" icona={BellRing} titolo="Notifiche" descrizione="Quali avvisi ricevere" />
+        </ElencoLink>
         <Card>
           <CardHeader>
             <CardTitle>Aspetto</CardTitle>
@@ -142,6 +107,24 @@ export function PaginaImpostazioni() {
             </Campo>
           </CardContent>
         </Card>
+        <TitoloSezione className="mt-2">Ricettario e spesa</TitoloSezione>
+        <ElencoLink etichetta="Ricettario e spesa">
+          <RigaLink a="/ingredienti" icona={Carrot} titolo="Ingredienti" descrizione="Catalogo comune: reparti, sinonimi, unità" />
+        </ElencoLink>
+        {amministratore ? (
+          <>
+            <TitoloSezione className="mt-2">Amministrazione</TitoloSezione>
+            <p className="-mt-2 text-sm text-testo-tenue">Valgono per tutti: le cambia solo chi amministra l&apos;app.</p>
+            <ElencoLink etichetta="Amministrazione">
+              <RigaLink a="/impostazioni/eventi" icona={UtensilsCrossed} titolo="Portate e coefficiente dei nuovi eventi" descrizione="Valori proposti alla creazione di un evento" />
+              <RigaLink a="/impostazioni/reparti" icona={ShoppingBasket} titolo="Reparti del supermercato" descrizione="L'ordine della lista della spesa" />
+              {ingressoPrivato ? <RigaLink a="/impostazioni/utenti" icona={UsersRound} titolo="Utenti e dispositivi" descrizione="Nuovi utenti e inviti, approvazioni, dispositivi di tutti" /> : null}
+              {ingressoPrivato ? <RigaLink a="/impostazioni/dati" icona={Database} titolo="Dati e backup" descrizione="Stato del server, backup, esportazione, ripristino" /> : null}
+            </ElencoLink>
+          </>
+        ) : (
+          <p className="text-sm text-testo-tenue">Portate proposte e reparti del supermercato sono comuni a tutti: li gestisce chi amministra l&apos;app.</p>
+        )}
       </div>
     </Pagina>
   )
@@ -316,5 +299,29 @@ function RigaReparto({
         <Trash2 />
       </Button>
     </div>
+  )
+}
+
+/** Portate e coefficiente proposti ai nuovi eventi (solo chi amministra li cambia). */
+export function PaginaImpostazioniEventi() {
+  const { amministratore } = useUtenteCorrente()
+  return (
+    <Pagina titolo="Nuovi eventi" indietro="/impostazioni">
+      <SolaLettura motivo={amministratore ? null : 'Le cambia l\'amministratore'}>
+        <ImpostazioniEventi />
+      </SolaLettura>
+    </Pagina>
+  )
+}
+
+/** Reparti del supermercato: l'ordine della lista della spesa (solo chi amministra li cambia). */
+export function PaginaReparti() {
+  const { amministratore } = useUtenteCorrente()
+  return (
+    <Pagina titolo="Reparti" indietro="/impostazioni">
+      <SolaLettura motivo={amministratore ? null : 'Li cambia l\'amministratore'}>
+        <GestioneReparti />
+      </SolaLettura>
+    </Pagina>
   )
 }

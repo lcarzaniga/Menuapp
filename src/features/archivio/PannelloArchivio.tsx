@@ -12,10 +12,14 @@ import { usePuoScrivere } from '@/connessione/stato'
 import type { Evento } from '@/domain/tipi.ts'
 import { dataOra } from '@/lib/formato'
 
-export function PannelloArchivio({ evento: e }: { evento: Evento }) {
+/**
+ * Evento archiviato: quando, ricette da copiare, riapertura e versioni precedenti. La richiesta
+ * di archiviare arriva dal menù «Azioni» del Riepilogo (`archivia`, `onArchivia`).
+ */
+export function PannelloArchivio({ evento: e, archivia, onArchivia }: { evento: Evento; archivia: boolean; onArchivia: (aperta: boolean) => void }) {
   const archiviato = e.stato === 'archiviato'
   const snapshot = useSnapshot(e.id)
-  const [archivia, setArchivia] = useState(false)
+  const setArchivia = onArchivia
   const [riapri, setRiapri] = useState(false)
   const riapertura = useRiapertura(e.id, archiviato && riapri)
   const puoScrivere = usePuoScrivere()
@@ -62,10 +66,6 @@ export function PannelloArchivio({ evento: e }: { evento: Evento }) {
             </Button>
           </CardContent>
         </Card>
-      ) : !archiviato ? (
-        <Button variante="fantasma" className="self-start" disabled={!puoScrivere} onClick={() => setArchivia(true)}>
-          <Archive /> Archivia
-        </Button>
       ) : null}
 
       {superati.length ? (

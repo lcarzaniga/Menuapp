@@ -66,6 +66,8 @@ export const SchemaAssociaRicorrenza = z.union([z.object({ ricorrenza: SchemaSce
 // Ogni parte è null quando la funzione non è usata nell'evento: niente indicatori vuoti.
 
 export const SchemaRiepilogoEvento = z.object({
+  /** Piatti nel menù: zero è una cosa da fare, non «tutto pronto» (SPEC §31.2). */
+  menu: z.object({ voci: z.number().int() }),
   coperti: z.object({ equivalenti: z.number(), adulti: z.number().int(), bambini: z.number().int(), automatici: z.boolean() }),
   partecipanti: z.object({ confermati: z.number().int(), inAttesa: z.number().int(), assenti: z.number().int() }).nullable(),
   incarichi: z
@@ -121,3 +123,13 @@ export const SchemaConfronto = z.object({
   portate: z.object({ aggiunte: z.array(z.string()), tolte: z.array(z.string()) }),
 })
 export type Confronto = z.infer<typeof SchemaConfronto>
+
+// ── «Per te» (SPEC §31.3) ───────────────────────────────────
+
+export const SchemaPerTe = z.object({
+  /** Piatti e cose affidati all'utente e non ancora fatti, negli eventi in corso. */
+  incarichi: z.array(z.object({ tipo: z.enum(['voce', 'cosa']), id: Id, nome: z.string(), evento: z.string(), data: DataISO, collegamento: z.string() })),
+  /** Sondaggi aperti a cui l'utente non ha ancora risposto. */
+  sondaggi: z.array(z.object({ id: Id, testo: z.string(), dove: z.string(), collegamento: z.string() })),
+})
+export type PerTe = z.infer<typeof SchemaPerTe>

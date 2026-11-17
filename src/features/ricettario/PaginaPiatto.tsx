@@ -1,5 +1,5 @@
 // Piatto: scheda, modifica, eliminazione; nuovo piatto (SPEC §5, F3–F4).
-import { AlertTriangle, CalendarDays, ChefHat, Clock, Download, Pencil, Share2, Trash2, Users, Wrench } from 'lucide-react'
+import { AlertTriangle, CalendarDays, ChefHat, Clock, Download, Pencil, Settings2, Share2, Trash2, Users, Wrench } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { api, ErroreRichiesta, nuovoId } from '@/api/client'
@@ -81,19 +81,27 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
       }
       indietro="/ricettario"
       azioni={
-        p.mio ? (
-          <Button variante="contorno" misura="piccolo" disabled={!puoScrivere} onClick={onModifica}>
-            <Pencil /> Modifica
+        <>
+          {p.mio ? (
+            <Button variante="contorno" misura="piccolo" disabled={!puoScrivere} onClick={onModifica}>
+              <Pencil /> Modifica
+            </Button>
+          ) : (
+            <CopiaRicetta piatto={p} />
+          )}
+          <Button
+            variante="fantasma"
+            misura="iconaPiccola"
+            aria-label="Gestione della ricetta"
+            title="Gestione della ricetta"
+            onClick={() => document.getElementById('gestione-ricetta')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          >
+            <Settings2 />
           </Button>
-        ) : (
-          <CopiaRicetta piatto={p} />
-        )
+        </>
       }
     >
       <div className="flex flex-col gap-4">
-        {p.mio ? <VisibilitaRicetta piatto={p} /> : null}
-        <CopiaInFamiglia piatto={p} />
-        {p.provenienza ? <ProvenienzaRicetta provenienza={p.provenienza} /> : null}
         <GalleriaFoto piattoId={p.id} foto={p.foto} nome={p.nome} procedimento={p.procedimento} />
         <div className="flex flex-wrap gap-2 text-sm">
           <Badge variante={p.porzioniBase ? 'primario' : 'avviso'}>
@@ -192,19 +200,28 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
           </section>
         ) : null}
 
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variante="contorno" misura="piccolo">
-            <a href={`/api/v1/piatti/${p.id}/esporta`} download>
-              <Download /> Esporta ricetta
-            </a>
-          </Button>
-          <Button variante="contorno" misura="piccolo" onClick={() => void condividiTesto(p)}>
-            <Share2 /> Condividi come testo
-          </Button>
-        </div>
-        <Button variante="fantasma" className="self-start text-pericolo" disabled={!puoScrivere} onClick={() => setElimina(true)}>
-          <Trash2 /> Elimina piatto
-        </Button>
+        {/* Gestione: ciò che si usa di rado, dopo il contenuto (SPEC §31.3). */}
+        <section id="gestione-ricetta" aria-label="Gestione della ricetta" className="mt-2 flex scroll-mt-4 flex-col gap-3 rounded-2xl border border-bordo/70 bg-tenue/40 p-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-testo-tenue">Gestione della ricetta</h2>
+          {p.provenienza ? <ProvenienzaRicetta provenienza={p.provenienza} /> : null}
+          {p.mio ? <VisibilitaRicetta piatto={p} /> : null}
+          <CopiaInFamiglia piatto={p} />
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variante="contorno" misura="piccolo">
+              <a href={`/api/v1/piatti/${p.id}/esporta`} download>
+                <Download /> Esporta ricetta
+              </a>
+            </Button>
+            <Button variante="contorno" misura="piccolo" onClick={() => void condividiTesto(p)}>
+              <Share2 /> Condividi come testo
+            </Button>
+            {p.mio ? (
+              <Button variante="fantasma" misura="piccolo" className="text-pericolo" disabled={!puoScrivere} onClick={() => setElimina(true)}>
+                <Trash2 /> Elimina piatto
+              </Button>
+            ) : null}
+          </div>
+        </section>
       </div>
       <Conferma
         aperta={elimina}
