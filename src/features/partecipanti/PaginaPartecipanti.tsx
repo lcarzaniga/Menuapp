@@ -1,6 +1,6 @@
 // Evento — Partecipanti: elenco facoltativo, conferme, accompagnatori e coperti (SPEC §24).
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, Plus, UserRound, Users } from 'lucide-react'
+import { AlertTriangle, Check, CornerDownRight, Pencil, Plus, Users } from 'lucide-react'
 import { useState } from 'react'
 import { api, nuovoId } from '@/api/client'
 import { useScrittura } from '@/api/scrittura'
@@ -42,6 +42,9 @@ export function PaginaPartecipanti() {
   const q = usePartecipanti(e.id)
   const [aggiungi, setAggiungi] = useState(false)
   const [coperti, setCoperti] = useState(false)
+  // Elenco in sola consultazione (nome e risposta); risposte, accompagnatori e rimozioni solo
+  // dopo «Modifica elenco».
+  const [inModifica, setInModifica] = useState(false)
   if (q.isPending) return <Caricamento />
   if (!q.data) return null
   const d = q.data
@@ -90,29 +93,40 @@ export function PaginaPartecipanti() {
           </CardContent>
         </Card>
 
-        {d.puoGestire ? (
-          <Button variante="contorno" className="self-start" onClick={() => setAggiungi(true)}>
-            <Plus /> Aggiungi partecipante
-          </Button>
-        ) : null}
-
         {d.inviti.length === 0 ? (
-          <Vuoto
-            titolo="Nessun partecipante"
-            testo={
-              d.puoGestire
-                ? 'L\'elenco è facoltativo: puoi aggiungere chi è invitato (anche chi non usa l\'app) e segnare chi conferma. I coperti possono restare scritti a mano.'
-                : 'Chi organizza non ha ancora indicato i partecipanti.'
-            }
-          />
+          <>
+            <Vuoto
+              titolo="Nessun partecipante"
+              testo={
+                d.puoGestire
+                  ? 'L\'elenco è facoltativo: puoi aggiungere chi è invitato (anche chi non usa l\'app) e segnare chi conferma. I coperti possono restare scritti a mano.'
+                  : 'Chi organizza non ha ancora indicato i partecipanti.'
+              }
+            />
+            {d.puoGestire ? (
+              <Button variante="contorno" className="self-center" onClick={() => setAggiungi(true)}>
+                <Plus /> Aggiungi partecipante
+              </Button>
+            ) : null}
+          </>
         ) : (
-          <ul className="flex flex-col gap-2" aria-label="Partecipanti">
-            {d.inviti.map((i) => (
-              <li key={i.id}>
-                <RigaInvito invito={i} d={d} eventoId={e.id} />
-              </li>
-            ))}
-          </ul>
+          <Card>
+            <CardContent className="flex flex-col gap-3 pt-4">
+              {d.puoGestire ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {inModifica ? (
+                    <Button misura="piccolo" variante="contorno" onClick={() => setAggiungi(true)}>
+                      <Plus /> Aggiungi
+                    </Button>
+                  ) : null}
+                  <Button misura="piccolo" variante={inModifica ? 'primario' : 'contorno'} className="ml-auto" aria-pressed={inModifica} onClick={() => setInModifica(!inModifica)}>
+                    {inModifica ? <Check /> : <Pencil />} {inModifica ? 'Fine' : 'Modifica elenco'}
+                  </Button>
+                </div>
+              ) : null}
+              <TabellaPartecipanti d={d} eventoId={e.id} inModifica={d.puoGestire && inModifica} />
+            </CardContent>
+          </Card>
         )}
       </div>
       {aggiungi ? <FinestraPersona eventoId={e.id} d={d} onChiudi={() => setAggiungi(false)} /> : null}
@@ -140,29 +154,6 @@ export function confermaParziale(i: Invito): boolean {
   return stati.size > 1
 }
 
-/** Tre stati come pulsanti affiancati. */
-function SceltaStato({ valore, onScegli, nome, disabilitata, etichette }: { valore: StatoPresenza; onScegli: (s: StatoPresenza) => void; nome: string; disabilitata?: boolean; etichette?: Partial<Record<StatoPresenza, string>> }) {
-  return (
-    <div role="group" aria-label={`Presenza di ${nome}`} className="inline-flex overflow-hidden rounded-full border border-bordo text-xs">
-      {STATI.map((s) => (
-        <button
-          key={s.stato}
-          type="button"
-          aria-pressed={valore === s.stato}
-          disabled={disabilitata}
-          onClick={() => valore !== s.stato && onScegli(s.stato)}
-          className={cn(
-            'min-h-9 px-2.5 font-medium disabled:opacity-60',
-            valore === s.stato && (s.stato === 'confermato' ? 'bg-successo text-white' : s.stato === 'assente' ? 'bg-pericolo text-white' : 'bg-tenue text-testo'),
-          )}
-        >
-          {etichette?.[s.stato] ?? s.etichetta}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 const corpoPersona = (p: Partecipante, extra: Partial<Pick<Partecipante, 'stato' | 'categoria' | 'nome' | 'note'>> = {}) => ({
   nome: p.nome,
   categoria: p.categoria,
@@ -176,68 +167,151 @@ function useCambiaStato(p: Partecipante) {
   return useScrittura((stato: StatoPresenza) => api.modifica<Partecipante>(`/partecipanti/${p.id}`, corpoPersona(p, { stato })), { oggetto: p.nome, successo: null })
 }
 
-/** «porta: Vino» e, se non viene, l'avviso: l'incarico resta finché qualcuno non lo cambia. */
-function Incarichi({ p }: { p: Partecipante }) {
-  if (!p.incarichi.length) return null
-  return p.stato === 'assente' ? (
-    <p className="flex items-center gap-1 text-xs text-avviso" role="note">
-      <AlertTriangle className="size-3.5" /> Non partecipa ma ha un incarico: {p.incarichi.join(', ')}
-    </p>
-  ) : (
-    <p className="text-xs text-testo-tenue">Porta: {p.incarichi.join(', ')}</p>
+/** Avviso: chi non viene ma ha ancora un incarico (che resta finché qualcuno non lo cambia). */
+function AvvisoIncarichi({ p }: { p: Partecipante }) {
+  if (!p.incarichi.length || p.stato !== 'assente') return null
+  return (
+    <span className="flex items-center gap-1 text-xs text-avviso" role="note">
+      <AlertTriangle className="size-3.5 shrink-0" /> Non partecipa ma ha un incarico: {p.incarichi.join(', ')}
+    </span>
   )
 }
 
-function RigaInvito({ invito: i, d, eventoId }: { invito: Invito; d: Partecipanti; eventoId: string }) {
-  const connesso = useStatoConnessione() === 'connesso'
-  const stato = useCambiaStato(i)
+/** Tabella compatta: una riga per persona, accompagnatori sotto il loro invito. */
+function TabellaPartecipanti({ d, eventoId, inModifica }: { d: Partecipanti; eventoId: string; inModifica: boolean }) {
+  return (
+    <table className="w-full table-fixed border-collapse text-sm" aria-label="Partecipanti">
+      <thead>
+        <tr className="border-b border-bordo text-left text-xs text-testo-tenue">
+          <th className="py-1.5 font-medium">Nome</th>
+          <th className={cn('py-1.5 font-medium', inModifica ? 'w-36' : 'w-32')}>Risposta</th>
+          {inModifica ? (
+            <th className="w-11 py-1.5">
+              <span className="sr-only">Azioni</span>
+            </th>
+          ) : null}
+        </tr>
+      </thead>
+      {d.inviti.map((i) => (
+        <RigheInvito key={i.id} invito={i} eventoId={eventoId} inModifica={inModifica} />
+      ))}
+    </table>
+  )
+}
+
+function RigheInvito({ invito: i, eventoId, inModifica }: { invito: Invito; eventoId: string; inModifica: boolean }) {
   const [modifica, setModifica] = useState<Partecipante | null>(null)
   const [accompagnatori, setAccompagnatori] = useState(false)
+  const connesso = useStatoConnessione() === 'connesso'
   const togli = useScrittura((p: Partecipante) => api.elimina(`/partecipanti/${p.id}`, p.versione), { successo: 'Tolto dall\'elenco' })
   const autonomo = useScrittura((p: Partecipante) => api.crea(`/partecipanti/${p.id}/autonomo`, { versione: p.versione }), { successo: 'Ora ha un invito suo' })
-  const gestisce = d.puoGestire
   const anonimi = totaleAnonimi(i.anonimi)
   return (
-    <Card data-testid="invito">
-      <CardContent className="flex flex-col gap-2 pt-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <UserRound className="size-4 shrink-0 text-testo-tenue" />
-          <p className="min-w-0 flex-1 font-medium">
-            {i.nome}
-            {i.categoria === 'bambino' ? <span className="text-sm font-normal text-testo-tenue"> · bambino</span> : null}
-            {!i.utenteId ? <span className="text-xs font-normal text-testo-tenue"> · senza app</span> : null}
-          </p>
-          {confermaParziale(i) ? <Badge variante="avviso">conferma parziale</Badge> : null}
-          {gestisce ? null : <Badge variante={VARIANTE_STATO[i.stato]}>{NOME_STATO[i.stato]}</Badge>}
-          <MenuAzioni
-            etichetta={`Azioni per ${i.nome}`}
-            voci={[
-              { etichetta: 'Aggiungi accompagnatori', onSelect: () => setAccompagnatori(true), nascosta: !gestisce, disabilitata: !connesso },
-              { etichetta: 'Modifica', onSelect: () => setModifica(i), nascosta: !gestisce, disabilitata: !connesso },
-              { etichetta: 'Togli dall\'elenco', onSelect: () => void togli.esegui(i), pericolosa: true, nascosta: !gestisce, disabilitata: !connesso },
-            ]}
-          />
-          {/* Su una riga a sé: sul telefono il nome resta leggibile. */}
-          {gestisce ? (
-            <div className="basis-full pl-6">
-              <SceltaStato valore={i.stato} nome={i.nome} disabilitata={!connesso || stato.inCorso} onScegli={(s) => void stato.esegui(s)} />
-            </div>
-          ) : null}
-        </div>
-        {i.note ? <p className="text-sm text-testo-tenue">{i.note}</p> : null}
-        <Incarichi p={i} />
-        {i.accompagnatori.length || anonimi ? (
-          <ul className="ml-6 flex flex-col gap-1.5 border-l border-bordo pl-3" aria-label={`Accompagnatori di ${i.nome}`}>
-            {i.accompagnatori.map((a) => (
-              <RigaAccompagnatore key={a.id} a={a} gestisce={gestisce} onModifica={() => setModifica(a)} onTogli={() => void togli.esegui(a)} onAutonomo={() => void autonomo.esegui(a)} />
+    <tbody data-testid="invito" className="border-b border-bordo/60 last:border-b-0">
+      <RigaPersona
+        p={i}
+        inModifica={inModifica}
+        parziale={confermaParziale(i)}
+        azioni={[
+          { etichetta: 'Accompagnatori', onSelect: () => setAccompagnatori(true), disabilitata: !connesso },
+          { etichetta: 'Modifica', onSelect: () => setModifica(i), disabilitata: !connesso },
+          { etichetta: 'Togli dall\'elenco', onSelect: () => void togli.esegui(i), pericolosa: true, disabilitata: !connesso },
+        ]}
+      />
+      {i.accompagnatori.map((a) => (
+        <RigaPersona
+          key={a.id}
+          p={a}
+          accompagnatore
+          inModifica={inModifica}
+          azioni={[
+            { etichetta: 'Modifica', onSelect: () => setModifica(a), disabilitata: !connesso },
+            { etichetta: 'Invito a parte', onSelect: () => void autonomo.esegui(a), disabilitata: !connesso },
+            { etichetta: 'Togli', onSelect: () => void togli.esegui(a), pericolosa: true, disabilitata: !connesso },
+          ]}
+        />
+      ))}
+      {anonimi ? (
+        <tr>
+          <td colSpan={inModifica ? 3 : 2} className="py-1 pl-5 text-xs text-testo-tenue">
+            {descriviAnonimi(i.anonimi)}
+          </td>
+        </tr>
+      ) : null}
+      {modifica ? (
+        <tr hidden>
+          <td>
+            <FinestraModifica p={modifica} gestisce onChiudi={() => setModifica(null)} />
+          </td>
+        </tr>
+      ) : null}
+      {accompagnatori ? (
+        <tr hidden>
+          <td>
+            <FinestraAccompagnatori invito={i} eventoId={eventoId} onChiudi={() => setAccompagnatori(false)} />
+          </td>
+        </tr>
+      ) : null}
+    </tbody>
+  )
+}
+
+function RigaPersona({
+  p,
+  inModifica,
+  accompagnatore = false,
+  parziale = false,
+  azioni,
+}: {
+  p: Partecipante
+  inModifica: boolean
+  accompagnatore?: boolean
+  parziale?: boolean
+  azioni: { etichetta: string; onSelect: () => void; pericolosa?: boolean; disabilitata?: boolean }[]
+}) {
+  const connesso = useStatoConnessione() === 'connesso'
+  const stato = useCambiaStato(p)
+  return (
+    <tr className="align-middle" data-testid={accompagnatore ? 'accompagnatore' : undefined}>
+      <td className={cn('py-1.5 pr-2', accompagnatore && 'pl-5')}>
+        <span className={cn('flex min-w-0 items-center gap-1.5 break-words', !accompagnatore && 'font-medium')}>
+          {accompagnatore ? <CornerDownRight className="size-3.5 shrink-0 text-testo-tenue" aria-hidden /> : null}
+          <span className="min-w-0">
+            {p.nome}
+            {p.categoria === 'bambino' ? <span className="text-xs font-normal text-testo-tenue"> · bambino</span> : null}
+          </span>
+        </span>
+        {p.note ? <span className="block truncate text-xs text-testo-tenue">{p.note}</span> : null}
+        <AvvisoIncarichi p={p} />
+      </td>
+      <td className="py-1.5">
+        {inModifica ? (
+          <Select
+            aria-label={`Presenza di ${p.nome}`}
+            className="h-9 w-full px-2 text-sm"
+            value={p.stato}
+            disabled={!connesso || stato.inCorso}
+            onChange={(ev) => void stato.esegui(ev.target.value as StatoPresenza)}
+          >
+            {STATI.map((x) => (
+              <option key={x.stato} value={x.stato}>
+                {x.etichetta}
+              </option>
             ))}
-            {anonimi ? <li className="text-sm text-testo-tenue">{descriviAnonimi(i.anonimi)}</li> : null}
-          </ul>
-        ) : null}
-      </CardContent>
-      {modifica ? <FinestraModifica p={modifica} gestisce={gestisce} onChiudi={() => setModifica(null)} /> : null}
-      {accompagnatori ? <FinestraAccompagnatori invito={i} eventoId={eventoId} onChiudi={() => setAccompagnatori(false)} /> : null}
-    </Card>
+          </Select>
+        ) : (
+          <span className="flex flex-wrap items-center gap-1">
+            <Badge variante={VARIANTE_STATO[p.stato]}>{NOME_STATO[p.stato]}</Badge>
+            {parziale ? <span className="text-xs text-avviso">parziale</span> : null}
+          </span>
+        )}
+      </td>
+      {inModifica ? (
+        <td className="py-1.5 text-right">
+          <MenuAzioni etichetta={`Azioni per ${p.nome}`} voci={azioni} />
+        </td>
+      ) : null}
+    </tr>
   )
 }
 
@@ -247,34 +321,6 @@ function descriviAnonimi(a: Anonimi): string {
     a.adultiInAttesa + a.bambiniInAttesa ? `${persone(a.adultiInAttesa, a.bambiniInAttesa)} (in attesa)` : '',
   ].filter(Boolean)
   return `+ ${parti.join(', ')} senza nome`
-}
-
-function RigaAccompagnatore({ a, gestisce, onModifica, onTogli, onAutonomo }: { a: Partecipante; gestisce: boolean; onModifica: () => void; onTogli: () => void; onAutonomo: () => void }) {
-  const connesso = useStatoConnessione() === 'connesso'
-  const stato = useCambiaStato(a)
-  return (
-    <li className="flex flex-wrap items-center gap-2 text-sm">
-      <span className="min-w-0 flex-1">
-        {a.nome}
-        {a.categoria === 'bambino' ? <span className="text-testo-tenue"> · bambino</span> : null}
-        <Incarichi p={a} />
-      </span>
-      {gestisce ? null : <Badge variante={VARIANTE_STATO[a.stato]}>{NOME_STATO[a.stato]}</Badge>}
-      <MenuAzioni
-        etichetta={`Azioni per ${a.nome}`}
-        voci={[
-          { etichetta: 'Modifica', onSelect: onModifica, nascosta: !gestisce, disabilitata: !connesso },
-          { etichetta: 'Invito a parte', onSelect: onAutonomo, nascosta: !gestisce, disabilitata: !connesso },
-          { etichetta: 'Togli', onSelect: onTogli, pericolosa: true, nascosta: !gestisce, disabilitata: !connesso },
-        ]}
-      />
-      {gestisce ? (
-        <div className="basis-full">
-          <SceltaStato valore={a.stato} nome={a.nome} disabilitata={!connesso || stato.inCorso} onScegli={(s) => void stato.esegui(s)} />
-        </div>
-      ) : null}
-    </li>
-  )
 }
 
 const ALTRO = '__altro__'

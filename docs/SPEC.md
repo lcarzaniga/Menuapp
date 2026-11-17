@@ -2274,6 +2274,12 @@ di notifica (decisione di Loris: niente notifiche per le conferme di partecipazi
   confermati, senza cambiare nulla) o «Automatici» (dai confermati, accompagnatori compresi);
   riquadri Confermati / In attesa / Non partecipano con i bambini; «conferma parziale» sugli
   inviti con risposte diverse fra titolare e accompagnatori.
+- **Elenco in tabella** (richiesta di Loris, 17/11/2026): colonne Nome e Risposta, gli
+  accompagnatori sotto il loro invito, quelli senza nome in una riga riassuntiva. Normalmente si
+  vedono solo nome e risposta; chi organizza tocca «Modifica elenco» e compaiono la scelta della
+  risposta, «Aggiungi» e per ogni riga il menù con accompagnatori, modifica, invito a parte e
+  «Togli dall'elenco»; «Fine» torna alla consultazione. Con l'elenco vuoto «Aggiungi
+  partecipante» resta subito disponibile.
 
 ### 29.3 «A che punto siamo?»
 
@@ -2379,3 +2385,4 @@ secondo sistema: le ricorrenze della Famiglia restano come sono.
 | 16/11/2026 | 6.1 — **Ricorrenze** della Famiglia (sostituiscono le serie anonime) e **copia delle ricette fra Famiglie** con provenienza; una ricetta visibile in una sola Famiglia (§28); migrazione `0013_ricorrenze.sql` |
 | 17/11/2026 | 6.2 — **Rifinitura UX** (§29): notifiche con categoria, gruppi apribili e apertura del contenuto preciso; **presenze solo manuali** da chi può modificare l'evento (rettifica: tolta la conferma personale anche dalle API); riepilogo con le cose in sospeso e «Tutto pronto»; duplicazione e confronto più chiari; ritorno alla posizione e ricerca nell'indirizzo; suggerimenti da tastiera; collaudo dell'aggiornamento PWA; migrazione `0014_dettagli_notifiche.sql` |
 | 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |
+| 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |

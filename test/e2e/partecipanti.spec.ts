@@ -1,9 +1,9 @@
 // Partecipanti, conferme e accompagnatori (SPEC §24): elenco facoltativo, +N, coperti manuali
-// e calcolati con confronto, conferme parziali, presenze solo da chi organizza (SPEC §29.2),
+// e calcolati con confronto, elenco in tabella (comandi solo in modifica), conferme parziali, presenze solo da chi organizza (SPEC §29.2),
 // «Chi porta» con un partecipante che non viene.
 import { mkdirSync } from 'node:fs'
 import { expect, type Page, test } from '@playwright/test'
-import { apiLeggi, apiScrivi } from './aiuti'
+import { apiLeggi, apiScrivi, senzaScorrimentoOrizzontale } from './aiuti'
 
 const CARTELLA = 'test-results/partecipanti'
 const foto = async (page: Page, nome: string) => {
@@ -29,17 +29,22 @@ test('partecipanti, accompagnatori e coperti calcolati', async ({ page, request 
   await dialogo.getByLabel('Presenza').selectOption('confermato')
   await dialogo.getByRole('button', { name: 'Aggiungi' }).click()
   const marco = page.getByTestId('invito').filter({ hasText: 'Zio Marco' })
-  await expect(marco.getByRole('group', { name: 'Presenza di Zio Marco' }).getByRole('button', { name: 'Confermato' })).toHaveAttribute('aria-pressed', 'true')
+  // Fuori dalla modifica: solo nome e risposta, nessun comando.
+  await expect(marco.getByRole('row')).toHaveText(/Zio Marco\s*confermato/)
+  await expect(page.getByLabel('Presenza di Zio Marco')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Azioni per Zio Marco' })).toHaveCount(0)
 
-  // ── Zia Anna con un adulto in più (senza nome) e la piccola Sofia (con nome)
-  await page.getByRole('button', { name: 'Aggiungi partecipante' }).click()
+  // ── In modifica: Zia Anna con un adulto in più (senza nome) e la piccola Sofia (con nome)
+  const modifica = page.getByRole('button', { name: 'Modifica elenco' })
+  await modifica.click()
+  await page.getByRole('button', { name: 'Aggiungi', exact: true }).click()
   dialogo = page.getByRole('dialog')
   await dialogo.getByLabel('Nome', { exact: true }).fill('Zia Anna')
   await dialogo.getByLabel('Presenza').selectOption('confermato')
   await dialogo.getByRole('button', { name: 'Aggiungi' }).click()
   const anna = page.getByTestId('invito').filter({ hasText: 'Zia Anna' })
   await anna.getByRole('button', { name: 'Azioni per Zia Anna' }).click()
-  await page.getByRole('menuitem', { name: 'Aggiungi accompagnatori' }).click()
+  await page.getByRole('menuitem', { name: 'Accompagnatori' }).click()
   dialogo = page.getByRole('dialog')
   await dialogo.getByLabel('Nome', { exact: true }).fill('Sofia')
   await dialogo.getByLabel('Adulto o bambino').selectOption('bambino')
@@ -47,23 +52,31 @@ test('partecipanti, accompagnatori e coperti calcolati', async ({ page, request 
   await expect(page.getByText('Sofia aggiunto')).toBeVisible()
   await dialogo.getByRole('button', { name: 'Più adulti confermati' }).click()
   await dialogo.getByRole('button', { name: 'Salva' }).click()
-  await expect(anna.getByRole('list', { name: 'Accompagnatori di Zia Anna' })).toContainText('Sofia')
+  await expect(anna.getByTestId('accompagnatore')).toContainText('Sofia')
   await expect(anna).toContainText('+ 1 adulto (confermato) senza nome')
-  // Sofia è ancora da confermare: l'invito di Zia Anna è una conferma parziale.
-  await anna.getByRole('group', { name: 'Presenza di Sofia' }).getByRole('button', { name: 'In attesa' }).click()
-  await expect(anna.getByText('conferma parziale')).toBeVisible()
-  await anna.getByRole('group', { name: 'Presenza di Sofia' }).getByRole('button', { name: 'Confermato' }).click()
-  await expect(anna.getByText('conferma parziale')).toHaveCount(0)
+  // Sofia ancora da confermare: finita la modifica, l'invito di Zia Anna risulta parziale.
+  await page.getByLabel('Presenza di Sofia').selectOption('in_attesa')
+  await expect(page.getByLabel('Presenza di Sofia')).toHaveValue('in_attesa')
+  await page.getByRole('button', { name: 'Fine' }).click()
+  await expect(anna.getByRole('row').first()).toContainText('parziale')
+  await expect(page.getByLabel('Presenza di Sofia')).toHaveCount(0)
+  await senzaScorrimentoOrizzontale(page)
+  await foto(page, '00-elenco')
+  await modifica.click()
+  await page.getByLabel('Presenza di Sofia').selectOption('confermato')
+  await expect(page.getByLabel('Presenza di Sofia')).toHaveValue('confermato')
 
   // ── Io, con l'app: nessun riquadro di risposta personale, si aggiorna come gli altri inviti
-  await page.getByRole('button', { name: 'Aggiungi partecipante' }).click()
+  await page.getByRole('button', { name: 'Aggiungi', exact: true }).click()
   await page.getByRole('dialog').getByLabel('Chi', { exact: true }).selectOption({ label: io.utente.nome })
   await page.getByRole('dialog').getByRole('button', { name: 'Aggiungi' }).click()
   await expect(page.getByTestId('mio-invito')).toHaveCount(0)
-  const io_ = page.getByTestId('invito').filter({ hasText: io.utente.nome })
-  await io_.getByRole('group', { name: `Presenza di ${io.utente.nome}` }).getByRole('button', { name: 'Confermato' }).click()
+  await page.getByLabel(`Presenza di ${io.utente.nome}`).selectOption('confermato')
   const totali = page.getByTestId('conteggio-partecipanti')
   await expect(totali.getByRole('listitem').first()).toContainText('5Confermati1 bambino')
+  await senzaScorrimentoOrizzontale(page)
+  await foto(page, '00-elenco-in-modifica')
+  await page.getByRole('button', { name: 'Fine' }).click()
   // Coperti manuali indipendenti dall'elenco: si dice soltanto quanti sarebbero con i confermati.
   await expect(page.getByTestId('coperti-confermati')).toContainText('Con i confermati sarebbero 4,5')
 
@@ -86,8 +99,8 @@ test('partecipanti, accompagnatori e coperti calcolati', async ({ page, request 
   await page.getByRole('dialog').getByRole('button', { name: 'Affida', exact: true }).click()
   await expect(vino).toContainText('Zio Marco')
   await page.getByRole('navigation', { name: 'Schede dell\'evento' }).getByRole('link', { name: 'Partecipanti' }).click()
-  await expect(marco).toContainText('Porta: Vino')
-  await marco.getByRole('button', { name: 'Non partecipa' }).click()
+  await page.getByRole('button', { name: 'Modifica elenco' }).click()
+  await page.getByLabel('Presenza di Zio Marco').selectOption('assente')
   await expect(marco.getByRole('note')).toContainText('Non partecipa ma ha un incarico: Vino')
   await page.getByRole('navigation', { name: 'Schede dell\'evento' }).getByRole('link', { name: 'Chi porta' }).click()
   await expect(vino.getByRole('note')).toContainText('non partecipa')

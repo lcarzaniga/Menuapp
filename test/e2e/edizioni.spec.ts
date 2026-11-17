@@ -52,7 +52,7 @@ test('duplica Natale come nuova edizione, con i partecipanti da riconfermare', a
   await expect(page.getByRole('button', { name: 'Cappone ripieno: apri dettagli' })).toBeVisible()
   await page.goto(`/#/eventi/${id}/partecipanti`)
   const ugo = page.getByTestId('invito').filter({ hasText: 'Zio Ugo' })
-  await expect(ugo.getByRole('button', { name: 'In attesa' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(ugo.getByRole('row').first()).toContainText('in attesa')
   await foto(page, '02-nuova-edizione')
 
   // ── Confronta con l'anno scorso: un piatto nuovo, uno tolto, quelli rimasti

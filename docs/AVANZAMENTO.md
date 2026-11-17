@@ -289,7 +289,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Rilasciato il 17/11 alle 11:58 (backup `pre-migrazione-20261117-115914-v13.db`); verificati
   salute (schema 14), 19 notifiche e 15 partecipanti invariati, chiavi esterne e integrità ok.
 
-## Ricorrenze standard (17/11/2026, ramo `ricorrenze-standard`, da rilasciare)
+## Ricorrenze standard (17/11/2026, in produzione: `20261117-1313-2de27ef`, schema v15)
 
 - SPEC 6.3 / §30. Il ramo `rifinitura-ux` era già rilasciato: lavoro su un ramo nuovo da `main`.
 - Stato iniziale: ricorrenze solo della Famiglia (§28), associate a mano; nessun tipo strutturato
@@ -306,4 +306,19 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Da sapere: in produzione esiste la ricorrenza della Famiglia «Vigilia di Natale»; un nuovo
   evento con occasione «Vigilia di Natale» entra nella standard, non in quella (niente unioni per
   nome). Duplicando l'evento esistente resta nella ricorrenza della Famiglia.
-- Rilascio: `! scripts/rilascia.sh ricorrenze-standard`.
+- Rilasciato il 17/11 alle 13:13 (backup `pre-migrazione-20261117-131414-v14.db`); verificati
+  salute (schema 15), nessuna associazione standard assegnata, 6 eventi e 74 ricette, chiavi
+  esterne e integrità ok.
+
+## Partecipanti in tabella (17/11/2026, ramo `partecipanti-tabella`, da rilasciare)
+
+- Richiesta di Loris: elenco meno dispersivo. Tabella Nome / Risposta con gli accompagnatori
+  sotto l'invito; in consultazione solo nome e risposta («parziale» se le risposte differiscono);
+  «Modifica elenco» mostra risposta modificabile, «Aggiungi» e il menù di ogni riga
+  (accompagnatori, modifica, invito a parte, togli). SPEC §29.2.
+- Solo interfaccia: nessuna migrazione, API invariate (permessi già sul server, §29.2).
+- Tolta dall'elenco l'indicazione «Porta: …» (si vede in «Chi porta»); resta l'avviso per chi
+  non partecipa ma ha un incarico.
+- Test: `npm run check` 382 verdi, `npm run test:e2e` 46 verdi (`partecipanti.spec.ts` rifatto
+  sulla tabella e sulla modalità di modifica).
+- Rilascio: `! scripts/rilascia.sh partecipanti-tabella`.
