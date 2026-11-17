@@ -54,7 +54,7 @@ export function PaginaConfronto() {
         ) : q.isPending ? (
           <Caricamento />
         ) : q.data ? (
-          <Risultato c={q.data} />
+          <Risultato c={q.data} ricorrenza={ed.data?.ricorrenza && ed.data.edizioni.some((x) => x.id === con) ? ed.data.ricorrenza.nome : null} />
         ) : (
           <Vuoto titolo="Confronto non disponibile" testo="L'evento scelto non è visibile o è di un'altra Famiglia." />
         )}
@@ -63,30 +63,44 @@ export function PaginaConfronto() {
   )
 }
 
-function Risultato({ c }: { c: Confronto }) {
+/** «+2», «−1,5» o niente se uguali. */
+function Differenza({ prima, ora }: { prima: number; ora: number }) {
+  const d = ora - prima
+  if (!d) return null
+  return <span className="ml-1 text-xs text-testo-tenue">({d > 0 ? '+' : '−'}{formattaCoperti(Math.abs(d))})</span>
+}
+
+function Risultato({ c, ricorrenza }: { c: Confronto; ricorrenza: string | null }) {
   const persone = (l: Confronto['ora']) =>
     l.partecipanti ? `${plurale(l.partecipanti.confermati, 'confermato', 'confermati')}${l.partecipanti.inAttesa ? `, ${l.partecipanti.inAttesa} in attesa` : ''}` : '—'
   return (
     <>
+      <p className="text-sm" data-testid="eventi-confrontati">
+        <strong>{c.ora.nome}</strong> ({dataBreve(c.ora.data)}) a confronto con{' '}
+        <Link to={`/eventi/${c.prima.id}`} className="font-semibold text-primario underline-offset-2 hover:underline">
+          {c.prima.nome}
+        </Link>{' '}
+        ({dataBreve(c.prima.data)})
+        <span className="block text-xs text-testo-tenue">{ricorrenza ? `Stessa ricorrenza: ${ricorrenza}` : 'Evento scelto a mano, senza una ricorrenza in comune'}</span>
+      </p>
       <Card>
-        <CardContent className="pt-4">
-          <table className="w-full text-sm">
+        <CardContent className="overflow-x-auto pt-4">
+          <table className="w-full table-fixed text-sm">
             <thead>
               <tr className="text-left text-testo-tenue">
-                <th className="font-normal" />
-                <th className="font-medium">
-                  <Link to={`/eventi/${c.prima.id}`} className="underline-offset-2 hover:underline">
-                    {c.prima.nome}
-                  </Link>
-                </th>
-                <th className="font-medium">{c.ora.nome}</th>
+                <th className="w-24 font-normal" />
+                <th className="break-words pr-2 font-medium">Prima</th>
+                <th className="break-words font-medium">Ora</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td className="py-1 pr-3 text-testo-tenue">Coperti</td>
                 <td>{formattaCoperti(c.prima.coperti.equivalenti)}</td>
-                <td>{formattaCoperti(c.ora.coperti.equivalenti)}</td>
+                <td>
+                  {formattaCoperti(c.ora.coperti.equivalenti)}
+                  <Differenza prima={c.prima.coperti.equivalenti} ora={c.ora.coperti.equivalenti} />
+                </td>
               </tr>
               <tr>
                 <td className="py-1 pr-3 text-testo-tenue">Persone</td>

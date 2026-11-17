@@ -2115,11 +2115,10 @@ Richiesta di Loris (16/11/2026, «Evoluzione organizzazione eventi», M1). Migra
   titolare non viene, i suoi accompagnatori restano come sono. «Invito a parte» rende autonomo
   un accompagnatore: è la stessa riga, quindi nessun doppio conteggio. Un solo livello (vincoli
   nel database); togliere un invito toglie i suoi accompagnatori nominativi.
-- **Chi risponde**: chi organizza (proprietario o in modifica) gestisce tutto e registra le
-  conferme di chi non ha l'app. Un utente collegato al proprio invito, se vede l'evento,
-  conferma o rifiuta per sé e gestisce i propri accompagnatori entro il limite dell'evento
-  (`max_accompagnatori`, null = nessun limite); non cambia gli altri inviti né la propria
-  categoria. Nessun link pubblico, email o SMS.
+- **Chi aggiorna le presenze** (rettifica del 17/11/2026, §29.2): solo chi può modificare
+  l'evento (proprietario o permesso di modifica) inserisce partecipanti e accompagnatori e ne
+  cambia gli stati, per tutti, anche per chi usa l'app. Nessuna risposta personale, link
+  pubblico, email o SMS. `max_accompagnatori` resta nel database ma non ha più effetto.
 - **Coperti** (`eventi.coperti_automatici`): «Coperti manuali» (predefinito) o «Calcolati dai
   partecipanti» (confermati, accompagnatori compresi; in attesa e assenti esclusi). Un'unica
   funzione (`copertiEffettivi`, `src/domain/partecipanti.ts`) decide adulti e bambini effettivi,
@@ -2163,8 +2162,8 @@ M2. Migrazioni `0011_edizioni.sql` (`eventi.serie_id`) e `0012_origine_voci.sql`
 M3. In cima alla Panoramica; `GET /eventi/:id/riepilogo` aggrega dati esistenti in una sola
 richiesta. Ogni indicatore apre la sua sezione; quelli delle funzioni non usate non compaiono.
 
-- Sempre: coperti e modalità. Con l'elenco: confermati e in attesa; «Conferma la tua presenza»
-  se il proprio invito è in attesa.
+- Sempre: coperti e modalità. Con l'elenco: confermati e in attesa. Ordine e «Tutto pronto»:
+  §29.3.
 - «Chi porta», solo se usato (un piatto affidato o una cosa da portare): cose da portare senza
   nessuno e incarichi di chi non partecipa (attenzione), incarichi da completare, piatti non
   affidati (solo informazione: li può preparare chi organizza).
@@ -2231,6 +2230,93 @@ Richiesta di Loris (16/11/2026). Migrazione `0013_ricorrenze.sql`.
   quale Famiglia tiene l'originale va presa con Loris prima di convertirle in copie.
 - Test: `server/api/ricorrenze.test.ts`, e2e `ricorrenze.spec.ts` ed `edizioni.spec.ts`.
 
+## 29. Rifinitura UX e collaudo (6.2)
+
+Richiesta di Loris (17/11/2026, «Pacchetto di rifinitura UX e collaudo»), con la rettifica
+sulle presenze dello stesso giorno. Migrazione `0014_dettagli_notifiche.sql`. Nessun nuovo tipo
+di notifica (decisione di Loris: niente notifiche per le conferme di partecipazione).
+
+### 29.1 Centro notifiche
+
+- Ogni notifica mostra icona e categoria del tipo (Bacheca della Famiglia, Bacheca dell'evento,
+  Commento, Sondaggio, Proposta di piatto, La tua proposta, Chi porta cosa, Menù, Condivisione,
+  Valutazione), evento o Famiglia (con più Famiglie anche la Famiglia), testo con l'autore, data;
+  divise in «Da leggere» e «Già lette», con il pallino sulle non lette.
+- **Raggruppate apribili**: la colonna `notifiche.dettagli` (JSON) conserva gli ultimi 10
+  aggiornamenti riuniti sotto la stessa chiave (chi, cosa, quando, messaggio o elemento);
+  «N aggiornamenti» li elenca e ognuno porta al suo contenuto. Le chiavi restano per evento o
+  per Famiglia: nessun gruppo mescola eventi o Famiglie diverse. Le notifiche nate prima della
+  0014 non hanno elenco finché non ricevono un nuovo aggiornamento.
+- **Apertura**: messaggi, commenti, sondaggi e proposte → il messaggio nella sua bacheca
+  (`?messaggio=`); bacheca di una Famiglia → `#/famiglia?famiglia=<id>&messaggio=<id>`: la
+  Famiglia della notifica diventa quella attiva (se se ne fa ancora parte; il parametro vale una
+  volta sola); incarichi → l'incarico preciso in «Chi porta» (`?incarico=voce:<id>|cosa:<id>`),
+  evidenziato; menù e valutazioni → il menù; condivisioni → l'evento o la ricetta. Se il
+  contenuto non c'è più lo si dice («non è più disponibile»), senza altri dettagli.
+- Permessi come in §20.6: in lettura si ricontrollano e le notifiche su risorse non più
+  accessibili spariscono; un messaggio eliminato toglie la sua notifica; gli eventi archiviati
+  restano consultabili.
+
+### 29.2 Partecipanti e presenze (rettifica obbligatoria)
+
+- Le presenze sono **sempre manuali** e le aggiorna solo chi può modificare l'evento: inserisce
+  partecipanti e accompagnatori (adulti e bambini, con e senza nome) e cambia gli stati
+  (in attesa, confermato, non partecipa). Chi ha solo la lettura consulta l'elenco, vede chi
+  gestisce le presenze («Le presenze le aggiorna chi può modificare l'evento: …») e nessun
+  comando. Niente «Conferma presenza» personale, niente conferme da inviti, notifiche o altro.
+- Il server rifiuta (403, prima di validare il corpo) ogni scrittura sui partecipanti di chi non
+  ha il permesso di modifica, anche sul proprio invito; 404 se l'evento non è visibile. Le
+  presenze già registrate restano come sono.
+- La partecipazione non dà permessi; i permessi non sono partecipazione; «Chi porta cosa»
+  resta separato.
+- Interfaccia: «N coperti per porzioni e spesa» (il numero usato davvero), modalità
+  «Manuali» (indipendenti dall'elenco; a chi organizza si dice quanti sarebbero con i
+  confermati, senza cambiare nulla) o «Automatici» (dai confermati, accompagnatori compresi);
+  riquadri Confermati / In attesa / Non partecipano con i bambini; «conferma parziale» sugli
+  inviti con risposte diverse fra titolare e accompagnatori.
+
+### 29.3 «A che punto siamo?»
+
+- Prima ciò che manca, poi «Già a posto». In sospeso, nell'ordine: problemi (incarichi di chi
+  non partecipa, cose da portare senza nessuno, attività in ritardo, spesa da verificare), poi
+  conferme mancanti, incarichi da completare, attività da fare, proposte da decidere, sondaggi
+  aperti, spesa da comprare. I piatti non affidati sono una nota, non una cosa in sospeso.
+- Niente in sospeso: «Tutto pronto». Ogni voce apre la sezione che la risolve; nessuna gestione
+  parallela.
+
+### 29.4 Duplicazione e confronto
+
+- La finestra «Duplica evento» dice da quale evento si parte, cosa si copia e cosa no, e che la
+  ricorrenza proposta è quella dell'originale.
+- Il confronto dice quali eventi si confrontano (nomi e date), se li lega una ricorrenza (o se
+  l'evento è scelto a mano) e la differenza dei coperti; colonne «Prima» e «Ora». Senza
+  un'edizione precedente il collegamento si chiama «Confronta con un altro evento».
+
+### 29.5–29.6 Ricorrenze e ricette fra Famiglie
+
+Verificate (§28) e lasciate invariate: collaudo e2e con più Famiglie, eliminazione della
+ricorrenza senza perdere eventi, copia indipendente (foto, provenienza, eliminazione
+dell'originale, uscita dalla Famiglia).
+
+### 29.7 Ricettario e menù
+
+- Tornando indietro (a una pagina già vista) si ritrova la posizione di scorrimento; una pagina
+  nuova parte dall'alto. Nel ricettario anche la ricerca resta nell'indirizzo (`?q=`), come la
+  portata.
+- Suggerimenti del ricettario nel menù: campo «combobox», frecce per scegliere, Invio per
+  collegare, Esc per chiudere (prima non erano raggiungibili da tastiera).
+
+### 29.8 Collaudo
+
+- `server/api/notifiche.test.ts`, test di partecipanti e riepilogo aggiornati alla rettifica;
+  e2e `rifinitura.spec.ts` (due persone, notifiche, Famiglia giusta, presenze in sola lettura,
+  tastiera, ritorno nel ricettario, testi lunghi senza scorrimento orizzontale, archivio).
+- **Aggiornamento PWA** (`test/e2e/aggiornamento.pwa.ts`, progetto `pwa`): server di prova
+  isolato su 127.0.0.1:4175 con dati propri; seconda build (`MENUAPP_COMMIT=pwa-nuova`) messa al
+  posto della prima: rilevamento al ritorno in primo piano, avviso senza ricaricamento, «Aggiorna»,
+  nuova versione in Impostazioni → Dati, nessun file della build vecchia in cache, sessione, dati
+  e preferenze intatti.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2253,3 +2339,4 @@ Richiesta di Loris (16/11/2026). Migrazione `0013_ricorrenze.sql`.
 | 16/11/2026 | 5.2 — **Ricerca per ingredienti** (§23): nome, ingredienti, catalogo e sinonimi, più termini, ordine per pertinenza nel ricettario e nel menù |
 | 16/11/2026 | 6.0 — **Organizzazione degli eventi** (§24–§27): partecipanti con conferme e accompagnatori, coperti manuali o calcolati; duplicazione ed edizioni; «A che punto siamo?»; confronto fra edizioni; migrazioni 0010–0012 |
 | 16/11/2026 | 6.1 — **Ricorrenze** della Famiglia (sostituiscono le serie anonime) e **copia delle ricette fra Famiglie** con provenienza; una ricetta visibile in una sola Famiglia (§28); migrazione `0013_ricorrenze.sql` |
+| 17/11/2026 | 6.2 — **Rifinitura UX** (§29): notifiche con categoria, gruppi apribili e apertura del contenuto preciso; **presenze solo manuali** da chi può modificare l'evento (rettifica: tolta la conferma personale anche dalle API); riepilogo con le cose in sospeso e «Tutto pronto»; duplicazione e confronto più chiari; ritorno alla posizione e ricerca nell'indirizzo; suggerimenti da tastiera; collaudo dell'aggiornamento PWA; migrazione `0014_dettagli_notifiche.sql` |

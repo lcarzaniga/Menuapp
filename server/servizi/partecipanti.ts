@@ -1,9 +1,9 @@
-// Partecipanti, conferme e accompagnatori (SPEC §24). L'elenco non dà accesso all'evento e
-// l'accesso non implica la partecipazione. Chi organizza gestisce tutto; chi usa l'app
-// risponde per il proprio invito e i suoi accompagnatori.
+// Partecipanti, conferme e accompagnatori (SPEC §24, §29.2). L'elenco non dà accesso all'evento e
+// l'accesso non implica la partecipazione. Le presenze sono sempre manuali: le gestisce solo chi
+// può modificare l'evento; nessuno risponde da sé, nemmeno per il proprio invito.
 import { randomUUID } from 'node:crypto'
 import type { AggiornaPartecipante, ImpostaCoperti, Invito, NuovoPartecipante, Partecipante, Partecipanti } from '../../src/contratto/partecipanti.ts'
-import { type Anonimi, contaPresenze, NESSUN_ANONIMO, stessaPersona, totaleAnonimi } from '../../src/domain/partecipanti.ts'
+import { type Anonimi, contaPresenze, NESSUN_ANONIMO, stessaPersona } from '../../src/domain/partecipanti.ts'
 import { norm, pulisci } from '../../src/domain/testo.ts'
 import { type Db, lettura, transazione } from '../db/connessione.ts'
 import * as repoAccesso from '../db/repo/accesso.ts'
@@ -69,7 +69,6 @@ export function elenca(db: Db, u: UtenteCorrente, eventoId: string): Partecipant
     const incarichi = incarichiEvento(db, eventoId)
     const righe = archiviato ? archiviato.flatMap(({ accompagnatori, ...t }) => [t, ...accompagnatori]) : repo.partecipantiEvento(db, eventoId).map((r) => verso(r, incarichi))
     const conteggio = contaPresenze(righe)
-    const mio = righe.find((r) => r.invitoId === null && r.utenteId === u.id)
     const famiglia = repoAccesso.gruppoEvento(db, eventoId)
     const puoGestire = gestisce(permesso) && e.stato !== 'archiviato'
     return {
@@ -81,7 +80,7 @@ export function elenca(db: Db, u: UtenteCorrente, eventoId: string): Partecipant
       coefficienteBambini: e.coefficienteBambini,
       maxAccompagnatori: e.maxAccompagnatori,
       puoGestire,
-      mioInvitoId: mio?.id ?? null,
+      gestori: gestori(db, eventoId),
       solaLettura: e.stato === 'archiviato',
       scelte: {
         persone: puoGestire ? personeScegliibili(db, eventoId) : [],
@@ -89,6 +88,13 @@ export function elenca(db: Db, u: UtenteCorrente, eventoId: string): Partecipant
       },
     }
   })
+}
+
+/** Chi può aggiornare le presenze: il proprietario e chi ha il permesso di modifica. */
+function gestori(db: Db, eventoId: string): string[] {
+  const proprietario = repoAccesso.leggiUtente(db, repoAccesso.proprietarioEvento(db, eventoId) ?? '')?.nome
+  const inModifica = repoAccesso.condivisioniEvento(db, eventoId).filter((c) => c.permesso === 'modifica').map((c) => c.nome)
+  return [...(proprietario ? [proprietario] : []), ...inModifica]
 }
 
 /** Elenco da conservare nell'archivio: nomi, stati e accompagnatori, senza permessi. */
@@ -99,37 +105,32 @@ export function perArchivio(db: Db, eventoId: string): Invito[] {
 
 interface Contesto {
   r: repo.RigaPartecipante
-  titolare: repo.RigaPartecipante
-  gestisce: boolean
-  /** La riga appartiene all'invito dell'utente (titolare o suo accompagnatore). */
-  proprio: boolean
 }
 
 /** Partecipante visibile all'utente (404 altrimenti), su un evento modificabile. */
-/**
- * Per la rotta di creazione, prima di validare il corpo: chi organizza aggiunge chiunque; chi
- * vede l'evento solo accompagnatori al proprio invito, se ne ha uno.
- */
+const SOLO_CHI_ORGANIZZA = 'Le presenze le aggiorna solo chi può modificare l\'evento'
+
+/** Per la rotta di creazione, prima di validare il corpo: solo chi può modificare l'evento. */
 export function richiediAggiunta(db: Db, u: UtenteCorrente, eventoId: string): void {
-  const permesso = richiediEvento(db, u, eventoId, 'lettura')
-  if (!gestisce(permesso) && !repo.partecipantiEvento(db, eventoId).some((r) => r.invito_id === null && r.utente_id === u.id)) {
-    throw accessoNegato('Solo chi organizza aggiunge partecipanti')
-  }
+  if (!gestisce(richiediEvento(db, u, eventoId, 'lettura'))) throw accessoNegato(SOLO_CHI_ORGANIZZA)
 }
 
-/** Per le rotte: 404 se il partecipante non esiste o l'evento non è visibile (prima di validare il corpo). */
+/**
+ * Per le rotte, prima di validare il corpo: 404 se il partecipante non esiste o l'evento non è
+ * visibile; 403 senza il permesso di modifica (anche per il proprio invito: niente risposte
+ * personali, SPEC §29.2).
+ */
 export function richiedi(db: Db, u: UtenteCorrente, id: string): void {
-  const r = repo.leggiPartecipante(db, id)
-  if (!r || !permessoEvento(db, u, r.evento_id)) throw nonTrovato('Partecipante')
+  contesto(db, u, id)
 }
 
 function contesto(db: Db, u: UtenteCorrente, id: string): Contesto {
   const r = repo.leggiPartecipante(db, id)
   const permesso = r ? permessoEvento(db, u, r.evento_id) : null
   if (!r || !permesso) throw nonTrovato('Partecipante')
+  if (!gestisce(permesso)) throw accessoNegato(SOLO_CHI_ORGANIZZA)
   richiediModificabile(leggiEvento(db, r.evento_id))
-  const titolare = r.invito_id ? repo.leggiPartecipante(db, r.invito_id)! : r
-  return { r, titolare, gestisce: gestisce(permesso), proprio: titolare.utente_id === u.id }
+  return { r }
 }
 
 function riletto(db: Db, id: string): Partecipante {
@@ -147,18 +148,17 @@ function controllaDoppione(db: Db, eventoId: string, p: { utenteId: string | nul
 }
 
 /** Chi è: un utente con l'app, una persona della rubrica o un nome (riconosciuto se già noto). */
-function risolvi(db: Db, u: UtenteCorrente, eventoId: string, d: NuovoPartecipante, perGestore: boolean, adesso: number) {
+function risolvi(db: Db, u: UtenteCorrente, eventoId: string, d: NuovoPartecipante, adesso: number) {
   const famiglia = repoAccesso.gruppoEvento(db, eventoId)
   const membro = membroFamiglia(db, u, famiglia)
   if (d.utenteId) {
-    if (!perGestore) throw accessoNegato('Solo chi organizza collega una persona con l\'app')
     const p = personeScegliibili(db, eventoId).find((x) => x.id === d.utenteId)
     if (!p) throw nonTrovato('Persona')
     return { nome: p.nome, utenteId: p.id, esternoId: null }
   }
   if (d.esternoId) {
     const e = repoFam.leggiEsterno(db, d.esternoId)
-    if (!perGestore || !e || e.gruppo_id !== famiglia || !membro) throw nonTrovato('Persona')
+    if (!e || e.gruppo_id !== famiglia || !membro) throw nonTrovato('Persona')
     return { nome: e.nome, utenteId: null, esternoId: e.id }
   }
   const nome = pulisci(d.nome!)
@@ -169,7 +169,7 @@ function risolvi(db: Db, u: UtenteCorrente, eventoId: string, d: NuovoPartecipan
   if (famiglia && membro) {
     const esistente = repoFam.esternoPerNome(db, famiglia, chiave)
     if (esistente) return { nome: esistente.nome, utenteId: null, esternoId: esistente.id }
-    if (d.salvaInRubrica && perGestore) {
+    if (d.salvaInRubrica) {
       const id = randomUUID()
       repoFam.inserisciEsterno(db, { id, gruppoId: famiglia, nome, nomeNorm: chiave, note: '', creatoDa: u.id }, adesso)
       return { nome, utenteId: null, esternoId: id }
@@ -178,22 +178,9 @@ function risolvi(db: Db, u: UtenteCorrente, eventoId: string, d: NuovoPartecipan
   return { nome, utenteId: null, esternoId: null }
 }
 
-/** Accompagnatori (con e senza nome) di un invito. */
-function accompagnatoriDi(db: Db, titolare: repo.RigaPartecipante, anonimi = repo.anonimiDi(titolare)): number {
-  return repo.partecipantiEvento(db, titolare.evento_id).filter((x) => x.invito_id === titolare.id).length + totaleAnonimi(anonimi)
-}
-
-/** Chi usa l'app aggiunge accompagnatori da sé solo entro il limite dell'evento. */
-function controllaLimite(db: Db, eventoId: string, totale: number): void {
-  const max = leggiEvento(db, eventoId).maxAccompagnatori
-  if (max !== null && totale > max) {
-    throw regolaViolata('troppi_accompagnatori', max === 0 ? 'Per questo evento non si aggiungono accompagnatori: chiedi a chi organizza' : `Puoi indicare al massimo ${max} accompagnatori: per altri chiedi a chi organizza`)
-  }
-}
-
 export function crea(db: Db, u: UtenteCorrente, eventoId: string, d: NuovoPartecipante, adesso = Date.now()): Partecipante {
   return transazione(db, () => {
-    const permesso = richiediEvento(db, u, eventoId, 'lettura')
+    richiediAggiunta(db, u, eventoId)
     richiediModificabile(leggiEvento(db, eventoId))
     const esistente = repo.leggiPartecipante(db, d.id)
     if (esistente) {
@@ -201,17 +188,12 @@ export function crea(db: Db, u: UtenteCorrente, eventoId: string, d: NuovoPartec
       if (esistente.evento_id === eventoId) return riletto(db, d.id)
       throw nonTrovato('Partecipante')
     }
-    const perGestore = gestisce(permesso)
     let titolare: repo.RigaPartecipante | undefined
     if (d.invitoId) {
       titolare = repo.leggiPartecipante(db, d.invitoId)
       if (!titolare || titolare.evento_id !== eventoId || titolare.invito_id !== null) throw nonTrovato('Invito')
-      if (!perGestore) {
-        if (titolare.utente_id !== u.id) throw accessoNegato('Puoi aggiungere accompagnatori solo al tuo invito')
-        controllaLimite(db, eventoId, accompagnatoriDi(db, titolare) + 1)
-      }
-    } else if (!perGestore) throw accessoNegato('Solo chi organizza aggiunge partecipanti')
-    const chi = risolvi(db, u, eventoId, d, perGestore, adesso)
+    }
+    const chi = risolvi(db, u, eventoId, d, adesso)
     const nomeNorm = norm(chi.nome)
     controllaDoppione(db, eventoId, { ...chi, nomeNorm })
     repo.inserisciPartecipante(
@@ -261,24 +243,18 @@ function scrivi(db: Db, c: Contesto, versione: number, dati: Partial<Parameters<
 }
 
 /**
- * Nome, categoria, stato e note. Chi organizza cambia tutto; chi usa l'app conferma o rifiuta
- * per sé e gestisce i propri accompagnatori nominativi. Il nome di una persona collegata
- * (app o rubrica) segue la sua origine e non si cambia qui.
+ * Nome, categoria, stato e note, solo da chi può modificare l'evento. Il nome di una persona
+ * collegata (app o rubrica) segue la sua origine e non si cambia qui.
  */
 export function aggiorna(db: Db, u: UtenteCorrente, id: string, d: AggiornaPartecipante, adesso = Date.now()): Partecipante {
   return transazione(db, () => {
     const c = contesto(db, u, id)
-    const accompagnatoreProprio = c.proprio && c.r.invito_id !== null
-    if (!c.gestisce && !c.proprio) throw accessoNegato('Puoi rispondere solo per il tuo invito')
     const collegato = c.r.utente_id !== null || c.r.esterno_id !== null
     let nome = c.r.nome
     if (!collegato && pulisci(d.nome) !== c.r.nome) {
-      if (!c.gestisce && !accompagnatoreProprio) throw accessoNegato('Il nome lo cambia chi organizza')
       nome = pulisci(d.nome)
       controllaDoppione(db, c.r.evento_id, { utenteId: null, esternoId: null, nomeNorm: norm(nome) }, id)
     }
-    // Chi usa l'app non cambia la propria categoria (adulto/bambino): lo fa chi organizza.
-    if (!c.gestisce && !accompagnatoreProprio && d.categoria !== c.r.categoria) throw accessoNegato('Adulto o bambino lo indica chi organizza')
     scrivi(db, c, d.versione, { nome, nomeNorm: norm(nome), categoria: d.categoria, stato: d.stato, note: pulisci(d.note) }, adesso)
     incrementaRevisione(db)
     return riletto(db, id)
@@ -290,8 +266,6 @@ export function impostaAnonimi(db: Db, u: UtenteCorrente, id: string, anonimi: A
   return transazione(db, () => {
     const c = contesto(db, u, id)
     if (c.r.invito_id !== null) throw regolaViolata('non_titolare', 'Gli accompagnatori si indicano sull\'invito principale')
-    if (!c.gestisce && !c.proprio) throw accessoNegato('Puoi rispondere solo per il tuo invito')
-    if (!c.gestisce && totaleAnonimi(anonimi) > totaleAnonimi(repo.anonimiDi(c.r))) controllaLimite(db, c.r.evento_id, accompagnatoriDi(db, c.r, anonimi))
     scrivi(db, c, versione, { anonimi }, adesso)
     incrementaRevisione(db)
     return riletto(db, id)
@@ -305,7 +279,6 @@ export function impostaAnonimi(db: Db, u: UtenteCorrente, id: string, anonimi: A
 export function rendiAutonomo(db: Db, u: UtenteCorrente, id: string, versione: number, adesso = Date.now()): Partecipante {
   return transazione(db, () => {
     const c = contesto(db, u, id)
-    if (!c.gestisce) throw accessoNegato('Solo chi organizza separa gli inviti')
     if (c.r.invito_id === null) throw regolaViolata('gia_autonomo', `${c.r.nome} ha già un invito suo`)
     scrivi(db, c, versione, { invitoId: null }, adesso)
     incrementaRevisione(db)
@@ -316,9 +289,7 @@ export function rendiAutonomo(db: Db, u: UtenteCorrente, id: string, versione: n
 /** Togliere un invito toglie anche i suoi accompagnatori nominativi. */
 export function elimina(db: Db, u: UtenteCorrente, id: string, versione: number): void {
   transazione(db, () => {
-    const c = contesto(db, u, id)
-    const accompagnatoreProprio = c.proprio && c.r.invito_id !== null
-    if (!c.gestisce && !accompagnatoreProprio) throw accessoNegato('Solo chi organizza toglie i partecipanti')
+    contesto(db, u, id)
     controllaVersione(db, 'partecipanti', id, versione, () => riletto(db, id))
     repo.eliminaPartecipante(db, id)
     incrementaRevisione(db)

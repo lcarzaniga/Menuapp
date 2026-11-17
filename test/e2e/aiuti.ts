@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { type APIRequestContext, expect, type Page } from '@playwright/test'
+import { type APIRequestContext, type Browser, devices, expect, type Page } from '@playwright/test'
 
 export const ORIGINE = 'http://127.0.0.1:4174'
 
@@ -57,4 +57,36 @@ export async function chiediAccesso(page: Page, link: string, dispositivo: strin
   const codice = (await page.getByTestId('codice-attivazione').textContent())?.trim() ?? ''
   expect(codice).toMatch(/^[A-Z2-9]{3}-[A-Z2-9]{3}$/)
   return codice
+}
+
+/** Nuovo familiare con il suo telefono autorizzato (invito e approvazione via API dell'amministratore). */
+export async function familiare(browser: Browser, request: APIRequestContext, nome: string) {
+  const id = `utente-e2e-${nome.toLowerCase()}`
+  const esiste = (await apiLeggi<{ id: string }[]>(request, '/admin/utenti')).some((u) => u.id === id)
+  if (!esiste) expect((await apiScrivi(request, 'post', '/admin/utenti', { id, nome, famiglia: true })).stato).toBe(201)
+  const invito = (await apiScrivi(request, 'post', `/admin/utenti/${id}/inviti`, {})).corpo as { link: string }
+  const ctx = await browser.newContext({ ...devices['Pixel 7'], locale: 'it-IT', storageState: { cookies: [], origins: [] } })
+  const page = await ctx.newPage()
+  const codice = await chiediAccesso(page, invito.link.replace(/^https?:\/\/[^/]+/, ''), `Telefono di ${nome}`)
+  const richiesta = (await apiLeggi<{ id: string; codice: string }[]>(request, '/admin/richieste')).find((r) => r.codice === codice)!
+  expect((await apiScrivi(request, 'post', `/richieste/${richiesta.id}/approva`, {})).stato).toBe(200)
+  await expect(page.getByRole('heading', { name: 'Eventi', exact: true })).toBeVisible({ timeout: 10_000 })
+  return { id, ctx, page }
+}
+
+
+/** Chiamata API dal browser di un'altra persona (con la sua sessione). */
+export async function apiDa(page: Page, metodo: 'POST' | 'PUT' | 'DELETE', url: string, corpo?: unknown): Promise<{ stato: number; corpo: any }> {
+  return page.evaluate(
+    async ({ metodo, url, corpo }) => {
+      const r = await fetch(`/api/v1${url}`, { method: metodo, headers: corpo === undefined ? {} : { 'content-type': 'application/json' }, body: corpo === undefined ? undefined : JSON.stringify(corpo) })
+      return { stato: r.status, corpo: await r.json().catch(() => null) }
+    },
+    { metodo, url, corpo },
+  )
+}
+
+/** Nessuno scorrimento orizzontale della pagina. */
+export async function senzaScorrimentoOrizzontale(page: Page) {
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
 }

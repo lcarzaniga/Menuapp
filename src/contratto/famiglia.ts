@@ -289,6 +289,8 @@ export const SchemaNotifica = z.object({
   attore: z.string().nullable(),
   conteggio: z.number().int(),
   collegamento: z.string(),
+  /** Aggiornamenti riuniti nella notifica (dal più recente), ognuno con il suo collegamento; vuoto se è uno solo. */
+  dettagli: z.array(z.object({ attore: z.string().nullable(), testo: z.string(), collegamento: z.string(), il: Epoch })),
   letta: z.boolean(),
   aggiornatoIl: Epoch,
 })

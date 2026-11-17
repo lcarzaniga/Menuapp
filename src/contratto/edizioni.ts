@@ -56,8 +56,6 @@ export const SchemaAssociaRicorrenza = z.object({ ricorrenzaId: Id.nullable() })
 export const SchemaRiepilogoEvento = z.object({
   coperti: z.object({ equivalenti: z.number(), adulti: z.number().int(), bambini: z.number().int(), automatici: z.boolean() }),
   partecipanti: z.object({ confermati: z.number().int(), inAttesa: z.number().int(), assenti: z.number().int() }).nullable(),
-  /** Stato del proprio invito, se l'utente è fra i partecipanti. */
-  mioInvito: z.enum(['in_attesa', 'confermato', 'assente']).nullable(),
   incarichi: z
     .object({
       /** Cose da portare ancora senza nessuno: aggiunte apposta per essere portate. */

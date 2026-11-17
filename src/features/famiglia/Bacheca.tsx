@@ -1,8 +1,8 @@
 // Bacheca (della famiglia o di un evento): un piccolo blog familiare con messaggi, foto,
 // ricette segnalate, sondaggi e proposte di piatti, reazioni e commenti (SPEC §20.1–20.4).
 import { BarChart3, BookOpen, Camera, Check, ChefHat, ImagePlus, MessageCircle, Pin, Send, UtensilsCrossed, X } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { api, nuovoId } from '@/api/client'
 import { usePiatti } from '@/api/query'
@@ -17,6 +17,7 @@ import type { Messaggio, Reazione } from '@/contratto/famiglia.ts'
 import { MASSIMO_ALLEGATI, REAZIONI, SIMBOLI_REAZIONE } from '@/contratto/famiglia.ts'
 import { useStatoConnessione } from '@/connessione/stato'
 import { riduciFoto } from '@/lib/immagini'
+import { useEvidenzia } from '@/lib/evidenzia'
 import { cn } from '@/lib/utils'
 import { urlFoto } from '@/features/ricettario/FotoPiatto'
 import { type AmbitoBacheca, percorsoBacheca, quando, useBacheca } from './api'
@@ -25,12 +26,7 @@ type Modo = 'messaggio' | 'sondaggio' | 'proposta'
 
 export function Bacheca({ ambito, portate = [], segnaposto }: { ambito: AmbitoBacheca; portate?: { id: string; nome: string }[]; segnaposto?: string }) {
   const b = useBacheca(ambito)
-  const [parametri] = useSearchParams()
-  const evidenziato = parametri.get('messaggio')
-  useEffect(() => {
-    if (!evidenziato || !b.data) return
-    document.getElementById(`messaggio-${evidenziato}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-  }, [evidenziato, b.data])
+  const { id: evidenziato, mancante } = useEvidenzia('messaggio', 'messaggio-', Boolean(b.data))
   if (b.isPending) return <Caricamento />
   if (!b.data) return <p className="py-6 text-center text-sm text-testo-tenue">Bacheca non disponibile.</p>
   return (
@@ -40,6 +36,11 @@ export function Bacheca({ ambito, portate = [], segnaposto }: { ambito: AmbitoBa
       ) : (
         <p className="rounded-xl bg-info-tenue px-3 py-2 text-sm text-info">Puoi leggere la bacheca, ma chi organizza non ti ha abilitato a scrivere.</p>
       )}
+      {mancante ? (
+        <p role="status" className="rounded-xl bg-tenue px-3 py-2 text-sm text-testo-tenue">
+          Il messaggio della notifica non è più disponibile: forse è stato eliminato.
+        </p>
+      ) : null}
       {b.data.messaggi.length === 0 ? (
         <p className="py-8 text-center text-sm text-testo-tenue">Ancora nessun messaggio. Scrivi il primo!</p>
       ) : (

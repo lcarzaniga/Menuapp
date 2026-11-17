@@ -1,5 +1,5 @@
 import { Bell, BookOpen, CalendarDays, CircleUserRound, Settings, UsersRound } from 'lucide-react'
-import { NavLink, Outlet, useLocation } from 'react-router'
+import { NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Caricamento, Pagina, Vuoto } from '@/components/Pagina'
@@ -64,11 +64,12 @@ function Guscio({ nome }: { nome: string }) {
   const { pathname } = useLocation()
   const client = useQueryClient()
   const nonLette = useConteggioNotifiche().data?.nonLette ?? 0
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [pathname])
   return (
     <div className="min-h-dvh md:pl-56 print:pl-0">
+      {/* Ogni pagina nuova parte dall'alto; tornando indietro (o di nuovo alla stessa pagina) si
+          ritrova il punto in cui si era. La chiave è il percorso: filtri e ricerche nell'indirizzo
+          non fanno saltare la pagina (SPEC §29.7). */}
+      <ScrollRestoration getKey={(l) => l.pathname} />
       <BannerConnessione onRiprova={() => void controllaRevisione(client)} />
       <nav aria-label="Sezioni" className="non-stampare fixed inset-y-0 left-0 z-30 hidden w-56 flex-col gap-1 border-r border-bordo/70 bg-carta/90 p-3 backdrop-blur md:flex">
         <div className="mb-6 flex flex-col items-center gap-1 px-3 pt-3 text-center">

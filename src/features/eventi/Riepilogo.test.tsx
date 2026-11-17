@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { RiepilogoOrganizzativo } from '@/contratto/edizioni.ts'
 import { nomeEdizione } from './Edizioni'
-import { indicatori } from './Riepilogo'
+import { indicatori, inSospeso } from './Riepilogo'
 
 const base: RiepilogoOrganizzativo = {
   coperti: { equivalenti: 7, adulti: 6, bambini: 2, automatici: false },
   partecipanti: null,
-  mioInvito: null,
   incarichi: null,
   attivita: null,
   proposte: null,
@@ -23,13 +22,14 @@ describe('a che punto siamo: indicatori', () => {
   it('piatti non affidati sono solo un\'informazione; cose senza nessuno e responsabili assenti chiedono attenzione', () => {
     const l = indicatori({ ...base, incarichi: { coseSenzaResponsabile: 1, daCompletare: 0, piattiNonAffidati: 3, responsabiliAssenti: 1 } })
     expect(l.filter((x) => x.livello === 'attenzione').map((x) => x.testo)).toEqual(['1 incarico di chi non partecipa', '1 cosa da portare senza nessuno'])
-    expect(l.find((x) => x.testo === '3 piatti non affidati')).toMatchObject({ livello: 'info', a: 'chi-porta' })
+    // Facoltativo: non è fra le cose in sospeso.
+    expect(l.find((x) => x.testo === '3 piatti non affidati')).toMatchObject({ livello: 'nota', a: 'chi-porta' })
+    expect(l.filter(inSospeso).map((x) => x.testo)).toEqual(['1 incarico di chi non partecipa', '1 cosa da portare senza nessuno'])
   })
 
-  it('ogni indicatore porta alla sua sezione; le cose finite risultano a posto', () => {
+  it('prima ciò che manca (le conferme per prime), poi ciò che è a posto; ogni indicatore porta alla sua sezione', () => {
     const l = indicatori({
       ...base,
-      mioInvito: 'in_attesa',
       partecipanti: { confermati: 5, inAttesa: 2, assenti: 1 },
       attivita: { daFare: 0, inRitardo: 0 },
       proposte: { inAttesa: 1 },
@@ -37,14 +37,21 @@ describe('a che punto siamo: indicatori', () => {
       spesa: { daComprare: 0, daVerificare: 0, avvisi: 0 },
     })
     expect(l.map((x) => [x.testo, x.a, x.livello])).toEqual([
-      ['Conferma la tua presenza', 'partecipanti', 'attenzione'],
-      ['5 confermati, 2 in attesa', 'partecipanti', 'info'],
+      ['2 in attesa di conferma', 'partecipanti', 'da_fare'],
+      ['1 proposta da decidere', 'bacheca', 'da_fare'],
+      ['2 sondaggi aperti', 'bacheca', 'da_fare'],
       ['7 coperti', 'partecipanti', 'ok'],
       ['Piano completato', 'piano', 'ok'],
-      ['1 proposta da decidere', 'bacheca', 'info'],
-      ['2 sondaggi aperti', 'bacheca', 'info'],
       ['Spesa fatta', 'spesa', 'ok'],
     ])
+  })
+
+  it('tutto pronto: nessuna cosa in sospeso, i problemi in ritardo passano davanti', () => {
+    const pronto = indicatori({ ...base, partecipanti: { confermati: 8, inAttesa: 0, assenti: 1 }, spesa: { daComprare: 0, daVerificare: 0, avvisi: 0 } })
+    expect(pronto.filter(inSospeso)).toEqual([])
+    expect(pronto[0]).toMatchObject({ testo: '8 confermati, 1 non partecipa', dettaglio: 'tutti hanno risposto', livello: 'ok' })
+    const ritardo = indicatori({ ...base, partecipanti: { confermati: 1, inAttesa: 1, assenti: 0 }, attivita: { daFare: 3, inRitardo: 1 } })
+    expect(ritardo.map((x) => x.livello)).toEqual(['attenzione', 'da_fare', 'ok'])
   })
 })
 

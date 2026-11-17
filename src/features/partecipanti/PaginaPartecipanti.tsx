@@ -45,7 +45,9 @@ export function PaginaPartecipanti() {
   if (q.isPending) return <Caricamento />
   if (!q.data) return null
   const d = q.data
-  const mio = d.inviti.find((i) => i.id === d.mioInvitoId)
+  const c = d.conteggio
+  const usati = formattaCoperti(copertiEquivalenti(e))
+  const calcolati = formattaCoperti(copertiEquivalenti({ ...d.copertiCalcolati, coefficienteBambini: d.coefficienteBambini }))
   return (
     <CorpoScheda>
       <div className="flex flex-col gap-4">
@@ -53,9 +55,8 @@ export function PaginaPartecipanti() {
           <CardContent className="flex flex-col gap-2 pt-4">
             <div className="flex flex-wrap items-center gap-2">
               <Users className="size-5 text-primario" />
-              <p className="flex-1 font-semibold">
-                {formattaCoperti(copertiEquivalenti(e))} coperti
-                <span className="font-normal text-testo-tenue"> · {d.copertiAutomatici ? 'calcolati dai partecipanti' : 'manuali'}</span>
+              <p className="flex-1 font-semibold" data-testid="coperti-usati">
+                {usati} coperti per porzioni e spesa
               </p>
               {d.puoGestire ? (
                 <Button misura="piccolo" variante="contorno" onClick={() => setCoperti(true)}>
@@ -63,20 +64,31 @@ export function PaginaPartecipanti() {
                 </Button>
               ) : null}
             </div>
-            {d.inviti.length ? (
-              <p className="text-sm text-testo-tenue" data-testid="conteggio-partecipanti">
-                Confermati: {persone(d.conteggio.adulti.confermati, d.conteggio.bambini.confermati)}
-                {d.conteggio.adulti.inAttesa + d.conteggio.bambini.inAttesa ? ` · in attesa: ${persone(d.conteggio.adulti.inAttesa, d.conteggio.bambini.inAttesa)}` : ''}
-                {d.conteggio.adulti.assenti + d.conteggio.bambini.assenti ? ` · non partecipano: ${d.conteggio.adulti.assenti + d.conteggio.bambini.assenti}` : ''}
+            <p className="text-sm text-testo-tenue">
+              <Badge variante={d.copertiAutomatici ? 'primario' : 'neutro'}>{d.copertiAutomatici ? 'Automatici' : 'Manuali'}</Badge>{' '}
+              {d.copertiAutomatici
+                ? 'calcolati dai partecipanti confermati, accompagnatori compresi.'
+                : `scritti a mano (${persone(d.copertiManuali.adulti, d.copertiManuali.bambini)}), indipendenti dall'elenco.`}
+            </p>
+            {d.puoGestire && !d.copertiAutomatici && d.inviti.length && calcolati !== usati ? (
+              <p className="text-xs text-testo-tenue" data-testid="coperti-confermati">
+                Con i confermati sarebbero {calcolati}: per usarli scegli «Calcolati dai partecipanti» in Cambia.
               </p>
             ) : null}
-            {!d.copertiAutomatici && d.inviti.length ? (
-              <p className="text-xs text-testo-tenue">Porzioni e spesa seguono i numeri scritti a mano ({persone(d.copertiManuali.adulti, d.copertiManuali.bambini)}).</p>
+            {d.inviti.length ? (
+              <ul className="mt-1 grid grid-cols-3 gap-2 text-center text-xs" aria-label="Riepilogo delle presenze" data-testid="conteggio-partecipanti">
+                <Totale etichetta="Confermati" adulti={c.adulti.confermati} bambini={c.bambini.confermati} classe="bg-successo-tenue text-successo" />
+                <Totale etichetta="In attesa" adulti={c.adulti.inAttesa} bambini={c.bambini.inAttesa} classe="bg-tenue text-testo" />
+                <Totale etichetta="Non partecipano" adulti={c.adulti.assenti} bambini={c.bambini.assenti} classe="bg-pericolo-tenue text-pericolo" />
+              </ul>
+            ) : null}
+            {!d.puoGestire && !d.solaLettura ? (
+              <p className="text-xs text-testo-tenue" data-testid="chi-gestisce">
+                Le presenze le aggiorna chi può modificare l&apos;evento{d.gestori.length ? `: ${d.gestori.join(', ')}` : ''}.
+              </p>
             ) : null}
           </CardContent>
         </Card>
-
-        {mio && !d.solaLettura ? <MioInvito invito={mio} d={d} eventoId={e.id} /> : null}
 
         {d.puoGestire ? (
           <Button variante="contorno" className="self-start" onClick={() => setAggiungi(true)}>
@@ -107,6 +119,25 @@ export function PaginaPartecipanti() {
       {coperti ? <FinestraCoperti evento={e} d={d} onChiudi={() => setCoperti(false)} /> : null}
     </CorpoScheda>
   )
+}
+
+/** Un riquadro del riepilogo: quante persone in uno stato, adulti e bambini. */
+function Totale({ etichetta, adulti, bambini, classe }: { etichetta: string; adulti: number; bambini: number; classe: string }) {
+  return (
+    <li className={cn('rounded-xl px-1 py-2', classe)}>
+      <span className="block text-lg font-semibold leading-tight">{adulti + bambini}</span>
+      <span className="block font-medium">{etichetta}</span>
+      {bambini ? <span className="block opacity-80">{plurale(bambini, 'bambino', 'bambini')}</span> : null}
+    </li>
+  )
+}
+
+/** Invito con risposte diverse fra titolare e accompagnatori (es. lui sì, la figlia ancora no). */
+export function confermaParziale(i: Invito): boolean {
+  const stati = new Set<StatoPresenza>([i.stato, ...i.accompagnatori.map((a) => a.stato)])
+  if (i.anonimi.adultiConfermati + i.anonimi.bambiniConfermati) stati.add('confermato')
+  if (i.anonimi.adultiInAttesa + i.anonimi.bambiniInAttesa) stati.add('in_attesa')
+  return stati.size > 1
 }
 
 /** Tre stati come pulsanti affiancati. */
@@ -176,6 +207,7 @@ function RigaInvito({ invito: i, d, eventoId }: { invito: Invito; d: Partecipant
             {i.categoria === 'bambino' ? <span className="text-sm font-normal text-testo-tenue"> · bambino</span> : null}
             {!i.utenteId ? <span className="text-xs font-normal text-testo-tenue"> · senza app</span> : null}
           </p>
+          {confermaParziale(i) ? <Badge variante="avviso">conferma parziale</Badge> : null}
           {gestisce ? null : <Badge variante={VARIANTE_STATO[i.stato]}>{NOME_STATO[i.stato]}</Badge>}
           <MenuAzioni
             etichetta={`Azioni per ${i.nome}`}
@@ -204,7 +236,7 @@ function RigaInvito({ invito: i, d, eventoId }: { invito: Invito; d: Partecipant
         ) : null}
       </CardContent>
       {modifica ? <FinestraModifica p={modifica} gestisce={gestisce} onChiudi={() => setModifica(null)} /> : null}
-      {accompagnatori ? <FinestraAccompagnatori invito={i} eventoId={eventoId} d={d} onChiudi={() => setAccompagnatori(false)} /> : null}
+      {accompagnatori ? <FinestraAccompagnatori invito={i} eventoId={eventoId} onChiudi={() => setAccompagnatori(false)} /> : null}
     </Card>
   )
 }
@@ -242,53 +274,6 @@ function RigaAccompagnatore({ a, gestisce, onModifica, onTogli, onAutonomo }: { 
         </div>
       ) : null}
     </li>
-  )
-}
-
-/** Per chi usa l'app ed è fra gli invitati: «Conferma presenza» e i propri accompagnatori. */
-function MioInvito({ invito: i, d, eventoId }: { invito: Invito; d: Partecipanti; eventoId: string }) {
-  const connesso = useStatoConnessione() === 'connesso'
-  const stato = useCambiaStato(i)
-  const [accompagnatori, setAccompagnatori] = useState(false)
-  const togli = useScrittura((p: Partecipante) => api.elimina(`/partecipanti/${p.id}`, p.versione), { successo: null })
-  const cambiaAccompagnatore = useScrittura((x: { p: Partecipante; stato: StatoPresenza }) => api.modifica(`/partecipanti/${x.p.id}`, corpoPersona(x.p, { stato: x.stato })), { successo: null })
-  return (
-    <Card className="border-primario/40" data-testid="mio-invito">
-      <CardContent className="flex flex-col gap-3 pt-4">
-        <p className="font-semibold">Conferma presenza</p>
-        <SceltaStato
-          valore={i.stato}
-          nome={i.nome}
-          etichette={{ in_attesa: 'Non so ancora', confermato: 'Ci sono', assente: 'Non vengo' }}
-          disabilitata={!connesso || stato.inCorso}
-          onScegli={(s) => void stato.esegui(s)}
-        />
-        {i.accompagnatori.length || totaleAnonimi(i.anonimi) ? (
-          <ul className="flex flex-col gap-1.5 text-sm" aria-label="I tuoi accompagnatori">
-            {i.accompagnatori.map((a) => (
-              <li key={a.id} className="flex flex-wrap items-center gap-2">
-                <span className="flex-1">
-                  {a.nome}
-                  {a.categoria === 'bambino' ? <span className="text-testo-tenue"> · bambino</span> : null}
-                </span>
-                <Button misura="piccolo" variante="fantasma" disabled={!connesso} onClick={() => void togli.esegui(a)}>
-                  Togli
-                </Button>
-                <div className="basis-full">
-                  <SceltaStato valore={a.stato} nome={a.nome} etichette={{ in_attesa: 'Forse', confermato: 'Viene', assente: 'Non viene' }} disabilitata={!connesso} onScegli={(s) => void cambiaAccompagnatore.esegui({ p: a, stato: s })} />
-                </div>
-              </li>
-            ))}
-            {totaleAnonimi(i.anonimi) ? <li className="text-testo-tenue">{descriviAnonimi(i.anonimi)}</li> : null}
-          </ul>
-        ) : null}
-        <Button misura="piccolo" variante="contorno" className="self-start" disabled={!connesso} onClick={() => setAccompagnatori(true)}>
-          <Plus /> Aggiungi accompagnatori
-        </Button>
-        {d.maxAccompagnatori !== null ? <p className="text-xs text-testo-tenue">Puoi indicare fino a {plurale(d.maxAccompagnatori, 'accompagnatore', 'accompagnatori')}.</p> : null}
-      </CardContent>
-      {accompagnatori ? <FinestraAccompagnatori invito={i} eventoId={eventoId} d={d} onChiudi={() => setAccompagnatori(false)} /> : null}
-    </Card>
   )
 }
 
@@ -425,7 +410,7 @@ function FinestraModifica({ p, gestisce, onChiudi }: { p: Partecipante; gestisce
 }
 
 /** Accompagnatori di un invito: con nome (uno alla volta) e senza nome (quantità). */
-function FinestraAccompagnatori({ invito: i, eventoId, d, onChiudi }: { invito: Invito; eventoId: string; d: Partecipanti; onChiudi: () => void }) {
+function FinestraAccompagnatori({ invito: i, eventoId, onChiudi }: { invito: Invito; eventoId: string; onChiudi: () => void }) {
   const [nome, setNome] = useState('')
   const [categoria, setCategoria] = useState<CategoriaPersona>('adulto')
   const [statoNuovo, setStatoNuovo] = useState<StatoPresenza>('confermato')
@@ -446,7 +431,6 @@ function FinestraAccompagnatori({ invito: i, eventoId, d, onChiudi }: { invito: 
       aperta
       onCambia={(a) => !a && onChiudi()}
       titolo={`Accompagnatori di ${i.nome}`}
-      descrizione={d.puoGestire || d.maxAccompagnatori === null ? undefined : `Fino a ${plurale(d.maxAccompagnatori, 'accompagnatore', 'accompagnatori')} in tutto.`}
       piede={
         <Button disabled={salvaAnonimi.inCorso} onClick={() => (cambiati ? void salvaAnonimi.esegui(undefined) : onChiudi())}>
           {cambiati ? 'Salva' : 'Fatto'}
@@ -498,7 +482,6 @@ function FinestraCoperti({ evento: e, d, onChiudi }: { evento: Evento; d: Partec
   const [automatici, setAutomatici] = useState(d.copertiAutomatici)
   const [adulti, setAdulti] = useState(d.copertiAutomatici ? d.copertiCalcolati.adulti : d.copertiManuali.adulti)
   const [bambini, setBambini] = useState(d.copertiAutomatici ? d.copertiCalcolati.bambini : d.copertiManuali.bambini)
-  const [limite, setLimite] = useState(d.maxAccompagnatori === null ? '' : String(d.maxAccompagnatori))
   const coeff = { coefficienteBambini: d.coefficienteBambini }
   const manuali = copertiEquivalenti({ ...d.copertiManuali, ...coeff })
   const calcolati = copertiEquivalenti({ ...d.copertiCalcolati, ...coeff })
@@ -509,7 +492,8 @@ function FinestraCoperti({ evento: e, d, onChiudi }: { evento: Evento; d: Partec
         // Restando o passando in automatico i numeri manuali non cambiano.
         adulti: automatici ? d.copertiManuali.adulti : adulti,
         bambini: automatici ? d.copertiManuali.bambini : bambini,
-        maxAccompagnatori: limite.trim() === '' ? null : Math.max(0, Math.min(99, Math.round(Number(limite)) || 0)),
+        // Limite degli accompagnatori: valeva per le risposte personali, che non ci sono più; resta com'è.
+        maxAccompagnatori: d.maxAccompagnatori,
         versione: e.versione,
       }),
     { oggetto: 'L\'evento', successo: 'Coperti aggiornati', dopo: onChiudi },
@@ -561,9 +545,6 @@ function FinestraCoperti({ evento: e, d, onChiudi }: { evento: Evento; d: Partec
             </div>
           </div>
         ) : null}
-        <Campo etichetta="Accompagnatori per invito" htmlFor="cop-limite" aiuto="Quanti ne può aggiungere da sé chi usa l'app. Vuoto: nessun limite.">
-          <Input id="cop-limite" inputMode="numeric" value={limite} placeholder="Nessun limite" onChange={(ev) => setLimite(ev.target.value.replace(/\D/g, ''))} />
-        </Campo>
       </div>
     </Finestra>
   )

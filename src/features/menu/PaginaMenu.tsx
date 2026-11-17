@@ -1,6 +1,6 @@
 // Evento — Menù: portate, voci, inserimento rapido, riordino (SPEC F2, §7.2).
 import { ArrowDown, ArrowUp, ChefHat, FolderInput, ListOrdered, Pencil, Plus, ShoppingCart, Trash2, User } from 'lucide-react'
-import { type ClipboardEvent, useRef, useState } from 'react'
+import { type ClipboardEvent, type KeyboardEvent, useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { api, nuovoId } from '@/api/client'
 import { useMenu } from '@/api/query'
@@ -16,7 +16,7 @@ import { formattaCoperti } from '@/domain/porzioni.ts'
 import type { Evento, VoceMenu } from '@/domain/tipi.ts'
 import { ValutaVoce } from '@/features/famiglia/ValutaVoce'
 import { CorpoScheda, useEventoCorrente } from '@/features/eventi/LayoutEvento'
-import { SuggerimentiPiatti } from '@/features/ricettario/SuggerimentiPiatti'
+import { SuggerimentiPiatti, usePiattiProposti } from '@/features/ricettario/SuggerimentiPiatti'
 import { cn } from '@/lib/utils'
 import { EditorVoce } from './EditorVoce'
 import { GestionePortate } from './GestionePortate'
@@ -103,7 +103,11 @@ function SezionePortata({
 function InserimentoRapido({ evento, portata, autoFocus }: { evento: Evento; portata: Portata; autoFocus: boolean }) {
   const [testo, setTesto] = useState('')
   const [focus, setFocus] = useState(false)
+  const [chiusi, setChiusi] = useState(false)
+  const [attivo, setAttivo] = useState(-1)
   const rif = useRef<HTMLInputElement>(null)
+  const idElenco = useId()
+  const trovati = usePiattiProposti(testo, focus && !chiusi && testo.trim().length >= 2)
   const puoScrivere = usePuoScrivere()
   const crea = useScrittura(
     (voci: { nome: string; piattoId?: string | null }[]) =>
@@ -115,7 +119,25 @@ function InserimentoRapido({ evento, portata, autoFocus }: { evento: Evento; por
     if (voci.length === 0) return
     const r = await crea.esegui(voci)
     if (r) setTesto('')
+    setAttivo(-1)
     rif.current?.focus()
+  }
+
+  function tasto(ev: KeyboardEvent<HTMLInputElement>) {
+    if (ev.key === 'Escape' && trovati.length) {
+      ev.preventDefault()
+      setChiusi(true)
+    } else if ((ev.key === 'ArrowDown' || ev.key === 'ArrowUp') && trovati.length) {
+      ev.preventDefault()
+      const passo = ev.key === 'ArrowDown' ? 1 : -1
+      // Da -1 (nessuna, si scrive liberamente) alle opzioni e ritorno, in cerchio.
+      const n = trovati.length + 1
+      setAttivo((a) => ((a + 1 + passo + n) % n) - 1)
+    } else if (ev.key === 'Enter' && attivo >= 0 && trovati[attivo]) {
+      ev.preventDefault()
+      const p = trovati[attivo].ricetta
+      void aggiungi([{ nome: p.nome, piattoId: p.id }])
+    }
   }
 
   function incolla(ev: ClipboardEvent<HTMLInputElement>) {
@@ -145,7 +167,17 @@ function InserimentoRapido({ evento, portata, autoFocus }: { evento: Evento; por
           placeholder={`Aggiungi a ${portata.nome.toLowerCase()}…`}
           enterKeyHint="done"
           className="h-11 border-dashed bg-transparent"
-          onChange={(ev) => setTesto(ev.target.value)}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={trovati.length > 0}
+          aria-controls={idElenco}
+          aria-activedescendant={attivo >= 0 && trovati[attivo] ? `${idElenco}-${attivo}` : undefined}
+          onKeyDown={tasto}
+          onChange={(ev) => {
+            setTesto(ev.target.value)
+            setChiusi(false)
+            setAttivo(-1)
+          }}
           onPaste={incolla}
           onFocus={() => setFocus(true)}
           onBlur={() => setTimeout(() => setFocus(false), 150)}
@@ -154,9 +186,7 @@ function InserimentoRapido({ evento, portata, autoFocus }: { evento: Evento; por
           <Plus />
         </Button>
       </form>
-      {focus && testo.trim().length >= 2 ? (
-        <SuggerimentiPiatti testo={testo} onScegli={(p) => void aggiungi([{ nome: p.nome, piattoId: p.id }])} />
-      ) : null}
+      <SuggerimentiPiatti id={idElenco} trovati={trovati} attivo={attivo} onScegli={(p) => void aggiungi([{ nome: p.nome, piattoId: p.id }])} />
     </div>
   )
 }

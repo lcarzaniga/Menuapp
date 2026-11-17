@@ -1,7 +1,7 @@
 // Famiglia attiva: bacheca, piatti più apprezzati, membri e inviti (SPEC §20, §21).
 import { useQuery } from '@tanstack/react-query'
 import { LogOut, Medal, Plus, Star, Trophy, UserPlus } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { api, nuovoId } from '@/api/client'
 import { useImpostazioni } from '@/api/query'
@@ -18,15 +18,38 @@ import { useStatoConnessione } from '@/connessione/stato'
 import { useUtenteCorrente } from '@/features/accesso/sessione'
 import { cn } from '@/lib/utils'
 import { Bacheca } from './Bacheca'
-import { useClassifica } from './api'
+import { useClassifica, useGruppi } from './api'
 import { useFamigliaAttiva } from './attiva'
 import { RicorrenzeFamiglia } from './RicorrenzeFamiglia'
 
 export function PaginaFamiglia() {
-  const { attiva, caricamento } = useFamigliaAttiva()
+  const { attiva, famiglie, caricamento, scegli } = useFamigliaAttiva()
   const [parametri, setParametri] = useSearchParams()
   const scheda = (['apprezzati', 'membri'] as const).find((x) => x === parametri.get('scheda')) ?? 'bacheca'
-  if (caricamento) return <Caricamento />
+  // Da una notifica: si apre la Famiglia da cui viene, che diventa quella attiva (se se ne fa
+  // parte). Il parametro serve una volta sola: poi il selettore torna libero.
+  const richiesta = parametri.get('famiglia')
+  const gruppi = useGruppi()
+  const ricaricati = useRef(false)
+  useEffect(() => {
+    if (!richiesta || caricamento || gruppi.isFetching) return
+    // Una Famiglia appena unita può mancare dall'elenco in memoria: lo si ricarica una volta.
+    if (!famiglie.some((f) => f.id === richiesta) && !ricaricati.current) {
+      ricaricati.current = true
+      void gruppi.refetch()
+      return
+    }
+    if (famiglie.some((f) => f.id === richiesta)) scegli(richiesta)
+    setParametri(
+      (p) => {
+        const n = new URLSearchParams(p)
+        n.delete('famiglia')
+        return n
+      },
+      { replace: true },
+    )
+  }, [richiesta, caricamento, famiglie, scegli, setParametri, gruppi])
+  if (caricamento || richiesta) return <Caricamento />
   if (!attiva) return <SenzaFamiglia />
   return (
     <Pagina titolo={attiva.nome} sottotitolo={attiva.membri.map((m) => m.nome).join(' · ')}>

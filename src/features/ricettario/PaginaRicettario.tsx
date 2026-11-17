@@ -30,7 +30,6 @@ export function PaginaRicettario() {
   const piatti = usePiatti()
   const imp = useImpostazioni()
   const [parametri, setParametri] = useSearchParams()
-  const [cerca, setCerca] = useState('')
   const [soloVuoti, setSoloVuoti] = useState(false)
   const [soloMie, setSoloMie] = useState(false)
   const [importa, setImporta] = useState(false)
@@ -40,7 +39,12 @@ export function PaginaRicettario() {
   // La portata scelta resta nell'indirizzo: tornando da un piatto il filtro è ancora lì.
   const scelta = parametri.get('portata')
   const portata = portate.some((p) => p.nome === scelta) ? scelta : null
-  const scegli = (nome: string | null) => setParametri(nome ? { portata: nome } : {}, { replace: true })
+  // Anche la ricerca resta nell'indirizzo: tornando da una ricetta si ritrovano i risultati.
+  const cerca = parametri.get('q') ?? ''
+  const aggiorna = (portataNuova: string | null, testo: string) =>
+    setParametri({ ...(portataNuova ? { portata: portataNuova } : {}), ...(testo ? { q: testo } : {}) }, { replace: true })
+  const scegli = (nome: string | null) => aggiorna(nome, cerca)
+  const setCerca = (testo: string) => aggiorna(portata, testo)
   const filtrati = useMemo(
     () => tutti.filter((p) => (!soloVuoti || p.numeroIngredienti === 0) && (!soloMie || p.mio) && (!portata || portataDelPiatto(p.portataSuggerita, predefinite) === portata)),
     [tutti, soloVuoti, soloMie, portata, predefinite],

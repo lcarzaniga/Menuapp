@@ -57,7 +57,7 @@ describe('chi porta cosa', () => {
     expect(voceMenu).toMatchObject({ incaricato: 'Anna', inSpesa: false })
     expect(JSON.stringify(corpo(await t.leggi(`${P}/eventi/ev/spesa`)))).not.toContain('mascarpone')
     const notifica = corpo(await t.leggi(`${P}/notifiche`)).find((n: { tipo: string }) => n.tipo === 'incarico')
-    expect(notifica).toMatchObject({ testo: 'Anna porta «Tiramisù»', collegamento: '/eventi/ev/chi-porta' })
+    expect(notifica).toMatchObject({ testo: 'Anna porta «Tiramisù»', collegamento: '/eventi/ev/chi-porta?incarico=voce%3Av-tiramisu' })
 
     const lasciato = await ok(anna.scrivi('POST', `${P}/voci/v-tiramisu/rinuncia`, { versione: preso.versione }))
     expect(lasciato).toMatchObject({ incaricato: '', stato: 'da_assegnare', inSpesa: true, spesaToltaDaIncarico: false })

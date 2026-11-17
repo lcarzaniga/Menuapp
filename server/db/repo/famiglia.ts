@@ -342,7 +342,19 @@ export interface RigaNotifica {
   conteggio: number
   aggiornato_il: number
   letta_il: number | null
+  dettagli: string | null
 }
+
+/** Un aggiornamento dentro una notifica raggruppata (colonna JSON `dettagli`, gli ultimi 10). */
+export interface DettaglioNotifica {
+  attoreId: string | null
+  testo: string
+  messaggioId: string | null
+  /** Elemento a cui porta, oltre al messaggio: «voce:<id>» o «cosa:<id>». */
+  ancora: string | null
+  il: number
+}
+const MASSIMO_DETTAGLI = 10
 
 export interface NuovaNotifica {
   id: string
@@ -355,21 +367,39 @@ export interface NuovaNotifica {
   piattoId: string | null
   attoreId: string | null
   testo: string
+  ancora: string | null
 }
 
-/** Raggruppa: se c'è già una notifica non letta con la stessa chiave la aggiorna, altrimenti ne crea una. */
+/**
+ * Raggruppa: se c'è già una notifica non letta con la stessa chiave la aggiorna (e aggiunge
+ * l'aggiornamento all'elenco dei dettagli), altrimenti ne crea una.
+ */
 export function registraNotifica(db: Db, n: NuovaNotifica, adesso: number): void {
-  const aggiornate = esegui(
+  const nuovo: DettaglioNotifica = { attoreId: n.attoreId, testo: n.testo, messaggioId: n.messaggioId, ancora: n.ancora, il: adesso }
+  const aperta = uno<{ id: string; attore_id: string | null; testo: string; messaggio_id: string | null; aggiornato_il: number; dettagli: string | null }>(
     db,
-    'UPDATE notifiche SET conteggio = conteggio + 1, attore_id = ?, testo = ?, messaggio_id = coalesce(?, messaggio_id), aggiornato_il = ? WHERE utente_id = ? AND chiave = ? AND letta_il IS NULL',
-    n.attoreId, n.testo, n.messaggioId, adesso, n.utenteId, n.chiave,
+    'SELECT id, attore_id, testo, messaggio_id, aggiornato_il, dettagli FROM notifiche WHERE utente_id = ? AND chiave = ? AND letta_il IS NULL',
+    n.utenteId,
+    n.chiave,
   )
-  if (aggiornate > 0) return
+  if (aperta) {
+    // Le notifiche nate prima dei dettagli (0014) cominciano l'elenco con il loro ultimo aggiornamento.
+    const prima: DettaglioNotifica[] = aperta.dettagli
+      ? (JSON.parse(aperta.dettagli) as DettaglioNotifica[])
+      : [{ attoreId: aperta.attore_id, testo: aperta.testo, messaggioId: aperta.messaggio_id, ancora: null, il: aperta.aggiornato_il }]
+    const dettagli = JSON.stringify([...prima, nuovo].slice(-MASSIMO_DETTAGLI))
+    esegui(
+      db,
+      'UPDATE notifiche SET conteggio = conteggio + 1, attore_id = ?, testo = ?, messaggio_id = coalesce(?, messaggio_id), aggiornato_il = ?, dettagli = ? WHERE id = ?',
+      n.attoreId, n.testo, n.messaggioId, adesso, dettagli, aperta.id,
+    )
+    return
+  }
   esegui(
     db,
-    `INSERT INTO notifiche (id, utente_id, tipo, chiave, gruppo_id, evento_id, messaggio_id, piatto_id, attore_id, testo, creato_il, aggiornato_il)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    n.id, n.utenteId, n.tipo, n.chiave, n.gruppoId, n.eventoId, n.messaggioId, n.piattoId, n.attoreId, n.testo, adesso, adesso,
+    `INSERT INTO notifiche (id, utente_id, tipo, chiave, gruppo_id, evento_id, messaggio_id, piatto_id, attore_id, testo, creato_il, aggiornato_il, dettagli)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    n.id, n.utenteId, n.tipo, n.chiave, n.gruppoId, n.eventoId, n.messaggioId, n.piattoId, n.attoreId, n.testo, adesso, adesso, JSON.stringify([nuovo]),
   )
 }
 export const notificheUtente = (db: Db, utenteId: string, limite = 100) =>

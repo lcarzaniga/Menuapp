@@ -72,7 +72,7 @@ export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiud
       aperta
       onCambia={(a) => !a && onChiudi()}
       titolo="Duplica evento"
-      descrizione="Si copiano portate, menù, porzioni, stile di stampa e piano (da rifare). Non si copiano conferme, incarichi, voti, bacheca e spesa."
+      descrizione={`Nuovo evento a partire da «${e.nome}» del ${dataBreve(e.data)}. L'originale non cambia.`}
       piede={
         <Button disabled={!nome.trim() || !data || duplica.inCorso} onClick={() => void duplica.esegui(undefined)}>
           <Copy /> Duplica
@@ -114,10 +114,14 @@ export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiud
           </Campo>
         ) : null}
         <label className="flex min-h-11 items-center gap-3 text-sm">
-          <Casella checked={partecipanti} onChange={(ev) => setPartecipanti(ev.target.checked)} /> Copia anche i partecipanti (da riconfermare)
+          <Casella checked={partecipanti} onChange={(ev) => setPartecipanti(ev.target.checked)} /> Copia anche i partecipanti (tutti in attesa, da riconfermare)
         </label>
         {ricorrenze.data?.length ? (
-          <Campo etichetta="Ricorrenza" htmlFor="dup-ricorrenza">
+          <Campo
+            etichetta="Ricorrenza"
+            htmlFor="dup-ricorrenza"
+            aiuto={e.ricorrenzaId && sceltaRicorrenza === e.ricorrenzaId ? 'Proposta la stessa dell\'evento originale: puoi cambiarla o toglierla.' : undefined}
+          >
             <Select id="dup-ricorrenza" value={sceltaRicorrenza} onChange={(ev) => setRicorrenza(ev.target.value)}>
               <option value="">Nessuna</option>
               {ricorrenze.data.map((x) => (
@@ -128,6 +132,27 @@ export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiud
             </Select>
           </Campo>
         ) : null}
+        <div className="grid gap-3 rounded-xl bg-tenue/60 p-3 text-xs sm:grid-cols-2" data-testid="cosa-si-copia">
+          <div>
+            <p className="mb-1 font-semibold text-successo">Si copia</p>
+            <ul className="list-inside list-disc text-testo-tenue">
+              <li>portate, piatti e porzioni</li>
+              <li>coperti, come numeri manuali</li>
+              <li>note e stile di stampa</li>
+              <li>piano, spostato sulla nuova data e tutto da fare</li>
+              {partecipanti ? <li>partecipanti, tutti in attesa</li> : null}
+            </ul>
+          </div>
+          <div>
+            <p className="mb-1 font-semibold text-testo">Non si copia</p>
+            <ul className="list-inside list-disc text-testo-tenue">
+              <li>conferme{partecipanti ? '' : ' e partecipanti'}</li>
+              <li>chi porta cosa e incarichi</li>
+              <li>voti, bacheca e sondaggi</li>
+              <li>stato della spesa e condivisioni</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </Finestra>
   )
@@ -190,7 +215,7 @@ export function PannelloRicorrenza({ evento: e }: { evento: Evento }) {
         ) : null}
         {d.edizioni.length || d.altriEventi.length ? (
           <Button variante="contorno" misura="piccolo" className="self-start" asChild>
-            <Link to={`/eventi/${e.id}/confronto`}>Confronta con l&apos;anno scorso</Link>
+            <Link to={`/eventi/${e.id}/confronto`}>{d.edizioni.some((x) => x.data < e.data) ? 'Confronta con l\'anno scorso' : 'Confronta con un altro evento'}</Link>
           </Button>
         ) : null}
       </CardContent>

@@ -2,29 +2,14 @@
 // notifiche, bacheca dell'evento con proposta accettata nel menù, chi porta cosa integrato
 // con la spesa, valutazioni e classifica.
 import { mkdirSync } from 'node:fs'
-import { type APIRequestContext, type Browser, devices, expect, type Page, test } from '@playwright/test'
-import { apiLeggi, apiScrivi, chiediAccesso } from './aiuti'
+import { expect, type Page, test } from '@playwright/test'
+import { apiLeggi, apiScrivi, familiare } from './aiuti'
 
 test.describe.configure({ mode: 'serial' })
 const CARTELLA = 'test-results/famiglia'
 const foto = async (page: Page, nome: string) => {
   mkdirSync(CARTELLA, { recursive: true })
   await page.screenshot({ path: `${CARTELLA}/${nome}.png` })
-}
-
-/** Nuovo familiare con il suo telefono autorizzato (invito e approvazione via API dell'amministratore). */
-async function familiare(browser: Browser, request: APIRequestContext, nome: string) {
-  const id = `utente-e2e-${nome.toLowerCase()}`
-  const esiste = (await apiLeggi<{ id: string }[]>(request, '/admin/utenti')).some((u) => u.id === id)
-  if (!esiste) expect((await apiScrivi(request, 'post', '/admin/utenti', { id, nome, famiglia: true })).stato).toBe(201)
-  const invito = (await apiScrivi(request, 'post', `/admin/utenti/${id}/inviti`, {})).corpo as { link: string }
-  const ctx = await browser.newContext({ ...devices['Pixel 7'], locale: 'it-IT', storageState: { cookies: [], origins: [] } })
-  const page = await ctx.newPage()
-  const codice = await chiediAccesso(page, invito.link.replace(/^https?:\/\/[^/]+/, ''), `Telefono di ${nome}`)
-  const richiesta = (await apiLeggi<{ id: string; codice: string }[]>(request, '/admin/richieste')).find((r) => r.codice === codice)!
-  expect((await apiScrivi(request, 'post', `/richieste/${richiesta.id}/approva`, {})).stato).toBe(200)
-  await expect(page.getByRole('heading', { name: 'Eventi', exact: true })).toBeVisible({ timeout: 10_000 })
-  return { id, ctx, page }
 }
 
 const oggi = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Rome' })
@@ -53,7 +38,7 @@ test('famiglia: bacheca e sondaggio, evento con proposta, chi porta cosa, stelle
   await lucia.page.getByRole('link', { name: /Notifiche/ }).click()
   await foto(lucia.page, '01-notifiche')
   await lucia.page.getByRole('button', { name: /carne o pesce/ }).click()
-  await expect(lucia.page).toHaveURL(/#\/famiglia\?messaggio=/)
+  await expect(lucia.page).toHaveURL(/#\/famiglia\?famiglia=.+&messaggio=/)
   const perLucia = lucia.page.getByRole('article', { name: 'Messaggio di Loris' }).filter({ hasText: 'Natale: carne o pesce?' })
   await perLucia.getByRole('radio', { name: 'Pesce' }).click()
   await expect(perLucia.getByText('1 votante')).toBeVisible()

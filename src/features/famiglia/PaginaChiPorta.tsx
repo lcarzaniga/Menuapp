@@ -15,6 +15,7 @@ import type { Incarichi, Incarico } from '@/contratto/famiglia.ts'
 import { useStatoConnessione } from '@/connessione/stato'
 import { useUtenteCorrente } from '@/features/accesso/sessione'
 import { CorpoScheda, useEventoCorrente } from '@/features/eventi/LayoutEvento'
+import { useEvidenzia } from '@/lib/evidenzia'
 import { cn } from '@/lib/utils'
 import { useIncarichi } from './api'
 
@@ -24,6 +25,8 @@ export function PaginaChiPorta() {
   const e = useEventoCorrente()
   const q = useIncarichi(e.id)
   const [nuova, setNuova] = useState(false)
+  // Da una notifica: ?incarico=voce:<id> o cosa:<id>.
+  const { id: evidenziato, mancante } = useEvidenzia('incarico', 'incarico-', Boolean(q.data))
   if (q.isPending) return <Caricamento />
   if (!q.data) return <CorpoScheda>Impossibile caricare gli incarichi.</CorpoScheda>
   const d = q.data
@@ -46,12 +49,17 @@ export function PaginaChiPorta() {
           </Button>
         ) : null}
       </div>
+      {mancante ? (
+        <p role="status" className="mb-3 rounded-xl bg-tenue px-3 py-2 text-sm text-testo-tenue">
+          L'elemento della notifica non c'è più: forse è stato tolto dal menù o dall'elenco.
+        </p>
+      ) : null}
       {d.incarichi.length === 0 ? (
         <Vuoto illustrazione="taccuino" titolo="Niente da organizzare, per ora" testo="I piatti del menù compaiono qui; aggiungi anche vino, pane, bibite o altro da portare." />
       ) : (
         <div className="flex flex-col gap-4">
-          <Sezione titolo="Dal menù" incarichi={d.incarichi.filter((i) => i.tipo === 'voce')} d={d} />
-          <Sezione titolo="Da portare" incarichi={d.incarichi.filter((i) => i.tipo === 'cosa')} d={d} />
+          <Sezione titolo="Dal menù" incarichi={d.incarichi.filter((i) => i.tipo === 'voce')} d={d} evidenziato={evidenziato} />
+          <Sezione titolo="Da portare" incarichi={d.incarichi.filter((i) => i.tipo === 'cosa')} d={d} evidenziato={evidenziato} />
         </div>
       )}
       <NuovaCosa eventoId={e.id} aperta={nuova} onCambia={setNuova} />
@@ -59,7 +67,7 @@ export function PaginaChiPorta() {
   )
 }
 
-function Sezione({ titolo, incarichi, d }: { titolo: string; incarichi: Incarico[]; d: Incarichi }) {
+function Sezione({ titolo, incarichi, d, evidenziato }: { titolo: string; incarichi: Incarico[]; d: Incarichi; evidenziato: string | null }) {
   if (!incarichi.length) return null
   return (
     <section aria-label={titolo}>
@@ -68,8 +76,8 @@ function Sezione({ titolo, incarichi, d }: { titolo: string; incarichi: Incarico
       </h2>
       <ul className="flex flex-col gap-2">
         {incarichi.map((i) => (
-          <li key={`${i.tipo}-${i.id}`}>
-            <Riga i={i} d={d} />
+          <li key={`${i.tipo}-${i.id}`} id={`incarico-${i.tipo}:${i.id}`}>
+            <Riga i={i} d={d} evidenziato={evidenziato === `${i.tipo}:${i.id}`} />
           </li>
         ))}
       </ul>
@@ -77,7 +85,7 @@ function Sezione({ titolo, incarichi, d }: { titolo: string; incarichi: Incarico
   )
 }
 
-function Riga({ i, d }: { i: Incarico; d: Incarichi }) {
+function Riga({ i, d, evidenziato }: { i: Incarico; d: Incarichi; evidenziato: boolean }) {
   const connesso = useStatoConnessione() === 'connesso'
   const { utente } = useUtenteCorrente()
   const [prendi, setPrendi] = useState(false)
@@ -89,7 +97,7 @@ function Riga({ i, d }: { i: Incarico; d: Incarichi }) {
   const elimina = useScrittura(() => api.elimina(percorso(i), i.versione), { successo: 'Eliminata' })
   const mio = i.incaricatoId !== null && i.incaricatoId === utente?.id
   return (
-    <Card className={cn(i.stato === 'completato' && 'opacity-75')} data-testid="incarico">
+    <Card className={cn(i.stato === 'completato' && 'opacity-75', evidenziato && 'ring-2 ring-primario/50')} data-testid="incarico">
       <CardContent className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-3">
         {i.stato === 'completato' ? <CheckCircle2 className="size-5 shrink-0 text-successo" /> : <Circle className={cn('size-5 shrink-0', i.stato === 'assegnato' ? 'text-primario' : 'text-bordo')} />}
         {/* Su telefono i comandi vanno a capo sotto il testo, che resta leggibile. */}

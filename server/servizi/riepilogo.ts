@@ -19,13 +19,11 @@ export function riepilogo(db: Db, u: UtenteCorrente, eventoId: string, adesso = 
     const archiviato = e.stato === 'archiviato'
     const righe = repoPart.partecipantiEvento(db, eventoId)
     const c = contaPresenze(righe.map(repoPart.presenza))
-    const mio = righe.find((r) => r.invito_id === null && r.utente_id === u.id)
     const base = {
       coperti: { equivalenti: copertiEquivalenti(e), adulti: e.adulti, bambini: e.bambini, automatici: e.copertiAutomatici },
       partecipanti: righe.length
         ? { confermati: c.adulti.confermati + c.bambini.confermati, inAttesa: c.adulti.inAttesa + c.bambini.inAttesa, assenti: c.adulti.assenti + c.bambini.assenti }
         : null,
-      mioInvito: mio?.stato ?? null,
       archiviato,
     }
     if (archiviato) return { ...base, incarichi: null, attivita: null, proposte: null, sondaggi: null, spesa: null }

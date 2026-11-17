@@ -49,8 +49,8 @@ LAN 9870 chiusa. Da fare: collaudo manuale sui dispositivi (`docs/collaudo/colla
 
 ## Problemi aperti
 
-- Nessun test per l'avviso di aggiornamento PWA con due build reali (verificato solo che
-  il service worker metta in cache il guscio e mai `/api`): da provare a mano al secondo rilascio.
+- ~~Nessun test per l'avviso di aggiornamento PWA con due build reali~~: coperto dal 17/11
+  (`test/e2e/aggiornamento.pwa.ts`, SPEC §29.8).
 - Copia dei backup su un secondo supporto: decisione aperta (SPEC §11.6).
 - Trascinamento per il riordino non implementato (taglio previsto): Su/Giù/Sposta in.
 
@@ -246,7 +246,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   dati invariati (nessun partecipante, eventi in manuale, nessuna serie), chiavi esterne ok,
   altri servizi attivi.
 
-## Ricorrenze e copia delle ricette fra Famiglie (16/11/2026, ramo `ricorrenze-ricette`, da rilasciare)
+## Ricorrenze e copia delle ricette fra Famiglie (17/11/2026, in produzione: `20261117-0836-e08f42c`, schema v13)
 
 - SPEC 6.1 / §28: ricorrenze per Famiglia (Famiglia → Membri), associazione facoltativa agli
   eventi (riquadro «Ricorrenza» in Panoramica), proposta duplicando, confronto con l'evento
@@ -260,4 +260,30 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   nasce privata (prima: visibile in tutte); le serie anonime diventano ricorrenze con un nome.
 - Test: `npm run check` 364 verdi (nuovo `ricorrenze.test.ts`), `npm run test:e2e` 43 verdi
   (nuovo `ricorrenze.spec.ts`).
-- Rilascio: `! scripts/rilascia.sh ricorrenze-ricette`.
+- Rilasciato il 17/11 alle 08:36 (backup `pre-migrazione-20261117-083705-v12.db`); verificati
+  salute (schema 13), migrazione applicata senza ricorrenze create, 6 eventi e 74 ricette,
+  chiavi esterne e integrità ok.
+
+## Rifinitura UX e collaudo (17/11/2026, ramo `rifinitura-ux`, da rilasciare)
+
+- SPEC 6.2 / §29. Audit iniziale: ricorrenze e copia delle ricette fra Famiglie già corrette
+  (solo collaudo); notifiche senza categoria, gruppi non apribili, incarichi senza destinazione
+  precisa e un errore (bacheca di un'altra Famiglia aperta su quella attiva); riepilogo senza
+  priorità; ricettario che perdeva posizione e ricerca tornando indietro; suggerimenti del menù
+  irraggiungibili da tastiera; nessun test dell'aggiornamento PWA.
+- **Rettifica sulle presenze** (Loris, 17/11): solo chi può modificare l'evento aggiorna
+  partecipanti, accompagnatori e stati; tolti «Conferma presenza» e la gestione dei propri
+  accompagnatori dall'interfaccia, dal riepilogo e dalle API (403 prima della validazione). Le
+  presenze già registrate in produzione (15 partecipanti) restano invariate.
+- Decisione di Loris: nessuna notifica nuova per le conferme di partecipazione.
+- Migrazione `0014_dettagli_notifiche.sql` (colonna JSON, nessun dato cambiato) provata su una
+  copia del database di produzione: conteggi identici (salvo il registro delle migrazioni),
+  19 notifiche e 15 partecipanti invariati, chiavi esterne e integrità ok.
+- Test: `npm run check` 371 verdi (nuovo `notifiche.test.ts`; partecipanti e riepilogo
+  aggiornati alla rettifica), `npm run test:e2e` 45 verdi (nuovi `rifinitura.spec.ts` e
+  `aggiornamento.pwa.ts` su un server isolato 127.0.0.1:4175; `test:e2e` costruisce ora anche
+  una seconda build `pwa-nuova`).
+- Limitazioni: notifiche raggruppate più vecchie della 0014 senza elenco; un messaggio
+  eliminato toglie l'intera notifica raggruppata che lo cita per ultimo; `max_accompagnatori`
+  resta nel database senza effetto.
+- Rilascio: `! scripts/rilascia.sh rifinitura-ux`.

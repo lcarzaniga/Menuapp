@@ -192,7 +192,7 @@ export function prendi(db: Db, u: UtenteCorrente, tipo: TipoIncarico, id: string
     if (r.incaricato) throw conflittoVersione(incaricoAttuale(db, u, r))
     const toglie = tipo === 'voce' && togliDallaSpesa && r.inSpesa
     scrivi(db, u, r, versione, { incaricato: u.nome, incaricatoId: u.id, esternoId: null, completato: false, inSpesa: toglie ? false : r.inSpesa, spesaTolta: toglie }, adesso)
-    avvisa(db, { tipo: 'incarico', attoreId: u.id, destinatari: personeEvento(db, r.eventoId), chiave: `incarichi:${r.eventoId}`, eventoId: r.eventoId, testo: `${u.nome} porta «${r.nome}»` }, adesso)
+    avvisa(db, { tipo: 'incarico', attoreId: u.id, destinatari: personeEvento(db, r.eventoId), chiave: `incarichi:${r.eventoId}`, eventoId: r.eventoId, ancora: `${r.tipo}:${r.id}`, testo: `${u.nome} porta «${r.nome}»` }, adesso)
     incrementaRevisione(db)
     return incaricoAttuale(db, u, r)
   })
@@ -207,7 +207,7 @@ export function rinuncia(db: Db, u: UtenteCorrente, tipo: TipoIncarico, id: stri
     scrivi(db, u, r, versione, { ...NESSUNO, completato: false, inSpesa: r.spesaTolta ? true : r.inSpesa, spesaTolta: false }, adesso)
     avvisa(
       db,
-      { tipo: 'incarico', attoreId: u.id, destinatari: personeEvento(db, r.eventoId), chiave: `incarichi:${r.eventoId}`, eventoId: r.eventoId, testo: `«${r.nome}» è di nuovo da assegnare` },
+      { tipo: 'incarico', attoreId: u.id, destinatari: personeEvento(db, r.eventoId), chiave: `incarichi:${r.eventoId}`, eventoId: r.eventoId, ancora: `${r.tipo}:${r.id}`, testo: `«${r.nome}» è di nuovo da assegnare` },
       adesso,
     )
     incrementaRevisione(db)
@@ -282,9 +282,9 @@ export function assegna(db: Db, u: UtenteCorrente, tipo: TipoIncarico, id: strin
       adesso,
     )
     if (resp.incaricatoId && resp.incaricatoId !== u.id) {
-      avvisa(db, { tipo: 'incarico', attoreId: u.id, destinatari: [resp.incaricatoId], chiave: `assegnato:${r.eventoId}`, eventoId: r.eventoId, testo: `Ti è stato affidato «${r.nome}»` }, adesso)
+      avvisa(db, { tipo: 'incarico', attoreId: u.id, destinatari: [resp.incaricatoId], chiave: `assegnato:${r.eventoId}`, eventoId: r.eventoId, ancora: `${r.tipo}:${r.id}`, testo: `Ti è stato affidato «${r.nome}»` }, adesso)
     } else if (!resp.utente) {
-      avvisa(db, { tipo: 'incarico', attoreId: u.id, destinatari: personeEvento(db, r.eventoId), chiave: `incarichi:${r.eventoId}`, eventoId: r.eventoId, testo: `${resp.incaricato} porta «${r.nome}»` }, adesso)
+      avvisa(db, { tipo: 'incarico', attoreId: u.id, destinatari: personeEvento(db, r.eventoId), chiave: `incarichi:${r.eventoId}`, eventoId: r.eventoId, ancora: `${r.tipo}:${r.id}`, testo: `${resp.incaricato} porta «${r.nome}»` }, adesso)
     }
     incrementaRevisione(db)
     return incaricoAttuale(db, u, r)
@@ -336,7 +336,7 @@ export function creaCosa(db: Db, u: UtenteCorrente, eventoId: string, d: NuovaCo
     repo.inserisciCosa(db, { id: d.id, eventoId, ...dati, creatoDa: u.id }, adesso)
     if (d.prendo) repo.scriviIncaricoCosa(db, d.id, 1, { incaricato: u.nome, incaricatoId: u.id, esternoId: null, completato: false }, adesso)
     const testo = d.prendo ? `${u.nome} porta «${dati.nome}»` : `Da portare: «${dati.nome}»`
-    avvisa(db, { tipo: 'incarico', attoreId: u.id, destinatari: personeEvento(db, eventoId), chiave: `incarichi:${eventoId}`, eventoId, testo }, adesso)
+    avvisa(db, { tipo: 'incarico', attoreId: u.id, destinatari: personeEvento(db, eventoId), chiave: `incarichi:${eventoId}`, eventoId, ancora: `cosa:${d.id}`, testo }, adesso)
     incrementaRevisione(db)
     return incaricoAttuale(db, u, leggi(db, 'cosa', d.id))
   })

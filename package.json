@@ -12,7 +12,7 @@
     "lint": "oxlint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "vite build --outDir test-results/dist-e2e --emptyOutDir && playwright test",
+    "test:e2e": "vite build --outDir test-results/dist-e2e --emptyOutDir && MENUAPP_COMMIT=pwa-nuova vite build --outDir test-results/dist-pwa-nuova --emptyOutDir && playwright test",
     "check": "npm run lint && npm run typecheck && npm test && npm run build",
     "generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 public/logo.svg"
   },

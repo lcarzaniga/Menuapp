@@ -40,10 +40,10 @@ export const SchemaPartecipanti = z.object({
   copertiCalcolati: z.object({ adulti: z.number().int(), bambini: z.number().int() }),
   coefficienteBambini: z.number(),
   maxAccompagnatori: z.number().int().nullable(),
-  /** Chi organizza (proprietario o in modifica) gestisce tutte le presenze. */
+  /** Chi può modificare l'evento (proprietario o in modifica) gestisce tutte le presenze; nessun altro. */
   puoGestire: z.boolean(),
-  /** Invito dell'utente corrente, se è collegato a un partecipante. */
-  mioInvitoId: Id.nullable(),
+  /** Nomi di chi può aggiornare le presenze (proprietario e permesso di modifica). */
+  gestori: z.array(z.string()),
   /** Evento archiviato: elenco com'era all'archiviazione. */
   solaLettura: z.boolean(),
   /** Per aggiungere: persone con l'app (Famiglia ed evento) e rubrica (solo a chi organizza). */

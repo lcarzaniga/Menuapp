@@ -262,7 +262,7 @@ describe('notifiche', () => {
     await ok(anna.scrivi('POST', `${P}/gruppi/${G}/messaggi`, { id: 'm2', testo: 'Secondo' }))
     expect(await notifiche(anna)).toEqual([])
     const perBruno = await notifiche(bruno)
-    expect(perBruno).toEqual([expect.objectContaining({ tipo: 'bacheca_famiglia', conteggio: 2, testo: 'Secondo', letta: false, collegamento: '/famiglia?messaggio=m2' })])
+    expect(perBruno).toEqual([expect.objectContaining({ tipo: 'bacheca_famiglia', conteggio: 2, testo: 'Secondo', letta: false, collegamento: '/famiglia?famiglia=gruppo-famiglia&messaggio=m2' })])
     expect(corpo(await bruno.leggi(`${P}/notifiche/conteggio`))).toEqual({ nonLette: 1 })
     await ok(bruno.scrivi('POST', `${P}/notifiche/${perBruno[0]!.id}/letta`, {}))
     expect(corpo(await bruno.leggi(`${P}/notifiche/conteggio`))).toEqual({ nonLette: 0 })

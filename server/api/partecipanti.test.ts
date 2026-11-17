@@ -150,28 +150,39 @@ describe('accompagnatori', () => {
     expect(uno(t.db, "SELECT count(*) AS n FROM partecipanti WHERE id = 'a-leo'")).toEqual({ n: 0 })
   })
 
-  it('una persona con l\'app conferma per sé e gestisce i suoi accompagnatori, entro il limite; non tocca gli altri', async () => {
+  it('presenze solo manuali: chi è collegato al proprio invito ma non può modificare l\'evento non risponde da sé (SPEC §29.2)', async () => {
     await ok(nuovo('p-anna', { utenteId: anna.id }))
     await ok(nuovo('p-marco', { nome: 'Zio Marco' }))
-    let l = await elenco(anna)
-    expect(l).toMatchObject({ mioInvitoId: 'p-anna', puoGestire: false, scelte: { persone: [], rubrica: [] } })
-    await ok(anna.scrivi('PUT', `${P}/partecipanti/p-anna`, { nome: 'Anna', categoria: 'adulto', stato: 'confermato', note: 'arrivo alle 12', versione: 1 }))
-    await ok(anna.scrivi('POST', `${P}/eventi/ev/partecipanti`, { id: 'a-luca', invitoId: 'p-anna', nome: 'Luca', categoria: 'bambino', stato: 'confermato' }))
-    await ok(anna.scrivi('PUT', `${P}/partecipanti/p-anna/accompagnatori`, { anonimi: { adultiConfermati: 1, adultiInAttesa: 0, bambiniConfermati: 0, bambiniInAttesa: 0 }, versione: 2 }))
-    l = await elenco(anna)
-    expect(l.inviti[0]).toMatchObject({ nome: 'Anna', stato: 'confermato', note: 'arrivo alle 12', accompagnatori: [{ nome: 'Luca', stato: 'confermato' }] })
-    // Non cambia gli altri inviti, non ne crea di nuovi, non cambia la propria categoria.
-    expect((await anna.scrivi('PUT', `${P}/partecipanti/p-marco`, { nome: 'Zio Marco', categoria: 'adulto', stato: 'confermato', note: '', versione: 1 })).statusCode).toBe(403)
-    expect((await anna.scrivi('POST', `${P}/eventi/ev/partecipanti`, { id: 'p-x', nome: 'Amica di Anna' })).statusCode).toBe(403)
-    expect((await anna.scrivi('POST', `${P}/eventi/ev/partecipanti`, { id: 'a-y', invitoId: 'p-marco', nome: 'Y' })).statusCode).toBe(403)
-    expect((await anna.scrivi('PUT', `${P}/partecipanti/p-anna`, { nome: 'Anna', categoria: 'bambino', stato: 'confermato', note: '', versione: 3 })).statusCode).toBe(403)
-    // Limite dell'evento: 2 accompagnatori (Luca + 1 senza nome) → il terzo no; chi organizza sì.
-    await coperti(false, { maxAccompagnatori: 2 })
-    expect(await regola(anna.scrivi('POST', `${P}/eventi/ev/partecipanti`, { id: 'a-z', invitoId: 'p-anna', nome: 'Zoe' }))).toBe('troppi_accompagnatori')
-    await ok(t.scrivi('POST', `${P}/eventi/ev/partecipanti`, { id: 'a-z', invitoId: 'p-anna', nome: 'Zoe' }))
-    // Ridurre si può sempre; l'accompagnatore proprio si toglie.
-    await ok(anna.scrivi('PUT', `${P}/partecipanti/p-anna/accompagnatori`, { anonimi: { adultiConfermati: 0, adultiInAttesa: 0, bambiniConfermati: 0, bambiniInAttesa: 0 }, versione: (await leggiP('p-anna')).versione }))
-    await ok(anna.scrivi('DELETE', `${P}/partecipanti/a-luca?versione=1`))
+    await ok(t.scrivi('POST', `${P}/eventi/ev/partecipanti`, { id: 'a-luca', invitoId: 'p-anna', nome: 'Luca', categoria: 'bambino', stato: 'in_attesa' }))
+    const l = await elenco(anna)
+    // Anna (sola lettura) vede l'elenco e chi lo gestisce, ma non ha comandi.
+    expect(l).toMatchObject({ puoGestire: false, scelte: { persone: [], rubrica: [] } })
+    expect(l.gestori).toContain('Bruno')
+    expect(l).not.toHaveProperty('mioInvitoId')
+    const prima = uno(t.db, 'SELECT group_concat(id || stato || versione) AS s FROM partecipanti')
+    // Il server rifiuta ogni scrittura, anche sul proprio invito e sui propri accompagnatori,
+    // e prima di guardare il corpo (anche se non valido).
+    for (const r of [
+      anna.scrivi('PUT', `${P}/partecipanti/p-anna`, { nome: 'Anna', categoria: 'adulto', stato: 'confermato', note: '', versione: 1 }),
+      anna.scrivi('PUT', `${P}/partecipanti/p-anna`, { stato: 'boh' }),
+      anna.scrivi('PUT', `${P}/partecipanti/a-luca`, { nome: 'Luca', categoria: 'bambino', stato: 'confermato', note: '', versione: 1 }),
+      anna.scrivi('POST', `${P}/eventi/ev/partecipanti`, { id: 'a-z', invitoId: 'p-anna', nome: 'Zoe' }),
+      anna.scrivi('POST', `${P}/eventi/ev/partecipanti`, { id: 'p-x', nome: 'Amica di Anna' }),
+      anna.scrivi('PUT', `${P}/partecipanti/p-anna/accompagnatori`, { anonimi: { adultiConfermati: 1, adultiInAttesa: 0, bambiniConfermati: 0, bambiniInAttesa: 0 }, versione: 1 }),
+      anna.scrivi('POST', `${P}/partecipanti/a-luca/autonomo`, { versione: 1 }),
+      anna.scrivi('DELETE', `${P}/partecipanti/a-luca?versione=1`),
+      anna.scrivi('PUT', `${P}/partecipanti/p-marco`, { nome: 'Zio Marco', categoria: 'adulto', stato: 'confermato', note: '', versione: 1 }),
+    ]) {
+      expect((await r).statusCode).toBe(403)
+    }
+    expect(uno(t.db, 'SELECT group_concat(id || stato || versione) AS s FROM partecipanti')).toEqual(prima)
+    // Chi può modificare l'evento (Bruno) registra la conferma di Anna e dei suoi accompagnatori.
+    await ok(bruno.scrivi('PUT', `${P}/partecipanti/p-anna`, { nome: 'Anna', categoria: 'adulto', stato: 'confermato', note: 'arrivo alle 12', versione: 1 }))
+    await ok(bruno.scrivi('PUT', `${P}/partecipanti/p-anna/accompagnatori`, { anonimi: { adultiConfermati: 1, adultiInAttesa: 0, bambiniConfermati: 0, bambiniInAttesa: 0 }, versione: 2 }))
+    // Il vecchio limite degli accompagnatori riguardava le risposte personali: non frena chi organizza.
+    await coperti(false, { maxAccompagnatori: 0 })
+    await ok(bruno.scrivi('POST', `${P}/eventi/ev/partecipanti`, { id: 'a-z', invitoId: 'p-anna', nome: 'Zoe' }))
+    expect((await elenco(anna)).inviti[0]).toMatchObject({ nome: 'Anna', stato: 'confermato', note: 'arrivo alle 12', accompagnatori: [{ nome: 'Luca', stato: 'in_attesa' }, { nome: 'Zoe' }] })
     // Chi è collegato ma non vede l'evento non vede né il suo invito né l'elenco.
     await ok(nuovo('p-carla', { utenteId: carla.id }))
     expect((await carla.leggi(`${P}/eventi/ev/partecipanti`)).statusCode).toBe(404)

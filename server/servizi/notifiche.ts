@@ -23,6 +23,8 @@ export interface Avviso {
   eventoId?: string | null
   messaggioId?: string | null
   piattoId?: string | null
+  /** Elemento preciso a cui porta la notifica, oltre al messaggio: «voce:<id>» o «cosa:<id>» (Chi porta). */
+  ancora?: string | null
   testo: string
 }
 
@@ -45,6 +47,7 @@ export function avvisa(db: Db, a: Avviso, adesso = Date.now()): void {
         piattoId: a.piattoId ?? null,
         attoreId: a.attoreId,
         testo,
+        ancora: a.ancora ?? null,
       },
       adesso,
     )
@@ -67,16 +70,36 @@ function accessibile(db: Db, u: UtenteCorrente, n: repo.RigaNotifica): boolean {
   return true
 }
 
-function collegamento(n: repo.RigaNotifica): string {
-  const ancora = n.messaggio_id ? `?messaggio=${n.messaggio_id}` : ''
+/**
+ * Dove porta la notifica (o un suo aggiornamento): il contenuto preciso quando è noto. La
+ * bacheca di una Famiglia porta con sé la Famiglia, che può non essere quella attiva.
+ */
+function collegamento(n: repo.RigaNotifica, messaggioId = n.messaggio_id, ancora: string | null = null): string {
+  const messaggio = messaggioId ? `messaggio=${encodeURIComponent(messaggioId)}` : ''
   if (n.evento_id) {
-    if (n.tipo === 'incarico') return `/eventi/${n.evento_id}/chi-porta`
-    if (n.tipo === 'menu' || n.tipo === 'valutazione' || n.tipo === 'condivisione') return n.tipo === 'condivisione' ? `/eventi/${n.evento_id}` : `/eventi/${n.evento_id}/menu`
-    return `/eventi/${n.evento_id}/bacheca${ancora}`
+    if (n.tipo === 'incarico') return `/eventi/${n.evento_id}/chi-porta${ancora ? `?incarico=${encodeURIComponent(ancora)}` : ''}`
+    if (n.tipo === 'condivisione') return `/eventi/${n.evento_id}`
+    if (n.tipo === 'menu' || n.tipo === 'valutazione') return `/eventi/${n.evento_id}/menu`
+    return `/eventi/${n.evento_id}/bacheca${messaggio ? `?${messaggio}` : ''}`
   }
-  if (n.gruppo_id) return `/famiglia${ancora}`
+  if (n.gruppo_id) return `/famiglia?famiglia=${encodeURIComponent(n.gruppo_id)}${messaggio ? `&${messaggio}` : ''}`
   if (n.piatto_id) return `/ricettario/${n.piatto_id}`
   return '/notifiche'
+}
+
+const ultimaAncora = (n: repo.RigaNotifica) => (n.dettagli ? ((JSON.parse(n.dettagli) as repo.DettaglioNotifica[]).at(-1)?.ancora ?? null) : null)
+
+/** Aggiornamenti di una notifica raggruppata, dal più recente; vuoto se è uno solo. */
+function dettagli(db: Db, n: repo.RigaNotifica, nomi: Map<string, string | null>): Notifica['dettagli'] {
+  if (n.conteggio < 2 || !n.dettagli) return []
+  const nome = (id: string | null) => {
+    if (!id) return null
+    if (!nomi.has(id)) nomi.set(id, repoAccesso.leggiUtente(db, id)?.nome ?? null)
+    return nomi.get(id) ?? null
+  }
+  return (JSON.parse(n.dettagli) as repo.DettaglioNotifica[])
+    .map((d) => ({ attore: nome(d.attoreId), testo: d.testo, collegamento: collegamento(n, d.messaggioId ?? n.messaggio_id, d.ancora), il: d.il }))
+    .reverse()
 }
 
 function titolo(db: Db, n: repo.RigaNotifica): string {
@@ -96,6 +119,7 @@ export function elencaNotifiche(db: Db, u: UtenteCorrente, adesso = Date.now()):
   return transazione(db, () => {
     repo.pulisciNotificheVecchie(db, u.id, adesso - 60 * 24 * 3600_000)
     const visibili: Notifica[] = []
+    const nomi = new Map<string, string | null>()
     for (const n of repo.notificheUtente(db, u.id)) {
       if (!accessibile(db, u, n)) {
         repo.eliminaNotifica(db, n.id)
@@ -109,7 +133,8 @@ export function elencaNotifiche(db: Db, u: UtenteCorrente, adesso = Date.now()):
         testo: n.testo,
         attore: n.attore_nome,
         conteggio: n.conteggio,
-        collegamento: collegamento(n),
+        collegamento: collegamento(n, n.messaggio_id, ultimaAncora(n)),
+        dettagli: dettagli(db, n, nomi),
         letta: n.letta_il !== null,
         aggiornatoIl: n.aggiornato_il,
       })

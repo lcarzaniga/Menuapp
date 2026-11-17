@@ -32,7 +32,6 @@ describe('a che punto siamo', () => {
     expect(await riepilogo()).toEqual({
       coperti: { equivalenti: 7, adulti: 6, bambini: 2, automatici: false },
       partecipanti: null,
-      mioInvito: null,
       incarichi: null,
       attivita: null,
       proposte: null,
@@ -60,10 +59,11 @@ describe('a che punto siamo', () => {
     await ok(t.scrivi('PUT', `${P}/partecipanti/pm/accompagnatori`, { anonimi: { adultiConfermati: 0, adultiInAttesa: 0, bambiniConfermati: 1, bambiniInAttesa: 0 }, versione: 1 }))
     let r = await riepilogo(anna)
     expect(r.partecipanti).toEqual({ confermati: 2, inAttesa: 1, assenti: 0 })
-    expect(r.mioInvito).toBe('in_attesa')
-    await ok(anna.scrivi('PUT', `${P}/partecipanti/pa`, { nome: 'Anna', categoria: 'adulto', stato: 'confermato', note: '', versione: 1 }))
+    expect(r).not.toHaveProperty('mioInvito')
+    // Le presenze le registra chi organizza (SPEC §29.2).
+    await ok(t.scrivi('PUT', `${P}/partecipanti/pa`, { nome: 'Anna', categoria: 'adulto', stato: 'confermato', note: '', versione: 1 }))
     r = await riepilogo(anna)
-    expect(r).toMatchObject({ partecipanti: { confermati: 3, inAttesa: 0 }, mioInvito: 'confermato' })
+    expect(r).toMatchObject({ partecipanti: { confermati: 3, inAttesa: 0 } })
     // Incarichi: la torta a Zio Marco, il vino ancora senza nessuno.
     const torta = corpo(await t.leggi(`${P}/eventi/ev/incarichi`)).incarichi.find((i: { id: string }) => i.id === 'v2')
     await ok(t.scrivi('POST', `${P}/voci/v2/assegna`, { versione: torta.versione, partecipanteId: 'pm', togliDallaSpesa: true }))

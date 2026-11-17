@@ -1,5 +1,6 @@
 // Partecipanti, conferme e accompagnatori (SPEC §24): elenco facoltativo, +N, coperti manuali
-// e calcolati con confronto, il proprio invito, «Chi porta» con un partecipante che non viene.
+// e calcolati con confronto, conferme parziali, presenze solo da chi organizza (SPEC §29.2),
+// «Chi porta» con un partecipante che non viene.
 import { mkdirSync } from 'node:fs'
 import { expect, type Page, test } from '@playwright/test'
 import { apiLeggi, apiScrivi } from './aiuti'
@@ -18,7 +19,8 @@ test('partecipanti, accompagnatori e coperti calcolati', async ({ page, request 
 
   await page.goto('/#/eventi/ev-part/partecipanti')
   await expect(page.getByText('Nessun partecipante')).toBeVisible()
-  await expect(page.getByText('· manuali')).toBeVisible()
+  await expect(page.getByTestId('coperti-usati')).toHaveText('11 coperti per porzioni e spesa')
+  await expect(page.getByText('Manuali', { exact: true })).toBeVisible()
 
   // ── Zio Marco, confermato, da solo
   await page.getByRole('button', { name: 'Aggiungi partecipante' }).click()
@@ -47,15 +49,23 @@ test('partecipanti, accompagnatori e coperti calcolati', async ({ page, request 
   await dialogo.getByRole('button', { name: 'Salva' }).click()
   await expect(anna.getByRole('list', { name: 'Accompagnatori di Zia Anna' })).toContainText('Sofia')
   await expect(anna).toContainText('+ 1 adulto (confermato) senza nome')
+  // Sofia è ancora da confermare: l'invito di Zia Anna è una conferma parziale.
+  await anna.getByRole('group', { name: 'Presenza di Sofia' }).getByRole('button', { name: 'In attesa' }).click()
+  await expect(anna.getByText('conferma parziale')).toBeVisible()
+  await anna.getByRole('group', { name: 'Presenza di Sofia' }).getByRole('button', { name: 'Confermato' }).click()
+  await expect(anna.getByText('conferma parziale')).toHaveCount(0)
 
-  // ── Io, con l'app: conferma presenza dal mio invito
+  // ── Io, con l'app: nessun riquadro di risposta personale, si aggiorna come gli altri inviti
   await page.getByRole('button', { name: 'Aggiungi partecipante' }).click()
   await page.getByRole('dialog').getByLabel('Chi', { exact: true }).selectOption({ label: io.utente.nome })
   await page.getByRole('dialog').getByRole('button', { name: 'Aggiungi' }).click()
-  const mio = page.getByTestId('mio-invito')
-  await mio.getByRole('button', { name: 'Ci sono' }).click()
-  await expect(mio.getByRole('button', { name: 'Ci sono' })).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.getByTestId('conteggio-partecipanti')).toContainText('Confermati: 4 adulti, 1 bambino')
+  await expect(page.getByTestId('mio-invito')).toHaveCount(0)
+  const io_ = page.getByTestId('invito').filter({ hasText: io.utente.nome })
+  await io_.getByRole('group', { name: `Presenza di ${io.utente.nome}` }).getByRole('button', { name: 'Confermato' }).click()
+  const totali = page.getByTestId('conteggio-partecipanti')
+  await expect(totali.getByRole('listitem').first()).toContainText('5Confermati1 bambino')
+  // Coperti manuali indipendenti dall'elenco: si dice soltanto quanti sarebbero con i confermati.
+  await expect(page.getByTestId('coperti-confermati')).toContainText('Con i confermati sarebbero 4,5')
 
   // ── Coperti calcolati: confronto e conferma
   await page.getByRole('button', { name: 'Cambia' }).click()
@@ -63,7 +73,8 @@ test('partecipanti, accompagnatori e coperti calcolati', async ({ page, request 
   await dialogo.getByText('Calcolati dai partecipanti').click()
   await expect(dialogo.getByRole('note')).toContainText('passano da 11 a 4,5')
   await dialogo.getByRole('button', { name: 'Conferma: 4,5 coperti' }).click()
-  await expect(page.getByText('· calcolati dai partecipanti')).toBeVisible()
+  await expect(page.getByText('Automatici', { exact: true })).toBeVisible()
+  await expect(page.getByTestId('coperti-usati')).toHaveText('4,5 coperti per porzioni e spesa')
   await foto(page, '01-partecipanti')
 
   // ── «Chi porta»: il vino a Zio Marco, che poi non viene
