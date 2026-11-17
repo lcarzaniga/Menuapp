@@ -1,4 +1,4 @@
-// Duplica evento e ricorrenza dell'evento (SPEC §25, §28).
+// Duplica evento e ricorrenza dell'evento (SPEC §25, §28, §30).
 import { useQuery } from '@tanstack/react-query'
 import { Copy, Repeat } from 'lucide-react'
 import { useState } from 'react'
@@ -12,6 +12,7 @@ import { Campo, Casella, Input, Select } from '@/components/ui/campi'
 import { Finestra } from '@/components/ui/dialog'
 import { usePuoScrivere } from '@/connessione/stato'
 import type { Edizioni, EsitoDuplica, Ricorrenza } from '@/contratto/edizioni.ts'
+import { etichettaRicorrenza, SelettoreRicorrenza, sceltaDi, type ValoreRicorrenza, valoreDi } from './SceltaRicorrenza'
 import { dataBreve } from '@/domain/tempo.ts'
 import type { Evento } from '@/domain/tipi.ts'
 import { useAccessoEvento } from '@/features/accesso/sessione'
@@ -43,10 +44,18 @@ export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiud
   const [gruppoId, setGruppoId] = useState<string>(famigliaEvento && famiglie.some((f) => f.id === famigliaEvento) ? famigliaEvento : (famiglie[0]?.id ?? ''))
   const [partecipanti, setPartecipanti] = useState(false)
   const stessaFamiglia = (gruppoId || null) === famigliaEvento
-  // Si propone la stessa ricorrenza dell'originale; cambiando Famiglia si sceglie fra le sue.
-  const [ricorrenza, setRicorrenza] = useState(e.ricorrenzaId ?? '')
+  // Si propone la stessa ricorrenza dell'originale: una standard vale in ogni Famiglia, una della
+  // Famiglia solo nella sua (cambiando Famiglia si sceglie fra quelle della nuova).
+  const originale = valoreDi(e)
+  const [ricorrenza, setRicorrenza] = useState(originale)
   const ricorrenze = useRicorrenze(gruppoId || null)
-  const sceltaRicorrenza = ricorrenze.data ? (ricorrenze.data.some((x) => x.id === ricorrenza) ? ricorrenza : '') : stessaFamiglia ? ricorrenza : ''
+  const sceltaRicorrenza = !gruppoId
+    ? ''
+    : ricorrenza.startsWith('famiglia:')
+      ? ricorrenze.data
+        ? ricorrenze.data.some((x) => `famiglia:${x.id}` === ricorrenza) ? ricorrenza : ''
+        : stessaFamiglia ? ricorrenza : ''
+      : ricorrenza
   const duplica = useScrittura(
     () =>
       api.crea<EsitoDuplica>(`/eventi/${e.id}/duplica`, {
@@ -55,7 +64,7 @@ export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiud
         data,
         gruppoId: gruppoId || null,
         copiaPartecipanti: partecipanti,
-        ricorrenzaId: sceltaRicorrenza || null,
+        ricorrenza: sceltaDi(sceltaRicorrenza),
       }),
     {
       successo: (r) => `Creato «${r.evento.nome}»`,
@@ -116,20 +125,13 @@ export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiud
         <label className="flex min-h-11 items-center gap-3 text-sm">
           <Casella checked={partecipanti} onChange={(ev) => setPartecipanti(ev.target.checked)} /> Copia anche i partecipanti (tutti in attesa, da riconfermare)
         </label>
-        {ricorrenze.data?.length ? (
+        {gruppoId ? (
           <Campo
             etichetta="Ricorrenza"
             htmlFor="dup-ricorrenza"
-            aiuto={e.ricorrenzaId && sceltaRicorrenza === e.ricorrenzaId ? 'Proposta la stessa dell\'evento originale: puoi cambiarla o toglierla.' : undefined}
+            aiuto={originale && sceltaRicorrenza === originale ? 'Proposta la stessa dell\'evento originale: puoi cambiarla o toglierla.' : undefined}
           >
-            <Select id="dup-ricorrenza" value={sceltaRicorrenza} onChange={(ev) => setRicorrenza(ev.target.value)}>
-              <option value="">Nessuna</option>
-              {ricorrenze.data.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.nome}
-                </option>
-              ))}
-            </Select>
+            <SelettoreRicorrenza id="dup-ricorrenza" valore={sceltaRicorrenza} onCambia={setRicorrenza} famiglia={ricorrenze.data ?? []} />
           </Campo>
         ) : null}
         <div className="grid gap-3 rounded-xl bg-tenue/60 p-3 text-xs sm:grid-cols-2" data-testid="cosa-si-copia">
@@ -162,11 +164,12 @@ export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiud
 export function PannelloRicorrenza({ evento: e }: { evento: Evento }) {
   const q = useEdizioni(e.id)
   const puoScrivere = usePuoScrivere()
-  const imposta = useScrittura((ricorrenzaId: string | null) => api.modifica<Edizioni>(`/eventi/${e.id}/ricorrenza`, { ricorrenzaId }), {
-    successo: (r) => (r.ricorrenza ? `Ricorrenza: ${r.ricorrenza.nome}` : 'Ricorrenza tolta'),
+  const imposta = useScrittura((v: ValoreRicorrenza) => api.modifica<Edizioni>(`/eventi/${e.id}/ricorrenza`, { ricorrenza: sceltaDi(v) }), {
+    successo: (r) => (r.ricorrenza ? `Ricorrenza: ${etichettaRicorrenza(r.ricorrenza)}` : 'Nessuna ricorrenza'),
   })
   const d = q.data
-  if (!d || (!d.ricorrenza && !d.ricorrenze.length && !d.altriEventi.length)) return null
+  if (!d || (!d.ricorrenza && !d.puoAssociare && !d.altriEventi.length)) return null
+  const attuale = d.ricorrenza ? `${d.ricorrenza.tipo}:${d.ricorrenza.id}` : ''
   return (
     <Card>
       <CardHeader>
@@ -175,26 +178,26 @@ export function PannelloRicorrenza({ evento: e }: { evento: Evento }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        {d.puoAssociare && d.ricorrenze.length ? (
-          <Select
-            aria-label="Ricorrenza dell'evento"
-            value={d.ricorrenza?.id ?? ''}
-            disabled={!puoScrivere || imposta.inCorso}
-            onChange={(ev) => void imposta.esegui(ev.target.value || null)}
-          >
-            <option value="">Nessuna ricorrenza</option>
-            {d.ricorrenze.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.nome}
-              </option>
-            ))}
-          </Select>
+        {d.puoAssociare ? (
+          <SelettoreRicorrenza etichetta="Ricorrenza dell'evento" valore={attuale} famiglia={d.ricorrenze} disabilitato={!puoScrivere || imposta.inCorso} onCambia={(v) => void imposta.esegui(v)} />
         ) : (
-          <p className="text-sm">{d.ricorrenza ? d.ricorrenza.nome : 'Nessuna ricorrenza'}</p>
+          <p className="text-sm">{d.ricorrenza ? etichettaRicorrenza(d.ricorrenza) : 'Nessuna ricorrenza'}</p>
         )}
-        {d.puoAssociare && !d.ricorrenze.length ? (
+        {d.suggerita ? (
+          // Proposta dall'occasione: mai applicata da sola (SPEC §30).
+          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-info-tenue px-3 py-2 text-sm text-info" role="note" data-testid="ricorrenza-suggerita">
+            <span className="min-w-0 flex-1">L&apos;occasione indica la ricorrenza standard «{d.suggerita.nome}».</span>
+            <Button misura="piccolo" disabled={!puoScrivere || imposta.inCorso} onClick={() => void imposta.esegui(`standard:${d.suggerita!.id}`)}>
+              Usa «{d.suggerita.nome}»
+            </Button>
+            <Button misura="piccolo" variante="fantasma" disabled={!puoScrivere || imposta.inCorso} onClick={() => void imposta.esegui(attuale)}>
+              Lascia così
+            </Button>
+          </div>
+        ) : null}
+        {d.puoAssociare ? (
           <p className="text-xs text-testo-tenue">
-            Le ricorrenze (Natale, un compleanno…) si creano in{' '}
+            Le ricorrenze standard (Natale, Pasqua…) sono già pronte; le altre (un compleanno…) si creano in{' '}
             <Link to="/famiglia?scheda=membri" className="underline">
               Famiglia
             </Link>

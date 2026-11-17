@@ -32,7 +32,9 @@ export function rotteEdizioni(app: FastifyInstance, ctx: Contesto): void {
   app.put<ConId>(`${P}/eventi/:id/ricorrenza`, async (req) => {
     const u = chi(req)
     richiediEvento(db, u, req.params.id, 'modifica')
-    return duplicazione.associaRicorrenza(db, u, req.params.id, valida(SchemaAssociaRicorrenza, req.body).ricorrenzaId)
+    const d = valida(SchemaAssociaRicorrenza, req.body)
+    const scelta = 'ricorrenza' in d ? d.ricorrenza : d.ricorrenzaId ? { tipo: 'famiglia' as const, id: d.ricorrenzaId } : null
+    return duplicazione.associaRicorrenza(db, u, req.params.id, scelta)
   })
 
   // ── Ricorrenze della Famiglia ──

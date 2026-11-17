@@ -7,6 +7,8 @@ import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 import { Caricamento, Pagina } from '@/components/Pagina'
 import { aggiungiGiorni, oggiISO } from '@/domain/tempo.ts'
 import type { Evento } from '@/domain/tipi.ts'
+import type { SceltaRicorrenza } from '@/contratto/eventi.ts'
+import { useRicorrenze } from './Edizioni'
 import { type DatiModuloEvento, ModuloEvento } from './ModuloEvento'
 
 export function PaginaNuovoEvento() {
@@ -16,11 +18,16 @@ export function PaginaNuovoEvento() {
   const [errori, setErrori] = useState<Record<string, string>>({})
   // L'evento nasce nella Famiglia attiva (il server verifica che l'utente ne faccia parte).
   const { attiva } = useFamigliaAttiva()
-  const crea = useScrittura((d: DatiModuloEvento) => api.crea<Evento>('/eventi', { id, ...d, ...(attiva ? { gruppoId: attiva.id } : {}) }), {
+  const ricorrenze = useRicorrenze(attiva?.id ?? null)
+  const crea = useScrittura(
+    (x: { d: DatiModuloEvento; ricorrenza?: SceltaRicorrenza | null }) =>
+      api.crea<Evento>('/eventi', { id, ...x.d, ...(attiva ? { gruppoId: attiva.id } : {}), ...(x.ricorrenza !== undefined ? { ricorrenza: x.ricorrenza } : {}) }),
+    {
     successo: 'Evento creato',
     dopo: (e) => naviga(`/eventi/${e.id}/menu`, { replace: true }),
     dopoErrore: (e) => setErrori(Object.fromEntries(e.campi.map((c) => [c.campo, c.messaggio]))),
-  })
+    },
+  )
   if (!imp.data) return <Caricamento />
   const iniziale: DatiModuloEvento = {
     nome: '',
@@ -35,7 +42,15 @@ export function PaginaNuovoEvento() {
   }
   return (
     <Pagina titolo="Nuovo evento" indietro="/">
-      <ModuloEvento iniziale={iniziale} etichetta="Crea e componi il menù" inCorso={crea.inCorso} errori={errori} onSalva={(d) => void crea.esegui(d)} />
+      <ModuloEvento
+        iniziale={iniziale}
+        etichetta="Crea e componi il menù"
+        inCorso={crea.inCorso}
+        errori={errori}
+        // Le ricorrenze valgono per gli eventi di una Famiglia (SPEC §28, §30).
+        ricorrenze={attiva ? (ricorrenze.data ?? []).map((r) => ({ id: r.id, nome: r.nome })) : undefined}
+        onSalva={(d, ricorrenza) => void crea.esegui({ d, ricorrenza })}
+      />
     </Pagina>
   )
 }

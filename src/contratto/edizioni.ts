@@ -1,6 +1,6 @@
 // Contratto API: duplicazione degli eventi, ricorrenze, riepilogo e confronto (SPEC §25–§28).
 import { z } from 'zod'
-import { SchemaEvento } from './eventi.ts'
+import { SchemaEvento, SchemaSceltaRicorrenza } from './eventi.ts'
 import { DataISO, Id, NomeObbligatorio, TestoBreve, Versione } from './comune.ts'
 
 export const SchemaDuplica = z.object({
@@ -11,7 +11,12 @@ export const SchemaDuplica = z.object({
   /** Famiglia del nuovo evento (verificata); assente: quella dell'originale, se ne fai parte. */
   gruppoId: Id.nullable().optional(),
   copiaPartecipanti: z.boolean().default(false),
-  /** Ricorrenza della copia (della sua Famiglia); assente: quella dell'originale se la Famiglia è la stessa. */
+  /**
+   * Ricorrenza della copia (della sua Famiglia o standard), `null` nessuna; assente: quella
+   * dell'originale (una standard sempre, una della Famiglia se la Famiglia è la stessa).
+   */
+  ricorrenza: SchemaSceltaRicorrenza.nullable().optional(),
+  /** Forma precedente (solo ricorrenze della Famiglia), accettata per i client non aggiornati. */
   ricorrenzaId: Id.nullable().optional(),
 })
 export type Duplica = z.infer<typeof SchemaDuplica>
@@ -35,8 +40,12 @@ export const SchemaNuovaRicorrenza = z.object({ id: Id, nome: NomeRicorrenza, de
 export const SchemaAggiornaRicorrenza = z.object({ nome: NomeRicorrenza, descrizione: TestoBreve, versione: Versione })
 
 export const SchemaEdizioni = z.object({
-  /** Ricorrenza dell'evento (null: nessuna). */
-  ricorrenza: z.object({ id: Id, nome: z.string() }).nullable(),
+  /** Ricorrenza dell'evento (null: nessuna): della Famiglia o standard (SPEC §30). */
+  ricorrenza: z.object({ tipo: z.enum(['famiglia', 'standard']), id: Id, nome: z.string() }).nullable(),
+  /** Ricorrenza standard proposta dall'occasione, finché nessuno ha scelto (solo a chi può associare). */
+  suggerita: z.object({ id: Id, nome: z.string() }).nullable(),
+  /** Catalogo delle ricorrenze standard, per sceglierne una (solo a chi può associare). */
+  standard: z.array(z.object({ id: Id, nome: z.string() })),
   /** Altri eventi della stessa ricorrenza che l'utente può vedere, in ordine di data. */
   edizioni: z.array(SchemaEdizione),
   /** Altri eventi della stessa Famiglia visibili all'utente, da confrontare a mano. */
@@ -47,8 +56,11 @@ export const SchemaEdizioni = z.object({
 })
 export type Edizioni = z.infer<typeof SchemaEdizioni>
 
-/** Associa l'evento a una ricorrenza della sua Famiglia, oppure la toglie con null. */
-export const SchemaAssociaRicorrenza = z.object({ ricorrenzaId: Id.nullable() })
+/**
+ * Associa l'evento a una ricorrenza (della Famiglia o standard), oppure la toglie con null.
+ * `ricorrenzaId` è la forma precedente (solo ricorrenze della Famiglia).
+ */
+export const SchemaAssociaRicorrenza = z.union([z.object({ ricorrenza: SchemaSceltaRicorrenza.nullable() }), z.object({ ricorrenzaId: Id.nullable() })])
 
 // ── Riepilogo «A che punto siamo?» (SPEC §26) ───────────────
 // Ogni parte è null quando la funzione non è usata nell'evento: niente indicatori vuoti.

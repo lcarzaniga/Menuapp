@@ -2317,6 +2317,44 @@ dell'originale, uscita dalla Famiglia).
   nuova versione in Impostazioni → Dati, nessun file della build vecchia in cache, sessione, dati
   e preferenze intatti.
 
+## 30. Ricorrenze standard (6.3)
+
+Richiesta di Loris (17/11/2026). Migrazione `0015_ricorrenze_standard.sql`. Completa §28 senza un
+secondo sistema: le ricorrenze della Famiglia restano come sono.
+
+- **Catalogo** (`src/domain/ricorrenze.ts`, uguale per client e server): Vigilia di Natale,
+  Natale, Santo Stefano, Capodanno, Epifania, Pasqua, Pasquetta, Ferragosto, con identificativi
+  stabili (`vigilia-natale`, `natale`, …) indipendenti dal nome. Disponibili in tutte le
+  Famiglie senza configurazione e senza righe per Famiglia; nessun evento creato, nessuna data.
+  Aggiungerne una è una modifica del codice (nessun vincolo SQL sull'elenco).
+- **Modello**: l'evento ha al massimo una ricorrenza, della Famiglia (`ricorrenza_id`) oppure
+  standard (`eventi.ricorrenza_standard`, vincolo nel database); solo gli eventi di una
+  Famiglia ne hanno. `ricorrenza_manuale = 1` quando la ricorrenza, o la sua assenza, l'ha scelta
+  una persona. Il «tipo» che indica una standard è l'**occasione** dell'evento (campo già
+  esistente, con i suggerimenti), riconosciuta solo se coincide con il nome o un sinonimo
+  (senza accenti e maiuscole): mai dal nome libero dell'evento. Il «Tipo» pranzo/cena non c'entra.
+- **Creazione**: senza una scelta esplicita l'evento di una Famiglia con occasione standard entra
+  nella ricorrenza standard (`ricorrenza` assente nella richiesta); con `ricorrenza` (anche
+  `null`) vale la scelta. Nel modulo il campo «Ricorrenza» segue l'occasione finché non lo si
+  tocca. Una ricorrenza della Famiglia omonima non viene mai scelta per nome.
+- **Scelte manuali** (`PUT /eventi/:id/ricorrenza` con `{ ricorrenza: { tipo, id } | null }`;
+  resta accettato `{ ricorrenzaId }`): prevalgono sempre; titolo, data e altri campi non le
+  cambiano; una ricorrenza tolta non torna. Se cambia l'occasione verso un'altra standard, la
+  ricorrenza attuale resta e la Panoramica propone la nuova («Usa «Pasquetta»» / «Lascia così»).
+  Stessa proposta per gli eventi esistenti senza ricorrenza; nessuna associazione in massa.
+- **Duplicazione**: la copia mantiene la ricorrenza standard (anche in un'altra Famiglia), salvo
+  scelta diversa; nessuna nuova definizione. **Edizioni e confronto**: eventi della stessa
+  ricorrenza standard **nella stessa Famiglia**; confronto invariato (§27). Spostando un evento
+  in un'altra Famiglia la standard resta, rendendolo personale si perde.
+- **Interfaccia**: un unico selettore (creazione, Panoramica, Duplica) con «Nessuna ricorrenza»,
+  «Ricorrenze standard» e «Ricorrenze della Famiglia» (queste con «(della Famiglia)»); la
+  ricorrenza si mostra come «Natale · standard» o «Natale · della Famiglia». In Famiglia →
+  Membri l'elenco delle standard già pronte.
+- Migrazione provata su una copia del database di produzione (17/11): eventi e snapshot
+  identici, nessuna ricorrenza standard assegnata, l'unico evento con una ricorrenza della
+  Famiglia («Vigilia di Natale») la conserva come scelta manuale.
+- Test: `server/api/ricorrenze-standard.test.ts`, e2e `ricorrenze-standard.spec.ts`.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2340,3 +2378,4 @@ dell'originale, uscita dalla Famiglia).
 | 16/11/2026 | 6.0 — **Organizzazione degli eventi** (§24–§27): partecipanti con conferme e accompagnatori, coperti manuali o calcolati; duplicazione ed edizioni; «A che punto siamo?»; confronto fra edizioni; migrazioni 0010–0012 |
 | 16/11/2026 | 6.1 — **Ricorrenze** della Famiglia (sostituiscono le serie anonime) e **copia delle ricette fra Famiglie** con provenienza; una ricetta visibile in una sola Famiglia (§28); migrazione `0013_ricorrenze.sql` |
 | 17/11/2026 | 6.2 — **Rifinitura UX** (§29): notifiche con categoria, gruppi apribili e apertura del contenuto preciso; **presenze solo manuali** da chi può modificare l'evento (rettifica: tolta la conferma personale anche dalle API); riepilogo con le cose in sospeso e «Tutto pronto»; duplicazione e confronto più chiari; ritorno alla posizione e ricerca nell'indirizzo; suggerimenti da tastiera; collaudo dell'aggiornamento PWA; migrazione `0014_dettagli_notifiche.sql` |
+| 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |

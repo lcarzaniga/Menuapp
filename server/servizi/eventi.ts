@@ -2,6 +2,7 @@
 import type { AggiornaEvento, AggiornaVoce, Menu, NuovaVoce, NuovoEvento, RiepilogoEvento, RiordinoVoci } from '../../src/contratto/eventi.ts'
 import { copertiEquivalenti, porzioniEffettive } from '../../src/domain/porzioni.ts'
 import { modificabile, statoDopo } from '../../src/domain/regole/evento.ts'
+import { standardPerOccasione } from '../../src/domain/ricorrenze.ts'
 import { norm, pulisci } from '../../src/domain/testo.ts'
 import type { Evento, StatoEvento, VoceMenu } from '../../src/domain/tipi.ts'
 import { type Db, esegui, lettura, transazione } from '../db/connessione.ts'
@@ -9,6 +10,7 @@ import * as repoAccesso from '../db/repo/accesso.ts'
 import * as repo from '../db/repo/eventi.ts'
 import * as repoFamiglia from '../db/repo/famiglia.ts'
 import { incrementaRevisione } from '../db/repo/meta.ts'
+import { automatica, risolviScelta } from './ricorrenze.ts'
 import { nonTrovato, regolaViolata, richiestaNonValida } from './errori.ts'
 import { leggiImpostazioni } from './impostazioni.ts'
 import { aggiornaConVersione, controllaVersione, controllaVersioni, creaIdempotente, eliminaConVersione } from './versioni.ts'
@@ -70,7 +72,15 @@ export function creaEvento(db: Db, d: NuovoEvento, proprietarioId: string, adess
         portate.forEach((p) => repo.inserisciPortata(db, d.id, p))
       },
     )
-    if (esito.creato) incrementaRevisione(db)
+    if (esito.creato) {
+      // Ricorrenza: quella scelta da chi crea, altrimenti la standard indicata dall'occasione (SPEC §30).
+      const scelta = d.ricorrenza === undefined ? automatica(dati.occasione, gruppoId) : { ...risolviScelta(db, d.ricorrenza, gruppoId), manuale: true }
+      if (scelta.ricorrenzaId || scelta.standard || scelta.manuale) {
+        repo.impostaRicorrenza(db, d.id, scelta)
+        esito.valore = leggiEvento(db, d.id)
+      }
+      incrementaRevisione(db)
+    }
     return esito
   })
 }
@@ -100,6 +110,9 @@ export function aggiornaEvento(db: Db, id: string, d: AggiornaEvento, adesso = D
       () => leggiEvento(db, id),
       adesso,
     )
+    // Cambiando l'occasione (il «tipo» della ricorrenza standard) la ricorrenza attuale resta, ma
+    // l'app può riproporre quella nuova: nessuna sostituzione silenziosa (SPEC §30).
+    if (standardPerOccasione(attuale.occasione)?.id !== standardPerOccasione(pulisci(d.occasione))?.id) repo.sbloccaRicorrenza(db, id)
     // Portate: rinomina, riordina, aggiunge; elimina solo quelle vuote (FK RESTRICT).
     const esistenti = new Map(attuale.portate.map((p) => [p.id, p]))
     const nuove = new Set(d.portate.map((p) => p.id))

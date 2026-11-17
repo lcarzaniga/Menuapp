@@ -66,7 +66,7 @@ describe('ricorrenze', () => {
     const ev = await evento(t, 'n26', '2026-12-25')
     await ok(t.scrivi('POST', `${P}/eventi/n26/voci`, { voci: [{ id: 'v1', portataId: ev.portate[1].id, nome: 'Lasagne' }] }))
     expect(corpo(await t.leggi(`${P}/eventi/n26`)).ricorrenzaId).toBeNull()
-    expect((await ok(associa(t, 'n26', 'r-natale'))).ricorrenza).toEqual({ id: 'r-natale', nome: 'Natale' })
+    expect((await ok(associa(t, 'n26', 'r-natale'))).ricorrenza).toEqual({ tipo: 'famiglia', id: 'r-natale', nome: 'Natale' })
     expect(corpo(await t.leggi(`${P}/eventi/n26`)).ricorrenzaId).toBe('r-natale')
     expect((await ok(t.leggi(`${P}/famiglie/${G}/ricorrenze`)))[0].eventi).toBe(1)
     expect((await ok(associa(t, 'n26', null))).ricorrenza).toBeNull()
@@ -87,7 +87,7 @@ describe('ricorrenze', () => {
     expect(await regola(associa(t, 'n26', 'r-rossi'))).toBe('ricorrenza_altra_famiglia')
     expect((await associa(t, 'n26', 'inesistente')).statusCode).toBe(404)
     // Il database impedisce comunque una ricorrenza di un'altra Famiglia.
-    expect(() => esegui(t.db, "UPDATE eventi SET ricorrenza_id = 'r-rossi' WHERE id = 'n26'")).toThrow(/altra Famiglia/)
+    expect(() => esegui(t.db, "UPDATE eventi SET ricorrenza_id = 'r-rossi', ricorrenza_standard = NULL WHERE id = 'n26'")).toThrow(/altra Famiglia/)
     // Evento personale: nessuna ricorrenza.
     await evento(t, 'pers', '2026-08-15', null)
     expect(await regola(associa(t, 'pers', 'r-natale'))).toBe('evento_personale')

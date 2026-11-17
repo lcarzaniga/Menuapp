@@ -1,9 +1,12 @@
-// Ricorrenze di una Famiglia (SPEC §28): «Natale», «Compleanno Carlo»… per raggruppare eventi
+// Ricorrenze di una Famiglia (SPEC §28) e ricorrenza degli eventi, anche standard (§30): «Natale», «Compleanno Carlo»… per raggruppare eventi
 // da ritrovare, duplicare e confrontare. Nessuna data né frequenza. I membri le creano e le
 // rinominano; eliminarle (gli eventi restano) spetta a chi amministra la Famiglia.
 import type { Ricorrenza } from '../../src/contratto/edizioni.ts'
+import type { SceltaRicorrenza } from '../../src/contratto/eventi.ts'
+import { standardPerOccasione } from '../../src/domain/ricorrenze.ts'
 import { norm, pulisci } from '../../src/domain/testo.ts'
 import { type Db, lettura, transazione } from '../db/connessione.ts'
+import type * as repoEventi from '../db/repo/eventi.ts'
 import { incrementaRevisione } from '../db/repo/meta.ts'
 import * as repo from '../db/repo/ricorrenze.ts'
 import { conflittoVersione, nonTrovato, regolaViolata } from './errori.ts'
@@ -70,4 +73,27 @@ export function elimina(db: Db, u: UtenteCorrente, id: string): void {
     repo.eliminaRicorrenza(db, id)
     incrementaRevisione(db)
   })
+}
+
+// ── Ricorrenza di un evento: della Famiglia o standard (SPEC §28, §30) ─────────
+
+/** Una ricorrenza della Famiglia indicata (che l'utente ha già dimostrato di frequentare). */
+export function ricorrenzaDellaFamiglia(db: Db, ricorrenzaId: string, gruppoId: string | null): string {
+  const r = repo.leggiRicorrenza(db, ricorrenzaId)
+  if (!r) throw nonTrovato('Ricorrenza')
+  if (r.gruppo_id !== gruppoId) throw regolaViolata('ricorrenza_altra_famiglia', 'La ricorrenza è di un\'altra Famiglia')
+  return r.id
+}
+
+/** Scelta esplicita → colonne dell'evento. Le ricorrenze (anche standard) valgono solo nelle Famiglie. */
+export function risolviScelta(db: Db, scelta: SceltaRicorrenza | null, gruppoId: string | null): { ricorrenzaId: string | null; standard: string | null } {
+  if (!scelta) return { ricorrenzaId: null, standard: null }
+  if (!gruppoId) throw regolaViolata('evento_personale', 'Un evento personale non ha ricorrenze: spostalo prima in una Famiglia')
+  if (scelta.tipo === 'famiglia') return { ricorrenzaId: ricorrenzaDellaFamiglia(db, scelta.id, gruppoId), standard: null }
+  return { ricorrenzaId: null, standard: scelta.id }
+}
+
+/** Associazione automatica: la ricorrenza standard indicata dall'occasione, per gli eventi di una Famiglia. */
+export function automatica(occasione: string, gruppoId: string | null): repoEventi.AssociazioneRicorrenza {
+  return { ricorrenzaId: null, standard: gruppoId ? (standardPerOccasione(occasione)?.id ?? null) : null, manuale: false }
 }

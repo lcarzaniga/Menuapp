@@ -45,6 +45,8 @@ export interface Evento extends Versionato {
   maxAccompagnatori: number | null
   /** Ricorrenza della Famiglia a cui appartiene l'evento («Natale»), facoltativa (SPEC §28). */
   ricorrenzaId: Id | null
+  /** Ricorrenza standard del catalogo (`src/domain/ricorrenze.ts`), in alternativa alla precedente (SPEC §30). */
+  ricorrenzaStandard: string | null
   note: string
   stato: StatoEvento
   conclusoIl: Epoch | null

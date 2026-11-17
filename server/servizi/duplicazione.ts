@@ -4,8 +4,10 @@
 // archiviazione. Un evento archiviato si duplica dal suo archivio, che resta com'è.
 import { randomUUID } from 'node:crypto'
 import type { Duplica, Edizione, Edizioni, EsitoDuplica } from '../../src/contratto/edizioni.ts'
+import type { SceltaRicorrenza } from '../../src/contratto/eventi.ts'
 import type { Invito } from '../../src/contratto/partecipanti.ts'
 import { NESSUN_ANONIMO } from '../../src/domain/partecipanti.ts'
+import { RICORRENZE_STANDARD, ricorrenzaStandard, standardPerOccasione } from '../../src/domain/ricorrenze.ts'
 import { aggiungiGiorni, differenzaGiorni } from '../../src/domain/tempo.ts'
 import { norm, pulisci } from '../../src/domain/testo.ts'
 import { type Db, lettura, transazione, uno } from '../db/connessione.ts'
@@ -23,6 +25,7 @@ import { piattoPerEvento } from './condivisione.ts'
 import { ErroreApi, nonTrovato, regolaViolata } from './errori.ts'
 import { creaEvento, creaVoci, leggiEvento, leggiMenu, richiediModificabile } from './eventi.ts'
 import { perArchivio } from './partecipanti.ts'
+import { risolviScelta } from './ricorrenze.ts'
 import { permessoEvento, richiediEvento, type UtenteCorrente } from './permessi.ts'
 
 const puoModificare = (p: string | null) => p === 'proprietario' || p === 'modifica'
@@ -48,12 +51,20 @@ export function duplica(db: Db, cartellaFoto: string, u: UtenteCorrente, origine
     const famigliaOrigine = repoAccesso.gruppoEvento(db, origineId)
     const gruppoId = d.gruppoId !== undefined ? d.gruppoId : famigliaOrigine && repoAccesso.ruoloNelGruppo(db, famigliaOrigine, u.id) ? famigliaOrigine : null
     if (gruppoId && !repoAccesso.ruoloNelGruppo(db, gruppoId, u.id)) throw nonTrovato('Famiglia')
-    // Ricorrenza: quella scelta (della Famiglia del nuovo evento), altrimenti quella dell'originale
-    // se resta nella stessa Famiglia e la ricorrenza esiste ancora.
-    let ricorrenzaId: string | null = null
-    if (d.ricorrenzaId) ricorrenzaId = ricorrenzaDellaFamiglia(db, d.ricorrenzaId, gruppoId)
-    else if (d.ricorrenzaId === undefined && gruppoId && gruppoId === famigliaOrigine && origine.ricorrenzaId && repoRicorrenze.leggiRicorrenza(db, origine.ricorrenzaId)?.gruppo_id === gruppoId) {
-      ricorrenzaId = origine.ricorrenzaId
+    // Ricorrenza: quella scelta (della Famiglia del nuovo evento, o standard), altrimenti quella
+    // dell'originale: una standard vale in ogni Famiglia, una della Famiglia solo se la Famiglia
+    // resta la stessa e la ricorrenza esiste ancora. Mai una nuova definizione (SPEC §28, §30).
+    const scelta = d.ricorrenza !== undefined ? d.ricorrenza : d.ricorrenzaId !== undefined ? (d.ricorrenzaId ? { tipo: 'famiglia' as const, id: d.ricorrenzaId } : null) : undefined
+    let ricorrenza: repo.AssociazioneRicorrenza
+    if (scelta !== undefined) ricorrenza = { ...risolviScelta(db, scelta, gruppoId), manuale: true }
+    else {
+      const manuale = repo.ricorrenzaManuale(db, origineId)
+      const stessa = gruppoId && gruppoId === famigliaOrigine && vivo.ricorrenzaId && repoRicorrenze.leggiRicorrenza(db, vivo.ricorrenzaId)?.gruppo_id === gruppoId
+      ricorrenza = stessa
+        ? { ricorrenzaId: vivo.ricorrenzaId, standard: null, manuale }
+        : gruppoId && vivo.ricorrenzaStandard
+          ? { ricorrenzaId: null, standard: vivo.ricorrenzaStandard, manuale }
+          : { ricorrenzaId: null, standard: null, manuale: false }
     }
 
     // Nuovo evento: coperti manuali (con i partecipanti da riconfermare i calcolati sarebbero zero).
@@ -132,7 +143,8 @@ export function duplica(db: Db, cartellaFoto: string, u: UtenteCorrente, origine
     // Partecipanti: stessa composizione, tutto da riconfermare.
     if (inviti.length) copiaPartecipanti(db, d.id, gruppoId, inviti, avvisi, adesso)
 
-    if (ricorrenzaId) repo.impostaRicorrenza(db, d.id, ricorrenzaId)
+    // Sempre: creando l'evento si sarebbe applicata l'associazione automatica dall'occasione.
+    repo.impostaRicorrenza(db, d.id, ricorrenza)
     incrementaRevisione(db)
     return { evento: leggiEvento(db, d.id), avvisi }
   })
@@ -177,14 +189,6 @@ function copiaPartecipanti(db: Db, eventoId: string, gruppoId: string | null, in
   }
 }
 
-/** Una ricorrenza della Famiglia indicata (che l'utente ha già dimostrato di frequentare). */
-function ricorrenzaDellaFamiglia(db: Db, ricorrenzaId: string, gruppoId: string | null): string {
-  const r = repoRicorrenze.leggiRicorrenza(db, ricorrenzaId)
-  if (!r) throw nonTrovato('Ricorrenza')
-  if (r.gruppo_id !== gruppoId) throw regolaViolata('ricorrenza_altra_famiglia', 'La ricorrenza è di un\'altra Famiglia')
-  return r.id
-}
-
 const edizione = (db: Db, id: string): Edizione => {
   const e = repo.leggiEvento(db, id)!
   return { id, nome: e.nome, data: e.data, stato: e.stato }
@@ -199,14 +203,21 @@ export function edizioni(db: Db, u: UtenteCorrente, eventoId: string): Edizioni 
     const membro = Boolean(famiglia && repoAccesso.ruoloNelGruppo(db, famiglia, u.id))
     const visibile = (id: string) => id !== eventoId && permessoEvento(db, u, id) !== null
     const ricorrenza = e.ricorrenzaId ? repoRicorrenze.leggiRicorrenza(db, e.ricorrenzaId) : undefined
-    const stesse = ricorrenza ? repo.eventiDellaRicorrenza(db, ricorrenza.id).filter(visibile) : []
+    // Una ricorrenza standard raccoglie le edizioni dentro la Famiglia dell'evento.
+    const standard = famiglia ? ricorrenzaStandard(e.ricorrenzaStandard) : undefined
+    const stesse = (ricorrenza ? repo.eventiDellaRicorrenza(db, ricorrenza.id) : standard && famiglia ? repo.eventiDellaRicorrenzaStandard(db, famiglia, standard.id) : []).filter(visibile)
     const altri = repo
       .elencaEventi(db, u.id)
       .filter((x) => x.id !== eventoId && x.gruppo?.id === (famiglia ?? undefined) && !stesse.includes(x.id))
       .sort((a, b) => b.data.localeCompare(a.data))
     const puoAssociare = puoModificare(permesso) && membro && e.stato !== 'archiviato'
+    // Proposta dall'occasione, finché nessuno ha scelto (o dopo un cambio d'occasione).
+    const proposta = standardPerOccasione(e.occasione)
+    const suggerita = puoAssociare && proposta && proposta.id !== e.ricorrenzaStandard && !repo.ricorrenzaManuale(db, eventoId) ? { id: proposta.id, nome: proposta.nome } : null
     return {
-      ricorrenza: ricorrenza ? { id: ricorrenza.id, nome: ricorrenza.nome } : null,
+      ricorrenza: ricorrenza ? { tipo: 'famiglia' as const, id: ricorrenza.id, nome: ricorrenza.nome } : standard ? { tipo: 'standard' as const, id: standard.id, nome: standard.nome } : null,
+      suggerita,
+      standard: puoAssociare ? RICORRENZE_STANDARD.map((r) => ({ id: r.id, nome: r.nome })) : [],
       edizioni: stesse.map((id) => edizione(db, id)),
       altriEventi: altri.map((x) => ({ id: x.id, nome: x.nome, data: x.data, stato: x.stato })),
       ricorrenze: puoAssociare && famiglia ? repoRicorrenze.ricorrenzeFamiglia(db, famiglia).map((r) => ({ id: r.id, nome: r.nome })) : [],
@@ -215,18 +226,17 @@ export function edizioni(db: Db, u: UtenteCorrente, eventoId: string): Edizioni 
   })
 }
 
-/** Associa l'evento a una ricorrenza della sua Famiglia (chi lo modifica e ne fa parte) o la toglie. */
-export function associaRicorrenza(db: Db, u: UtenteCorrente, eventoId: string, ricorrenzaId: string | null): Edizioni {
+/**
+ * Associa l'evento a una ricorrenza della sua Famiglia o standard (chi lo modifica e ne fa parte),
+ * o la toglie. È una scelta manuale: l'app non la cambierà più da sola (SPEC §30).
+ */
+export function associaRicorrenza(db: Db, u: UtenteCorrente, eventoId: string, scelta: SceltaRicorrenza | null): Edizioni {
   transazione(db, () => {
     richiediEvento(db, u, eventoId, 'modifica')
     richiediModificabile(leggiEvento(db, eventoId))
-    if (ricorrenzaId) {
-      const famiglia = repoAccesso.gruppoEvento(db, eventoId)
-      if (!famiglia) throw regolaViolata('evento_personale', 'Un evento personale non ha ricorrenze: spostalo prima in una Famiglia')
-      if (!repoAccesso.ruoloNelGruppo(db, famiglia, u.id)) throw nonTrovato('Ricorrenza')
-      ricorrenzaDellaFamiglia(db, ricorrenzaId, famiglia)
-    }
-    repo.impostaRicorrenza(db, eventoId, ricorrenzaId)
+    const famiglia = repoAccesso.gruppoEvento(db, eventoId)
+    if (scelta && famiglia && !repoAccesso.ruoloNelGruppo(db, famiglia, u.id)) throw nonTrovato('Ricorrenza')
+    repo.impostaRicorrenza(db, eventoId, { ...risolviScelta(db, scelta, famiglia), manuale: true })
     incrementaRevisione(db)
   })
   return edizioni(db, u, eventoId)

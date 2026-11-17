@@ -31,6 +31,7 @@ export const OCCASIONI_SUGGERITE = [
   'Epifania',
   'Pasqua',
   'Pasquetta',
+  'Ferragosto',
   'Compleanno',
   'Anniversario',
   'Battesimo',

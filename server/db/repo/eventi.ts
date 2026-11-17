@@ -17,6 +17,8 @@ interface RigaEvento {
   coperti_automatici: number
   max_accompagnatori: number | null
   ricorrenza_id: string | null
+  ricorrenza_standard: string | null
+  ricorrenza_manuale: number
   note: string
   stato: string
   concluso_il: number | null
@@ -43,6 +45,7 @@ function daRigaEvento(db: Db, r: RigaEvento, portate: Portata[]): Evento {
     copertiManuali: { adulti: r.adulti, bambini: r.bambini },
     maxAccompagnatori: r.max_accompagnatori,
     ricorrenzaId: r.ricorrenza_id,
+    ricorrenzaStandard: r.ricorrenza_standard,
     note: r.note,
     stato: r.stato as StatoEvento,
     conclusoIl: r.concluso_il,
@@ -108,7 +111,7 @@ export function collegaPiatto(db: Db, voceId: string, piattoId: string | null, a
   esegui(db, 'UPDATE voci_menu SET piatto_id = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ?', piattoId, adesso, voceId)
 }
 
-export function inserisciEvento(db: Db, e: Omit<Evento, 'versione' | 'portate' | 'copertiAutomatici' | 'copertiManuali' | 'maxAccompagnatori' | 'ricorrenzaId'>, proprietarioId: string, gruppoId: string | null = null): void {
+export function inserisciEvento(db: Db, e: Omit<Evento, 'versione' | 'portate' | 'copertiAutomatici' | 'copertiManuali' | 'maxAccompagnatori' | 'ricorrenzaId' | 'ricorrenzaStandard'>, proprietarioId: string, gruppoId: string | null = null): void {
   esegui(
     db,
     `INSERT INTO eventi (id, nome, data, ora_servizio, tipo, occasione, adulti, bambini, coefficiente_bambini, note, stato,
@@ -218,13 +221,31 @@ export function piattoEsiste(db: Db, id: string): boolean {
 
 // ── Ricorrenze ────────────────────────────────────────────────
 
-export function impostaRicorrenza(db: Db, eventoId: string, ricorrenzaId: string | null): void {
-  esegui(db, 'UPDATE eventi SET ricorrenza_id = ? WHERE id = ?', ricorrenzaId, eventoId)
+/** Ricorrenza dell'evento: della Famiglia o standard (al più una), e se l'ha scelta una persona. */
+export interface AssociazioneRicorrenza {
+  ricorrenzaId: string | null
+  standard: string | null
+  manuale: boolean
 }
 
-/** Eventi di una ricorrenza in ordine di data effettiva. */
+export function impostaRicorrenza(db: Db, eventoId: string, a: AssociazioneRicorrenza): void {
+  esegui(db, 'UPDATE eventi SET ricorrenza_id = ?, ricorrenza_standard = ?, ricorrenza_manuale = ? WHERE id = ?', a.ricorrenzaId, a.standard, a.manuale ? 1 : 0, eventoId)
+}
+
+/** La scelta torna «automatica» (l'occasione è cambiata): la ricorrenza resta, ma si può riproporre. */
+export function sbloccaRicorrenza(db: Db, eventoId: string): void {
+  esegui(db, 'UPDATE eventi SET ricorrenza_manuale = 0 WHERE id = ?', eventoId)
+}
+
+export const ricorrenzaManuale = (db: Db, eventoId: string) => uno<{ m: number }>(db, 'SELECT ricorrenza_manuale AS m FROM eventi WHERE id = ?', eventoId)?.m === 1
+
+/** Eventi di una ricorrenza della Famiglia in ordine di data effettiva. */
 export const eventiDellaRicorrenza = (db: Db, ricorrenzaId: string) =>
   tutti<{ id: string }>(db, 'SELECT id FROM eventi WHERE ricorrenza_id = ? ORDER BY data, ora_servizio, nome', ricorrenzaId).map((r) => r.id)
+
+/** Eventi di una ricorrenza standard dentro una Famiglia, in ordine di data effettiva. */
+export const eventiDellaRicorrenzaStandard = (db: Db, gruppoId: string, standard: string) =>
+  tutti<{ id: string }>(db, 'SELECT id FROM eventi WHERE gruppo_id = ? AND ricorrenza_standard = ? ORDER BY data, ora_servizio, nome', gruppoId, standard).map((r) => r.id)
 
 /** Voce d'origine delle voci copiate duplicando l'evento (SPEC §27). */
 export function originiVoci(db: Db, eventoId: string): Map<string, string> {

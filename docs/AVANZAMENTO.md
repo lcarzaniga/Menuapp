@@ -264,7 +264,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   salute (schema 13), migrazione applicata senza ricorrenze create, 6 eventi e 74 ricette,
   chiavi esterne e integrità ok.
 
-## Rifinitura UX e collaudo (17/11/2026, ramo `rifinitura-ux`, da rilasciare)
+## Rifinitura UX e collaudo (17/11/2026, in produzione: `20261117-1158-fd15fbd`, schema v14)
 
 - SPEC 6.2 / §29. Audit iniziale: ricorrenze e copia delle ricette fra Famiglie già corrette
   (solo collaudo); notifiche senza categoria, gruppi non apribili, incarichi senza destinazione
@@ -286,4 +286,24 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Limitazioni: notifiche raggruppate più vecchie della 0014 senza elenco; un messaggio
   eliminato toglie l'intera notifica raggruppata che lo cita per ultimo; `max_accompagnatori`
   resta nel database senza effetto.
-- Rilascio: `! scripts/rilascia.sh rifinitura-ux`.
+- Rilasciato il 17/11 alle 11:58 (backup `pre-migrazione-20261117-115914-v13.db`); verificati
+  salute (schema 14), 19 notifiche e 15 partecipanti invariati, chiavi esterne e integrità ok.
+
+## Ricorrenze standard (17/11/2026, ramo `ricorrenze-standard`, da rilasciare)
+
+- SPEC 6.3 / §30. Il ramo `rifinitura-ux` era già rilasciato: lavoro su un ramo nuovo da `main`.
+- Stato iniziale: ricorrenze solo della Famiglia (§28), associate a mano; nessun tipo strutturato
+  per le feste (il «Tipo» è pranzo/cena; l'occasione è testo libero con suggerimenti).
+- Catalogo di 8 ricorrenze standard nel codice; associazione automatica dall'occasione alla
+  creazione; scelte manuali che prevalgono; proposta al cambio d'occasione e per gli eventi
+  esistenti; duplicazione, edizioni e confronto nella stessa Famiglia; un selettore unico che
+  distingue standard e della Famiglia.
+- Migrazione `0015_ricorrenze_standard.sql` provata su una copia del database di produzione:
+  eventi e snapshot identici, nessuna associazione assegnata; l'evento «Vigilia di Natale» con la
+  ricorrenza della Famiglia omonima la conserva (scelta manuale).
+- Test: `npm run check` 382 verdi (nuovo `ricorrenze-standard.test.ts`, 11), `npm run test:e2e`
+  46 verdi (nuovo `ricorrenze-standard.spec.ts`).
+- Da sapere: in produzione esiste la ricorrenza della Famiglia «Vigilia di Natale»; un nuovo
+  evento con occasione «Vigilia di Natale» entra nella standard, non in quella (niente unioni per
+  nome). Duplicando l'evento esistente resta nella ricorrenza della Famiglia.
+- Rilascio: `! scripts/rilascia.sh ricorrenze-standard`.

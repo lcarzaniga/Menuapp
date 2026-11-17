@@ -120,8 +120,12 @@ export function spostaInFamiglia(db: Db, u: UtenteCorrente, eventoId: string, gr
   return transazione(db, () => {
     richiediEvento(db, u, eventoId, 'proprietario')
     if (gruppoId && !repo.ruoloNelGruppo(db, gruppoId, u.id)) throw nonTrovato('Famiglia')
-    // La ricorrenza è della Famiglia: cambiando Famiglia l'evento la perde.
-    if (repo.gruppoEvento(db, eventoId) !== gruppoId) repoEventi.impostaRicorrenza(db, eventoId, null)
+    // Una ricorrenza della Famiglia resta alla Famiglia: cambiando Famiglia l'evento la perde.
+    // Una standard vale in ogni Famiglia; un evento personale non ne ha (SPEC §30).
+    if (repo.gruppoEvento(db, eventoId) !== gruppoId) {
+      const e = repoEventi.leggiEvento(db, eventoId)!
+      repoEventi.impostaRicorrenza(db, eventoId, { ricorrenzaId: null, standard: gruppoId ? e.ricorrenzaStandard : null, manuale: repoEventi.ricorrenzaManuale(db, eventoId) })
+    }
     repo.impostaGruppoEvento(db, eventoId, gruppoId, adesso)
     incrementaRevisione(db)
     return accessoEvento(db, u, eventoId)

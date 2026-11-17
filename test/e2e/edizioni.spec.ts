@@ -24,13 +24,15 @@ test('duplica Natale come nuova edizione, con i partecipanti da riconfermare', a
 
   // La ricorrenza si sceglie dalla Panoramica.
   await page.goto('/#/eventi/ed-2026')
-  await page.getByLabel('Ricorrenza dell\'evento').selectOption({ label: 'Natale dai nonni' })
-  await expect(page.getByText('Ricorrenza: Natale dai nonni')).toBeVisible()
+  // L'occasione «Natale» l'ha messa nella ricorrenza standard; qui si sceglie quella della Famiglia.
+  await expect(page.getByLabel('Ricorrenza dell\'evento')).toHaveValue('standard:natale')
+  await page.getByLabel('Ricorrenza dell\'evento').selectOption({ label: 'Natale dai nonni (della Famiglia)' })
+  await expect(page.getByText('Ricorrenza: Natale dai nonni · della Famiglia')).toBeVisible()
   await page.getByRole('button', { name: 'Duplica evento' }).click()
   const dialogo = page.getByRole('dialog')
   await expect(dialogo.getByLabel('Nome del nuovo evento')).toHaveValue('Natale dai nonni 2027')
   await expect(dialogo.getByLabel('Data')).toHaveValue('2027-12-25')
-  await expect(dialogo.getByLabel('Ricorrenza')).toHaveValue('ed-natale')
+  await expect(dialogo.getByLabel('Ricorrenza')).toHaveValue('famiglia:ed-natale')
   // Si vede da quale evento si parte, la ricorrenza proposta e cosa si copia o no.
   await expect(dialogo).toContainText('a partire da «Natale dai nonni 2026»')
   await expect(dialogo).toContainText('Proposta la stessa dell\'evento originale')

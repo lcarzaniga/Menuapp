@@ -1,4 +1,5 @@
-// Ricorrenze della Famiglia (SPEC §28): un elenco di nomi per raggruppare gli eventi.
+// Ricorrenze della Famiglia (SPEC §28): un elenco di nomi per raggruppare gli eventi; accanto,
+// le ricorrenze standard sempre disponibili (§30), che non si gestiscono.
 import { Repeat } from 'lucide-react'
 import { useState } from 'react'
 import { api, nuovoId } from '@/api/client'
@@ -11,6 +12,7 @@ import { MenuAzioni } from '@/components/ui/menu'
 import { useStatoConnessione } from '@/connessione/stato'
 import type { Ricorrenza } from '@/contratto/edizioni.ts'
 import type { Gruppo } from '@/contratto/famiglia.ts'
+import { RICORRENZE_STANDARD } from '@/domain/ricorrenze.ts'
 import { useRicorrenze } from '@/features/eventi/Edizioni'
 import { plurale } from '@/lib/formato'
 
@@ -34,7 +36,12 @@ export function RicorrenzeFamiglia({ famiglia }: { famiglia: Gruppo }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <p className="text-sm text-testo-tenue">Natale, Pasqua, un compleanno: raggruppano gli eventi per ritrovarli, duplicarli e confrontarli. Nessuna data fissa.</p>
+        <p className="text-sm text-testo-tenue">Raggruppano gli eventi per ritrovarli, duplicarli e confrontarli. Nessuna data fissa.</p>
+        <p className="text-sm" data-testid="ricorrenze-standard">
+          <span className="font-medium">Standard, già pronte:</span>{' '}
+          <span className="text-testo-tenue">{RICORRENZE_STANDARD.map((r) => r.nome).join(', ')}. Un evento con una di queste occasioni ci entra da solo.</span>
+        </p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-testo-tenue">Della Famiglia</p>
         {elenco.data?.length ? (
           <ul className="flex flex-col divide-y divide-bordo/60" aria-label="Ricorrenze della Famiglia">
             {elenco.data.map((r) => (
@@ -63,7 +70,7 @@ export function RicorrenzeFamiglia({ famiglia }: { famiglia: Gruppo }) {
           }}
         >
           <Campo etichetta="Nuova ricorrenza" htmlFor="ricorrenza-nome" className="min-w-36 flex-1">
-            <Input id="ricorrenza-nome" value={nome} maxLength={80} placeholder="Es. Natale" onChange={(ev) => setNome(ev.target.value)} />
+            <Input id="ricorrenza-nome" value={nome} maxLength={80} placeholder="Es. Compleanno di Carlo" onChange={(ev) => setNome(ev.target.value)} />
           </Campo>
           <Button type="submit" variante="contorno" disabled={!nome.trim() || !connesso || aggiungi.inCorso}>
             Aggiungi

@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Campo, Input, Select, Textarea } from '@/components/ui/campi'
 import { copertiEquivalenti, formattaCoperti } from '@/domain/porzioni.ts'
 import { nomeSuggerito, OCCASIONI_SUGGERITE } from '@/domain/regole/evento.ts'
+import { standardPerOccasione } from '@/domain/ricorrenze.ts'
+import type { SceltaRicorrenza } from '@/contratto/eventi.ts'
+import { SelettoreRicorrenza, sceltaDi, type ValoreRicorrenza } from './SceltaRicorrenza'
 import { TIPI_EVENTO, type TipoEvento } from '@/domain/tipi.ts'
 import { usePuoScrivere } from '@/connessione/stato'
 
@@ -30,11 +33,18 @@ export function ModuloEvento({
   etichetta,
   errori = {},
   copertiAutomatici = false,
+  ricorrenze,
 }: {
   iniziale: DatiModuloEvento
+  /**
+   * Creando un evento in una Famiglia: le sue ricorrenze, e compare il campo «Ricorrenza»
+   * (in modifica la ricorrenza si cambia dalla Panoramica).
+   */
+  ricorrenze?: { id: string; nome: string }[]
   /** Coperti calcolati dai partecipanti: adulti e bambini non si scrivono qui. */
   copertiAutomatici?: boolean
-  onSalva: (d: DatiModuloEvento) => void
+  /** `ricorrenza` assente: nessuna scelta, vale quella indicata dall'occasione (SPEC §30). */
+  onSalva: (d: DatiModuloEvento, ricorrenza?: SceltaRicorrenza | null) => void
   inCorso: boolean
   etichetta: string
   errori?: Record<string, string>
@@ -44,6 +54,10 @@ export function ModuloEvento({
   const puoScrivere = usePuoScrivere()
   const coperti = useMemo(() => copertiEquivalenti(d), [d])
   const modificato = JSON.stringify(d) !== JSON.stringify(iniziale)
+  // Ricorrenza: segue l'occasione («Vigilia di Natale» → la standard) finché non la si sceglie.
+  const [ricorrenzaScelta, setRicorrenzaScelta] = useState<ValoreRicorrenza | null>(null)
+  const automatica = standardPerOccasione(d.occasione)
+  const ricorrenza = ricorrenzaScelta ?? (automatica ? `standard:${automatica.id}` : '')
 
   function cambia<K extends keyof DatiModuloEvento>(k: K, v: DatiModuloEvento[K]) {
     setD((x) => {
@@ -60,7 +74,7 @@ export function ModuloEvento({
       className="flex flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault()
-        if (!nomeVuoto) onSalva({ ...d, nome: d.nome.trim() })
+        if (!nomeVuoto) onSalva({ ...d, nome: d.nome.trim() }, ricorrenze && ricorrenzaScelta !== null ? sceltaDi(ricorrenzaScelta) : undefined)
       }}
     >
       <div className="grid gap-4 sm:grid-cols-2">
@@ -82,6 +96,19 @@ export function ModuloEvento({
           </Select>
         </Campo>
       </div>
+      {ricorrenze ? (
+        <Campo
+          etichetta="Ricorrenza"
+          htmlFor="ev-ricorrenza"
+          aiuto={
+            ricorrenzaScelta === null && automatica
+              ? `Dall'occasione: le edizioni di «${automatica.nome}» si ritrovano e si confrontano. Puoi cambiarla o toglierla.`
+              : 'Facoltativa: serve a ritrovare e confrontare le edizioni (Natale, un compleanno…).'
+          }
+        >
+          <SelettoreRicorrenza id="ev-ricorrenza" valore={ricorrenza} famiglia={ricorrenze} onCambia={setRicorrenzaScelta} />
+        </Campo>
+      ) : null}
       <Campo etichetta="Nome dell'evento" htmlFor="ev-nome" errore={errori.nome}>
         <Input
           id="ev-nome"

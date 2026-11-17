@@ -1,6 +1,7 @@
 // Contratto API: eventi, portate e voci di menù (SPEC §12.4).
 import { z } from 'zod'
 import { SchemaPersona } from './accesso.ts'
+import { ID_RICORRENZE_STANDARD } from '../domain/ricorrenze.ts'
 import { STATI_EVENTO, TIPI_EVENTO } from '../domain/tipi.ts'
 import { DataISO, Epoch, Id, NomeObbligatorio, Ora, TestoBreve, TestoLungo, Versione } from './comune.ts'
 import { Coefficiente } from './impostazioni.ts'
@@ -23,6 +24,7 @@ export const SchemaEvento = z.object({
   copertiManuali: z.object({ adulti: z.number().int(), bambini: z.number().int() }),
   maxAccompagnatori: z.number().int().nullable(),
   ricorrenzaId: Id.nullable(),
+  ricorrenzaStandard: z.string().nullable(),
   note: z.string(),
   stato: z.enum(STATI_EVENTO),
   conclusoIl: Epoch.nullable(),
@@ -44,6 +46,13 @@ export const SchemaRiepilogoEvento = SchemaEvento.extend({
 })
 export type RiepilogoEvento = z.infer<typeof SchemaRiepilogoEvento>
 
+/** Una ricorrenza: della Famiglia (id) o standard (id del catalogo). */
+export const SchemaSceltaRicorrenza = z.discriminatedUnion('tipo', [
+  z.object({ tipo: z.literal('famiglia'), id: Id }),
+  z.object({ tipo: z.literal('standard'), id: z.enum(ID_RICORRENZE_STANDARD) }),
+])
+export type SceltaRicorrenza = z.infer<typeof SchemaSceltaRicorrenza>
+
 const CampiEvento = {
   nome: NomeObbligatorio,
   data: DataISO,
@@ -64,6 +73,11 @@ export const SchemaNuovoEvento = z.object({
   coefficienteBambini: Coefficiente.optional(),
   /** Assenti: copiate dalle portate predefinite. */
   portate: z.array(z.object({ id: Id, nome: NomeObbligatorio })).max(30).optional(),
+  /**
+   * Ricorrenza scelta da chi crea (SPEC §30): `null` nessuna. Assente: quella standard indicata
+   * dall'occasione, se c'è e l'evento è di una Famiglia.
+   */
+  ricorrenza: SchemaSceltaRicorrenza.nullable().optional(),
 })
 export type NuovoEvento = z.infer<typeof SchemaNuovoEvento>
 
