@@ -2370,7 +2370,9 @@ decisioni. Nessuna migrazione; API invariate salvo `GET /per-te` (nuova, sola le
 ```
 Barra (telefono in basso, PC a sinistra): Eventi · Ricettario · Famiglia · Notifiche · Impostazioni
 Eventi #/ ── In programma │ Conclusi (?vista=conclusi) │ Archivio (?vista=archivio; #/eventi/archivio → qui)
-   · Prossimo evento · Per te · Condivisi con me · eventi nelle altre Famiglie · [Duplica] [Nuovo]
+   · Per te · Prossimo evento · un solo elenco in ordine di data (propri e condivisi insieme, i
+   condivisi con il badge «di … · sola lettura / puoi modificare») · eventi nelle altre Famiglie
+   · [Duplica] [Nuovo]
    └─ Evento #/eventi/:id ── Riepilogo │ Menù │ Persone │ Prepara │ Bacheca
          Riepilogo (#/eventi/:id, /confronto): A che punto siamo · [Stampa menù] [Azioni ▾]
                     · informazioni · archivio · Ricorrenza ed edizioni (Confronta) · Condivisione
@@ -2499,3 +2501,4 @@ aggiornati alla nuova navigazione.
 | 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |
 | 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |
 | 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |
+| 17/11/2026 | 6.4.1 — Eventi: propri e condivisi in un solo elenco in ordine di data (niente sezione «Condivisi con me»); i condivisi si riconoscono dal badge, anche nel prossimo evento (richiesta di Loris, §31.1) |

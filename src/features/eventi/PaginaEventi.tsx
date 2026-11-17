@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router'
 import { api } from '@/api/client'
 import { useEventi, usePerTe } from '@/api/query'
-import { Segmenti, TitoloSezione } from '@/components/Navigazione'
+import { Segmenti } from '@/components/Navigazione'
 import { Campo, Select } from '@/components/ui/campi'
 import { Finestra } from '@/components/ui/dialog'
 import type { Evento, StatoEvento } from '@/domain/tipi.ts'
@@ -43,12 +43,7 @@ export function SchedaEvento({ e }: { e: RiepilogoEvento }) {
           {e.stato === 'concluso' ? <Badge>Concluso</Badge> : null}
           {e.stato === 'archiviato' ? <Badge variante="info">Archiviato</Badge> : null}
           {daConcludere(e, oggiISO()) ? <Badge variante="avviso">Da concludere</Badge> : null}
-          {e.permesso !== 'proprietario' ? (
-            <Badge variante={e.permesso === 'lettura' ? 'info' : 'primario'}>
-              di {e.proprietario.nome}
-              {e.permesso === 'lettura' ? ' · sola lettura' : ''}
-            </Badge>
-          ) : null}
+          <BadgeCondiviso e={e} />
         </div>
         <p className="mt-0.5 text-sm first-letter:uppercase">
           {dataLunga(e.data)}
@@ -68,6 +63,17 @@ export function SchedaEvento({ e }: { e: RiepilogoEvento }) {
   )
 }
 
+/** «di Anna · sola lettura»: l'evento non è mio ma condiviso con me. */
+function BadgeCondiviso({ e }: { e: RiepilogoEvento }) {
+  if (e.permesso === 'proprietario') return null
+  return (
+    <Badge variante={e.permesso === 'lettura' ? 'info' : 'primario'} data-testid="evento-condiviso">
+      di {e.proprietario.nome}
+      {e.permesso === 'lettura' ? ' · sola lettura' : ' · puoi modificare'}
+    </Badge>
+  )
+}
+
 /** L'evento più vicino, in evidenza: illustrazione, conto alla rovescia, scorciatoie. */
 function Prossimo({ e }: { e: RiepilogoEvento }) {
   const giorni = differenzaGiorni(oggiISO(), e.data)
@@ -77,7 +83,9 @@ function Prossimo({ e }: { e: RiepilogoEvento }) {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_100%_at_100%_0%,var(--primario-tenue),transparent_70%)] opacity-80" />
       <div className="relative grid items-center gap-2 p-5 sm:grid-cols-[1fr_auto] sm:p-7">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-oro">{quanto}</p>
+          <p className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-oro">
+            {quanto} <BadgeCondiviso e={e} />
+          </p>
           <Link to={`/eventi/${e.id}`} className="titolo mt-1 block text-[2rem] font-semibold leading-tight hover:text-primario sm:text-[2.5rem]">
             {e.nome}
           </Link>
@@ -129,9 +137,9 @@ export function PaginaEventi() {
   const tutti = useEventi(vista.stato)
   const [duplica, setDuplica] = useState(false)
   const lista = vista.vista === 'archivio' ? [...(eventi.data ?? [])].reverse() : (eventi.data ?? [])
-  const propri = vista.vista === 'programma' ? lista.filter((e) => e.permesso === 'proprietario') : lista
-  const condivisi = vista.vista === 'programma' ? lista.filter((e) => e.permesso !== 'proprietario') : []
-  const prossimo = vista.vista === 'programma' ? (propri.find((x) => x.data >= oggiISO()) ?? propri[0]) : undefined
+  // Un solo elenco in ordine di data, propri e condivisi insieme: i condivisi si riconoscono dal
+  // badge «di …». Il prossimo evento può essere anche uno condiviso.
+  const prossimo = vista.vista === 'programma' ? (lista.find((x) => x.data >= oggiISO()) ?? lista[0]) : undefined
   const altre = multiple && attiva ? altreFamiglie(tutti.data ?? [], attiva.id, famiglie) : []
   return (
     <Pagina
@@ -184,19 +192,11 @@ export function PaginaEventi() {
             />
           ) : null}
           {prossimo ? <Prossimo e={prossimo} /> : null}
-          {propri
+          {lista
             .filter((x) => x.id !== prossimo?.id)
             .map((e) => (
               <SchedaEvento key={e.id} e={e} />
             ))}
-          {condivisi.length ? (
-            <section aria-label="Condivisi con me" className="flex flex-col gap-3">
-              <TitoloSezione className="mt-4">Condivisi con me</TitoloSezione>
-              {condivisi.map((e) => (
-                <SchedaEvento key={e.id} e={e} />
-              ))}
-            </section>
-          ) : null}
           {altre.length ? (
             <div className="mt-2 flex flex-col gap-2 rounded-2xl border border-dashed border-bordo p-3 text-sm" data-testid="altre-famiglie">
               {altre.map((f) => (

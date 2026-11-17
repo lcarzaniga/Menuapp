@@ -323,7 +323,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   sulla tabella e sulla modalità di modifica).
 - Rilasciato il 17/11 alle 14:20; verificati salute (schema 15), 15 partecipanti e 6 eventi invariati.
 
-## Audit UX e riorganizzazione (17/11/2026, ramo `riorganizzazione`, da rilasciare)
+## Audit UX e riorganizzazione (17/11/2026, in produzione: `20261117-1548-667343a`)
 
 - `docs/AUDIT-UX-ARCHITETTURA.md` (con schermate e prototipi in `docs/audit/`); implementata la
   proposta A con le decisioni di Loris: SPEC 6.4 / §31 (mappa della navigazione in §31.1).
@@ -347,4 +347,13 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   e2e esistenti aggiornati); risultati nella relazione del rilascio.
 - Da verificare su dispositivi fisici: barra e messaggi con la tastiera aperta su Android, area
   sicura in basso su iPhone/PWA installata, Echo Show 15 (testo grande).
-- Rilascio: `! scripts/rilascia.sh riorganizzazione`.
+- Rilasciato il 17/11 alle 15:48; verificati salute (schema 15), dati e integrità, `/per-te` 401 senza sessione.
+
+## Eventi in un solo elenco (17/11/2026, ramo `eventi-elenco-unico`, da rilasciare)
+
+- Richiesta di Loris: niente divisione fra eventi miei e condivisi. Un solo elenco in ordine di
+  data; i condivisi hanno il badge «di … · sola lettura / puoi modificare», anche nel riquadro del
+  prossimo evento (che ora può essere uno condiviso). SPEC 6.4.1.
+- Solo interfaccia, nessuna migrazione. e2e `multiutente.spec.ts` e `riorganizzazione.spec.ts`
+  aggiornati (ordine, badge, nessuna sezione «Condivisi con me»).
+- Rilascio: `! scripts/rilascia.sh eventi-elenco-unico`.

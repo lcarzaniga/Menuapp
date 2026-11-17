@@ -118,6 +118,15 @@ test('navigazione riorganizzata, Famiglie, schede, duplicazione e permessi', asy
   await expect(vino).toContainText('tu')
   await anna.page.goto('/#/')
   await expect(anna.page.getByRole('region', { name: 'Per te' })).toContainText('Porti Vino')
+  // Un solo elenco in ordine di data: prima l'evento condiviso (marzo 2027, con il badge), poi
+  // la copia di Ornella (marzo 2028), senza sezioni separate.
+  await expect(anna.page.getByRole('region', { name: 'Prossimo evento' })).toContainText('Pranzo della domenica')
+  await expect(anna.page.getByRole('region', { name: 'Prossimo evento' }).getByTestId('evento-condiviso')).toHaveText('di Loris · sola lettura')
+  await expect(anna.page.getByRole('region', { name: 'Condivisi con me' })).toHaveCount(0)
+  // Le schede dell'elenco (fuori da «Per te»): sotto il prossimo, la copia di Ornella, senza badge.
+  const schede = anna.page.locator('a[href^="#/eventi/"]').filter({ hasText: /coperti/ }).filter({ hasText: 'Pranzo della domenica' })
+  await expect(schede).toHaveCount(1)
+  await expect(schede.getByTestId('evento-condiviso')).toHaveCount(0)
   await anna.page.getByRole('region', { name: 'Per te' }).getByRole('link', { name: /Porti Vino/ }).click()
   await expect(anna.page).toHaveURL(/chi-porta\?incarico=cosa(%3A|:)ro-vino/)
   await foto(anna.page, '02-chi-porta-anna')
@@ -133,6 +142,8 @@ test('navigazione riorganizzata, Famiglie, schede, duplicazione e permessi', asy
   const attuale = await apiLeggi<{ versione: number }>(request, '/eventi/ro-ev')
   await apiScrivi(request, 'post', '/eventi/ro-ev/archivia', { versione: attuale.versione })
   await page.goto('/#/eventi/archivio')
+  // Archiviato via API: si ricarica, come farebbe la revisione periodica.
+  await page.reload()
   await expect(page).toHaveURL(/vista=archivio/)
   await expect(page.getByRole('navigation', { name: 'Quali eventi' }).getByRole('link', { name: 'Archivio' })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('link', { name: /Pranzo della domenica/ })).toBeVisible()

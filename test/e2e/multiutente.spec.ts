@@ -61,11 +61,12 @@ test('invito, approvazione, condivisione e revoca fra due persone', async ({ pag
   await foto(page, '04-condivisione')
 
   await anna.page.reload()
-  const condivisi = anna.page.getByRole('region', { name: 'Condivisi con me' })
-  await expect(condivisi.getByText('Cena dai nonni')).toBeVisible()
-  await expect(condivisi.getByText('di Loris')).toBeVisible()
+  // Un solo elenco in ordine di data: l'evento condiviso si riconosce dal badge.
+  await expect(anna.page.getByRole('link', { name: /Cena dai nonni/ }).first()).toBeVisible()
+  await expect(anna.page.getByTestId('evento-condiviso').first()).toHaveText('di Loris · puoi modificare')
+  await expect(anna.page.getByRole('region', { name: 'Condivisi con me' })).toHaveCount(0)
   await foto(anna.page, '05-eventi-anna')
-  await condivisi.getByText('Cena dai nonni').click()
+  await anna.page.getByRole('link', { name: /Cena dai nonni/ }).first().click()
   await expect(anna.page.getByTestId('permesso-evento')).toHaveText('Di Loris · puoi modificare')
   await anna.page.getByRole('navigation', { name: 'Schede dell\'evento' }).getByRole('link', { name: 'Menù' }).click()
   await anna.page.getByLabel('Aggiungi a Dolci').fill('Panettone')
