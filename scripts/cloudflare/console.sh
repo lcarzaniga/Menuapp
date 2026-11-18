@@ -80,6 +80,8 @@ collega() {
 
 disattiva() {
   carica_credenziali
+  # Il codice vero serve per l'attesa: con un codice inventato ogni prova conterebbe come errata.
+  local vecchio=${MENUAPP_CODICE_CONSOLE:-}
   cd "$RADICE"
   # wrangler chiede conferma: «y».
   yes | npx wrangler secret delete MENUAPP_CODICE_CONSOLE >/dev/null 2>&1 || info "Segreto già assente sul Worker"
@@ -93,7 +95,7 @@ disattiva() {
   for _ in $(seq 1 60); do
     # Con pipefail il codice d'uscita della prova (1) nasconderebbe il grep: prima l'uscita, poi il controllo.
     local esito
-    esito=$(MENUAPP_CODICE_CONSOLE=x "${CONSOLE[@]}" stato 2>&1 || true)
+    esito=$(MENUAPP_CODICE_CONSOLE=${vecchio:-x} "${CONSOLE[@]}" stato 2>&1 || true)
     [[ "$esito" == *"Console non attiva"* ]] && { ok "Console spenta"; return; }
     sleep 5
   done
