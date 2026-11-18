@@ -98,9 +98,9 @@ Ordine pensato perché l'accesso non si interrompa mai e Debian resti attivo fin
    ```
    In caso di problemi: `node scripts/cloudflare/migra.ts annulla pre-migrazione-….json` (il nome lo
    stampa `importa`). Debian non viene modificato in nessun passo (solo un backup manuale).
-4. **Sito sul dominio principale**: togliere `ricettedifamiglia.online` dal Worker `menuapp`
-   (Workers & Pages → menuapp → Settings → Domains & Routes → rimuovere il dominio principale, lasciando
-   `app.…`), poi `scripts/cloudflare/rilascia-sito.sh` (controlla prima che l'app risponda su `app.…`).
+4. **Sito sul dominio principale**: `scripts/cloudflare/rilascia-sito.sh` controlla che l'app risponda
+   su `app.…`, stacca `ricettedifamiglia.online` dal Worker `menuapp` (API, solo quel nome) e pubblica
+   il sito.
    I prossimi rilasci dell'app: `scripts/cloudflare/rilascia.sh` senza `--transizione`.
 5. **Dismissione di Debian e Funnel**: solo su conferma di Loris (docs/OPERAZIONI.md).
 

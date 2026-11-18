@@ -23,6 +23,19 @@ risolvi() { local h=${1#https://}; local ip; ip=$(dig +short @1.1.1.1 "$h" A | g
 # Nessun riferimento all'app nei file del sito.
 ! grep -rqiE "app\.|ricette|menu|famiglia" sito/pubblico || errore "I file del sito contengono riferimenti all'app"
 
+# Il dominio principale lascia il Worker dell'app (fase di transizione): solo quel nome e solo
+# su `menuapp`; gli altri domini dell'account non si toccano.
+API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains"
+id_dominio=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$API" | node -e '
+  let t = ""; process.stdin.on("data", (x) => (t += x)).on("end", () => {
+    const d = JSON.parse(t).result.find((x) => x.hostname === "ricettedifamiglia.online" && x.service === "menuapp")
+    process.stdout.write(d ? d.id : "")
+  })') || errore "Elenco dei domini dei Worker non leggibile"
+if [[ -n "$id_dominio" ]]; then
+  curl -fsS -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$API/$id_dominio" >/dev/null || errore "Il dominio principale non si stacca da menuapp: toglilo dalla dashboard"
+  ok "ricettedifamiglia.online staccato dal Worker menuapp (l'app resta su $APP)"
+fi
+
 info "Pubblicazione del sito…"
 npx wrangler deploy -c sito/wrangler.jsonc || errore "wrangler deploy del sito non riuscito (il dominio principale è ancora assegnato al Worker menuapp? vedi docs/CLOUDFLARE.md)"
 
