@@ -445,5 +445,10 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   `pre-migrazione-20261118-153446-v15.json` (annullamento: `migra.ts annulla` con quel nome); verifica
   superata (conteggi uguali a Debian, riferimenti integri, 48 foto presenti e identiche). Sessioni di
   Loris su Cloudflare intatte. Debian non modificato, ancora attivo con il Funnel.
-- Prossimi passi: controllo dall'app, console da spegnere, sito sul dominio principale, inviti a
-  Raffa e Palli, dismissione di Debian su conferma di Loris.
+- Console spenta (segreto tolto dal Worker e da cloudflare.env). Sito pubblicato il 18/11
+  (`ricettedifamiglia-sito`, versione `1ed0dea9`): dominio principale staccato da `menuapp`, solo
+  «Sito in costruzione», 404 per le risorse dell'app, noindex; app solo su `app.…`. I falsi errori
+  finali degli script venivano dal DNS del router (risposte negative in memoria): verifiche ora col
+  DNS di Cloudflare.
+- Prossimi passi: inviti a Raffa e Palli e ricollegamento di Lucia su `app.…`; dismissione di
+  Debian e Funnel su conferma di Loris.

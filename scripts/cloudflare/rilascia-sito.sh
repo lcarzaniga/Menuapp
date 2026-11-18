@@ -40,15 +40,15 @@ info "Pubblicazione del sito…"
 npx wrangler deploy -c sito/wrangler.jsonc || errore "wrangler deploy del sito non riuscito (il dominio principale è ancora assegnato al Worker menuapp? vedi docs/CLOUDFLARE.md)"
 
 for _ in $(seq 1 30); do
-  pagina=$(curl -fsS "$SITO/" 2>/dev/null || true)
+  pagina=$(curl -fsS $(risolvi "$SITO") "$SITO/" 2>/dev/null || true)
   [[ "$pagina" == *"Sito in costruzione"* ]] && break
   sleep 2
 done
 [[ "$pagina" == *"Sito in costruzione"* ]] || errore "$SITO non mostra la pagina in costruzione"
 for p in /api/v1/salute /manifest.webmanifest /registerSW.js; do
-  [[ "$(curl -s -o /dev/null -w '%{http_code}' "$SITO$p")" == 404 ]] || errore "$SITO$p non risponde 404"
+  [[ "$(curl -s $(risolvi "$SITO") -o /dev/null -w '%{http_code}' "$SITO$p")" == 404 ]] || errore "$SITO$p non risponde 404"
 done
-[[ "$(curl -sI "$SITO/" | tr -d '\r' | grep -i '^x-robots-tag:')" == *noindex* ]] || errore "Manca X-Robots-Tag: noindex"
+[[ "$(curl -sI $(risolvi "$SITO") "$SITO/" | tr -d '\r' | grep -i '^x-robots-tag:')" == *noindex* ]] || errore "Manca X-Robots-Tag: noindex"
 ok "Sito in costruzione attivo su $SITO; app solo su $APP"
 }
 
