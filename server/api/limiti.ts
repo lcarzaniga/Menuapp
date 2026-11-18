@@ -23,6 +23,12 @@ export class Limitatore {
     return c.n <= this.massimo
   }
 
+  /** Chiave oltre il massimo nella finestra, senza registrare un tentativo. */
+  bloccato(chiave: string, adesso = Date.now()): boolean {
+    const c = this.conteggi.get(chiave)
+    return c !== undefined && adesso - c.da < this.finestraMs && c.n >= this.massimo
+  }
+
   private pulisci(adesso: number): void {
     for (const [k, c] of this.conteggi) if (adesso - c.da >= this.finestraMs) this.conteggi.delete(k)
   }

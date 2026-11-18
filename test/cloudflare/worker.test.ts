@@ -96,6 +96,8 @@ describe('installazione Cloudflare', () => {
   it('console: segreto obbligatorio; primo amministratore con invito e approvazione', async () => {
     const sbagliato = await fetch(`${P}/console`, { method: 'POST', headers: { authorization: 'Bearer altro' } })
     expect(sbagliato.status).toBe(401)
+    // Le chiamate col codice giusto non consumano i tentativi (gli script ne fanno molte).
+    for (let i = 0; i < 15; i++) expect((await console_('stato')).stato).toBe(200)
     expect((await fetch(`${P}/console`)).status).toBe(404)
     const invito = await console_('invito')
     expect(invito.testo).toContain('Invito per Loris')

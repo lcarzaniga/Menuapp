@@ -13,7 +13,7 @@ import { importa, leggiEsportazione, preparaPiano, proponiCorrispondenza, verifi
 
 export const PERCORSO_CONSOLE = '/api/v1/console'
 const LUNGHEZZA_MINIMA = 32
-const tentativi = new Limitatore(10, 15 * 60_000)
+const sbagliati = new Limitatore(10, 15 * 60_000)
 
 const SISTEMA: UtenteCorrente = { id: '', nome: 'console', ruolo: 'amministratore', sessioneId: '', ingresso: 'unico' }
 
@@ -61,8 +61,12 @@ const data = (ms: number) => new Date(ms).toLocaleString('it-IT', { dateStyle: '
 export async function gestisciConsole(req: Request, a: Ambito): Promise<Response> {
   if (!a.codice || a.codice.length < LUNGHEZZA_MINIMA) return json(404, { errore: { codice: 'non_trovato', messaggio: 'Risorsa non trovata' } })
   if (req.method !== 'POST') return json(404, { errore: { codice: 'non_trovato', messaggio: 'Risorsa non trovata' } })
-  if (!tentativi.prova(a.ip)) return json(429, { errore: { codice: 'troppi_tentativi', messaggio: 'Troppi tentativi, riprova più tardi' } })
-  if (!autorizzata(req, a.codice)) return json(401, { errore: { codice: 'non_autenticato', messaggio: 'Codice della console errato' } })
+  // Contano solo i codici sbagliati: gli script interrogano la console più volte di seguito.
+  if (sbagliati.bloccato(a.ip)) return json(429, { errore: { codice: 'troppi_tentativi', messaggio: 'Troppi tentativi, riprova più tardi' } })
+  if (!autorizzata(req, a.codice)) {
+    sbagliati.prova(a.ip)
+    return json(401, { errore: { codice: 'non_autenticato', messaggio: 'Codice della console errato' } })
+  }
   const { comando = 'stato', argomenti = [] } = (await req.json().catch(() => ({}))) as { comando?: string; argomenti?: string[] }
   const { db } = a
   try {
