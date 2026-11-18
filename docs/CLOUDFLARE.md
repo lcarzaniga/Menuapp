@@ -46,34 +46,30 @@ verifica di `https://app.ricettedifamiglia.online/api/v1/salute` (`{"ok":true,"v
 del 401 senza sessione. Il primo rilascio crea il Durable Object (schema 15 e catalogo al primo
 accesso) e il dominio personalizzato (certificato in pochi minuti).
 
-## Primo amministratore (procedura temporanea)
+## Console e collegamento dei dispositivi
 
 ```bash
-# 1. segreto temporaneo (almeno 32 caratteri): lo chiede wrangler
-openssl rand -base64 36
-source ~/.config/menuapp/cloudflare.env && export CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID
-npx wrangler secret put MENUAPP_CODICE_CONSOLE
-# 2. invito per l'amministratore (utente «Loris» creato dalla migrazione)
-MENUAPP_CODICE_CONSOLE='…' node scripts/cloudflare/console.ts invito    # link su app.ricettedifamiglia.online
-# 3. aprire il link sul telefono, chiedere l'accesso, poi approvare col codice mostrato
-MENUAPP_CODICE_CONSOLE='…' node scripts/cloudflare/console.ts approva K7P-M2Q
-# 4. togliere il segreto: la console smette di esistere (404)
-npx wrangler secret delete MENUAPP_CODICE_CONSOLE
+scripts/cloudflare/console.sh attiva       # segreto nuovo in cloudflare.env e sul Worker
+scripts/cloudflare/console.sh collega      # invito per Loris (o: collega Anna), attesa, approvazione
+scripts/cloudflare/console.sh disattiva    # segreto tolto: la console risponde 404
 ```
 
-Gli altri utenti e dispositivi si gestiscono dall'app (Impostazioni → Utenti e dispositivi), solo
-dall'amministratore. La stessa procedura serve per recuperare l'accesso se l'amministratore perde
-tutti i dispositivi. Altri comandi: `stato`, `rifiuta`, `sessioni`, `revoca`, `backup`.
+`collega` mostra il link da aprire **sul dispositivo** (il cookie della sessione lo riceve solo il
+browser che apre il link: non si può collegare un telefono da qui), aspetta la richiesta, mostra il
+codice e approva solo dopo la conferma che coincide con quello sul dispositivo. Serve per il primo
+amministratore e per recuperare l'accesso; per il resto bastano le pagine dell'app. Gli script
+leggono il segreto da `cloudflare.env`; altri comandi: `node scripts/cloudflare/console.ts stato |
+sessioni | revoca | backup`.
 
 ## Backup e ripristino
 
 - Ogni notte (02:45 UTC) un backup completo in R2 (`backup/giornaliero-…json`, 14 giorni), più i
   manuali dalla pagina «Dati e backup» (10) e i `pre-ripristino` (5). Esportazione JSON o ZIP con
   le foto dalla stessa pagina, da conservare fuori da Cloudflare.
-- **Ripristino** solo con lo script (segreto della console attivo come sopra):
+- **Ripristino** solo con lo script (console attiva come sopra):
   ```bash
-  MENUAPP_CODICE_CONSOLE='…' node scripts/cloudflare/console.ts backup
-  MENUAPP_CODICE_CONSOLE='…' node scripts/cloudflare/console.ts ripristina giornaliero-20261119-024500-v15.json
+  node scripts/cloudflare/console.ts backup
+  node scripts/cloudflare/console.ts ripristina giornaliero-20261119-024500-v15.json
   ```
   Salva prima i dati attuali (`pre-ripristino-…`), sostituisce tutto il contenuto in una
   transazione, rimette dal cestino le foto che servono; i dispositivi restano collegati.
@@ -92,12 +88,13 @@ Ordine pensato perché l'accesso non si interrompa mai e Debian resti attivo fin
 3. **Migrazione dei dati** (segreto della console attivo; nessuno usa l'app nel frattempo, né su
    Debian né su Cloudflare):
    ```bash
-   export MENUAPP_CODICE_CONSOLE='…'   # lo stesso impostato con wrangler secret put
+   scripts/cloudflare/console.sh attiva
    node scripts/cloudflare/migra.ts prepara          # backup Debian + esportazione e foto in dati/migrazione/<id>
    node scripts/cloudflare/migra.ts carica <id>      # in R2 (zona di carico) + proposta di corrispondenza
    #   controllare dati/migrazione/<id>/corrispondenza.json e mettere "confermata": true
    node scripts/cloudflare/migra.ts conferma <id>    # piano di prova: tutti i controlli, nessuna modifica
    node scripts/cloudflare/migra.ts importa <id>     # backup pre-migrazione, importazione, verifica
+   scripts/cloudflare/console.sh disattiva
    ```
    In caso di problemi: `node scripts/cloudflare/migra.ts annulla pre-migrazione-….json` (il nome lo
    stampa `importa`). Debian non viene modificato in nessun passo (solo un backup manuale).

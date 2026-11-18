@@ -11,26 +11,23 @@
 //
 // Funziona solo mentre sul Worker è impostato lo stesso segreto (wrangler secret put
 // MENUAPP_CODICE_CONSOLE); indirizzo da MENUAPP_URL (predefinito https://app.ricettedifamiglia.online).
+import { chiamaConsole, codiceConsole } from './rete.ts'
+
 const url = (process.env.MENUAPP_URL ?? 'https://app.ricettedifamiglia.online').replace(/\/+$/, '')
-const codice = process.env.MENUAPP_CODICE_CONSOLE
+const codice = codiceConsole()
 const [comando = 'stato', ...argomenti] = process.argv.slice(2)
 
 if (!codice) {
-  console.error('Imposta MENUAPP_CODICE_CONSOLE con il segreto della console')
+  console.error('Console non attiva: scripts/cloudflare/console.sh attiva')
   process.exit(1)
 }
-const r = await fetch(`${url}/api/v1/console`, {
-  method: 'POST',
-  headers: { authorization: `Bearer ${codice}`, 'content-type': 'application/json' },
-  body: JSON.stringify({ comando, argomenti }),
-})
-const corpo = (await r.json().catch(() => null)) as { testo?: string; errore?: { messaggio: string } } | null
-if (r.status === 404) {
+const corpo = await chiamaConsole(url, codice, comando, argomenti)
+if (corpo.stato === 404) {
   console.error('Console non attiva: imposta il segreto con «npx wrangler secret put MENUAPP_CODICE_CONSOLE»')
   process.exit(1)
 }
-if (!r.ok || !corpo?.testo) {
-  console.error(corpo?.errore?.messaggio ?? `Errore ${r.status}`)
+if (corpo.stato >= 300 || !corpo.testo) {
+  console.error(corpo.errore?.messaggio ?? `Errore ${corpo.stato}`)
   process.exit(1)
 }
 console.log(corpo.testo)

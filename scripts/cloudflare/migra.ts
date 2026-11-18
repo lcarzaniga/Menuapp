@@ -18,6 +18,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from
 import { join, resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { esporta } from '../../server/backup/esportazione.ts'
+import { chiamaConsole, codiceConsole } from './rete.ts'
 import { nomeFile } from '../../server/servizi/foto.ts'
 import type { TipoFoto } from '../../src/contratto/foto.ts'
 
@@ -34,15 +35,10 @@ function esci(messaggio: string): never {
 }
 
 async function console_(cmd: string, ...argomenti: string[]): Promise<{ testo: string; dati?: unknown }> {
-  const codice = process.env.MENUAPP_CODICE_CONSOLE ?? esci('Imposta MENUAPP_CODICE_CONSOLE (segreto della console attivo sul Worker)')
-  const r = await fetch(`${URL_APP}/api/v1/console`, {
-    method: 'POST',
-    headers: { authorization: `Bearer ${codice}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ comando: cmd, argomenti }),
-  })
-  const c = (await r.json().catch(() => null)) as { testo?: string; dati?: unknown; errore?: { messaggio: string } } | null
-  if (r.status === 404) esci('Console non attiva: npx wrangler secret put MENUAPP_CODICE_CONSOLE')
-  if (!r.ok || !c?.testo) esci(c?.errore?.messaggio ?? `Errore ${r.status}`)
+  const codice = codiceConsole() ?? esci('Console non attiva: scripts/cloudflare/console.sh attiva')
+  const c = await chiamaConsole(URL_APP, codice, cmd, argomenti)
+  if (c.stato === 404) esci('Console non attiva: scripts/cloudflare/console.sh attiva')
+  if (c.stato >= 300 || !c.testo) esci(c.errore?.messaggio ?? `Errore ${c.stato}`)
   return { testo: c.testo, dati: c.dati }
 }
 
