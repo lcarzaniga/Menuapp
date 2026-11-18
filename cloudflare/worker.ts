@@ -33,6 +33,8 @@ export interface Ambiente {
 }
 
 const NOME_ISTANZA = 'archivio'
+/** Codice della console passato dal Worker al Durable Object (mai dal browser: il Worker la sovrascrive). */
+const INTESTAZIONE_CODICE = 'x-menuapp-codice-console'
 
 function configDa(env: Ambiente): Config {
   const pubblico = env.MENUAPP_URL_PUBBLICO
@@ -82,7 +84,9 @@ export class Archivio extends DurableObject<Ambiente> {
       return gestisciConsole(richiesta, {
         db: this.db,
         bucket: this.env.FOTO,
-        codice: this.env.MENUAPP_CODICE_CONSOLE,
+        // Dal Worker, non da this.env: il Durable Object legge i segreti solo al suo avvio, e
+        // aggiungere o togliere il segreto non lo fa ripartire.
+        codice: richiesta.headers.get(INTESTAZIONE_CODICE) ?? undefined,
         urlInviti: this.contesto.config.urlPubblico!,
         versioneApp: this.contesto.versioneApp,
         ip,
@@ -109,7 +113,19 @@ const archivio = (env: Ambiente) => env.ARCHIVIO.get(env.ARCHIVIO.idFromName(NOM
 export default {
   async fetch(richiesta: Request, env: Ambiente): Promise<Response> {
     const url = new URL(richiesta.url)
-    if (url.pathname.startsWith('/api/')) return archivio(env).fetch(richiesta)
+    if (url.pathname === PERCORSO_CONSOLE || url.pathname.startsWith(`${PERCORSO_CONSOLE}/`)) {
+      const inoltro = new Request(richiesta)
+      inoltro.headers.delete(INTESTAZIONE_CODICE)
+      if (env.MENUAPP_CODICE_CONSOLE) inoltro.headers.set(INTESTAZIONE_CODICE, env.MENUAPP_CODICE_CONSOLE)
+      return archivio(env).fetch(inoltro)
+    }
+    // Nessuna richiesta porta al Durable Object l'intestazione interna della console.
+    if (url.pathname.startsWith('/api/')) {
+      if (!richiesta.headers.has(INTESTAZIONE_CODICE)) return archivio(env).fetch(richiesta)
+      const pulita = new Request(richiesta)
+      pulita.headers.delete(INTESTAZIONE_CODICE)
+      return archivio(env).fetch(pulita)
+    }
     return env.ASSETS.fetch(richiesta)
   },
   async scheduled(_evento: ScheduledController, env: Ambiente, ctx: ExecutionContext): Promise<void> {

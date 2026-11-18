@@ -2537,7 +2537,9 @@ ripristini. Le foto si leggono solo dall'API, con il permesso sulla ricetta o su
   server per primo amministratore, approvazioni, sessioni, revoche, elenco dei backup e
   **ripristino**. Esiste solo mentre è impostato il segreto `MENUAPP_CODICE_CONSOLE` (almeno 32
   caratteri, confronto a tempo costante, 10 tentativi ogni 15 minuti per indirizzo); senza segreto
-  risponde 404. Script: `scripts/cloudflare/console.ts`.
+  risponde 404. Script: `scripts/cloudflare/console.ts`, `scripts/cloudflare/console.sh`. Il segreto
+  lo legge il Worker e lo passa al Durable Object con un'intestazione interna (quella del browser è
+  sempre tolta): il Durable Object legge i propri segreti solo al suo avvio.
 
 ### 32.5 Ingresso `unico`
 

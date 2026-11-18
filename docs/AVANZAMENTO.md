@@ -450,5 +450,11 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   «Sito in costruzione», 404 per le risorse dell'app, noindex; app solo su `app.…`. I falsi errori
   finali degli script venivano dal DNS del router (risposte negative in memoria): verifiche ora col
   DNS di Cloudflare.
+- 18/11 sera: `Clear-Site-Data` del sito con «cookies» cancellava anche la sessione di `app.…`
+  (vale per tutto il dominio): tolto, sito ripubblicato (`3a1f1aa7`), test d'architettura.
+  Console: il Durable Object legge i segreti solo al suo avvio, quindi attivazione e spegnimento non
+  avevano effetto finché non ripartiva; ora il codice arriva dal Worker (intestazione interna, mai dal
+  browser). Da rilasciare: `scripts/rilascia.sh dopo-migrazione`, poi `scripts/cloudflare/rilascia.sh`
+  (senza `--transizione`: il dominio principale è già del sito).
 - Prossimi passi: inviti a Raffa e Palli e ricollegamento di Lucia su `app.…`; dismissione di
   Debian e Funnel su conferma di Loris.
