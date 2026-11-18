@@ -49,6 +49,10 @@ describe('architettura', () => {
     const errori = [...grafoValori('cloudflare/worker.ts')].flatMap(([f, imp]) => imp.filter((i) => vietati.some((v) => v.test(i))).map((i) => `${f} importa ${i}`))
     expect(errori).toEqual([])
   })
+  it('il sito del dominio principale non cancella i cookie (varrebbe anche per app.…)', () => {
+    const intestazioni = readFileSync(join(RADICE, 'sito/pubblico/_headers'), 'utf8')
+    expect(intestazioni).not.toMatch(/clear-site-data:[^\n]*cookies/i)
+  })
   it('il Worker include tutte le migrazioni del server', () => {
     const sql = readdirSync(join(RADICE, 'server/db/migrazioni')).filter((f) => /^\d{4}_.*\.sql$/.test(f))
     const elenco = readFileSync(join(RADICE, 'cloudflare/migrazioni.ts'), 'utf8')

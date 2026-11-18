@@ -2621,8 +2621,9 @@ comandi della console `proponi`, `piano`, `importa`, `verifica`; procedura guida
   pagina neutra «Sito in costruzione» (responsive, chiara e scura), 404 per tutto il resto,
   `noindex` (intestazione, meta e `robots.txt`), CSP minima. **Nessun riferimento all'app**: niente
   link, pulsanti, reindirizzamenti o nomi di funzioni (lo script di rilascio lo controlla). Un service
-  worker sostitutivo e `Clear-Site-Data` tolgono dai dispositivi l'app installata in passato su
-  questo nome. Predisposto per diventare una landing page.
+  worker sostitutivo e `Clear-Site-Data: "cache", "storage"` tolgono dai dispositivi l'app
+  installata in passato su questo nome. **Mai `"cookies"`**: vale per tutto il dominio registrato,
+  sottodomini compresi, e cancellerebbe la sessione di `app.…` (successo il 18/11). Predisposto per diventare una landing page.
 - Passaggio senza interruzioni: `rilascia.sh --transizione` pubblica l'app su entrambi i nomi
   (origine del dominio principale ammessa in via temporanea); i dispositivi si ricollegano su `app.…`;
   poi il dominio principale passa al sito.
