@@ -89,7 +89,10 @@ disattiva() {
   unset MENUAPP_CODICE_CONSOLE
   # Con il segreto tolto la console risponde 404 (dopo qualche secondo).
   for _ in $(seq 1 30); do
-    MENUAPP_CODICE_CONSOLE=x "${CONSOLE[@]}" stato 2>&1 | grep -q 'Console non attiva' && { ok "Console spenta"; return; }
+    # Con pipefail il codice d'uscita della prova (1) nasconderebbe il grep: prima l'uscita, poi il controllo.
+    local esito
+    esito=$(MENUAPP_CODICE_CONSOLE=x "${CONSOLE[@]}" stato 2>&1 || true)
+    [[ "$esito" == *"Console non attiva"* ]] && { ok "Console spenta"; return; }
     sleep 2
   done
   errore "La console risponde ancora: controlla con «npx wrangler secret list»"
