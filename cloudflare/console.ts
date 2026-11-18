@@ -9,6 +9,7 @@ import type { Db } from '../server/db/connessione.ts'
 import * as identita from '../server/servizi/identita.ts'
 import type { UtenteCorrente } from '../server/servizi/permessi.ts'
 import { elencaBackupR2, ripristinaDaR2 } from './backup.ts'
+import { importa, leggiEsportazione, preparaPiano, proponiCorrispondenza, verificaImportazione } from './importazione.ts'
 
 export const PERCORSO_CONSOLE = '/api/v1/console'
 const LUNGHEZZA_MINIMA = 32
@@ -66,6 +67,7 @@ export async function gestisciConsole(req: Request, a: Ambito): Promise<Response
   const { db } = a
   try {
     const righe: string[] = []
+    let dati: unknown
     switch (comando) {
       case 'stato': {
         for (const u of identita.elencaUtenti(db)) righe.push(`${u.nome.padEnd(20)} ${u.ruolo.padEnd(15)} ${u.stato}`)
@@ -119,10 +121,49 @@ export async function gestisciConsole(req: Request, a: Ambito): Promise<Response
         }
         break
       }
+      // ── Migrazione dei contenuti da Debian (SPEC §33) ──
+      case 'proponi': {
+        const id = argomenti[0] ?? ''
+        const p = proponiCorrispondenza(db, await leggiEsportazione(a.bucket, id), id)
+        dati = p.corrispondenza
+        righe.push(p.problemi.length ? `Da decidere:\n${p.problemi.map((x) => `  - ${x}`).join('\n')}` : 'Nessuna omonimia: ogni utente Debian ha un solo corrispondente su Cloudflare.')
+        break
+      }
+      case 'piano': {
+        const p = await preparaPiano(db, a.bucket, argomenti[0] ?? '')
+        righe.push('Controlli superati, nessuna modifica fatta. L\'importazione:')
+        for (const [d, c] of p.mappa) righe.push(`  utente ${d} → ${c}`)
+        if (p.nuovi.length) righe.push(`  nuovi utenti senza dispositivi: ${p.nuovi.map((u) => u.nome).join(', ')}`)
+        righe.push(`  ${p.file.length} file di foto e allegati verificati`)
+        righe.push(`  contenuti: ${Object.entries(p.esportazione.conteggi).filter(([t, n]) => n > 0 && !['utenti', 'sessioni', 'meta'].includes(t)).map(([t, n]) => `${t} ${n}`).join(', ')}`)
+        break
+      }
+      case 'importa': {
+        a.manutenzione(true)
+        try {
+          const esito = await importa(db, a.bucket, argomenti[0] ?? '', a.versioneApp)
+          righe.push(`Importazione completata. Stato precedente salvato in ${esito.backupPrecedente} (annullamento: ripristina ${esito.backupPrecedente}).`)
+          if (esito.nuoviUtenti.length) righe.push(`Nuovi utenti senza dispositivi: ${esito.nuoviUtenti.join(', ')}`)
+        } finally {
+          a.manutenzione(false)
+        }
+        break
+      }
+      case 'verifica': {
+        const problemi = await verificaImportazione(db, a.bucket, argomenti[0] ?? '')
+        righe.push(problemi.length ? `PROBLEMI:\n${problemi.map((x) => `  - ${x}`).join('\n')}` : 'Verifica superata: conteggi uguali a Debian, riferimenti integri, tutti i file presenti e identici.')
+        if (problemi.length) dati = { problemi }
+        break
+      }
+      case 'utenti': {
+        dati = identita.elencaUtenti(db)
+        for (const u of dati as { id: string; nome: string; ruolo: string }[]) righe.push(`${u.id}  ${u.nome}  ${u.ruolo}`)
+        break
+      }
       default:
-        throw new Error(`Comando sconosciuto: ${comando}. Comandi: stato, invito, approva, rifiuta, sessioni, revoca, backup, ripristina`)
+        throw new Error(`Comando sconosciuto: ${comando}. Comandi: stato, invito, approva, rifiuta, sessioni, revoca, backup, ripristina, utenti, proponi, piano, importa, verifica`)
     }
-    return json(200, { testo: righe.join('\n') })
+    return json(200, { testo: righe.join('\n'), dati })
   } catch (e) {
     return json(422, { errore: { codice: 'regola_violata', messaggio: e instanceof Error ? e.message : String(e) } })
   }

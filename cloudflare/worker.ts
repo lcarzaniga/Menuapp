@@ -20,7 +20,7 @@ export interface Ambiente {
   ARCHIVIO: DurableObjectNamespace<Archivio>
   FOTO: R2Bucket
   ASSETS: Fetcher
-  /** Indirizzo dell'app (link d'invito), es. https://ricettedifamiglia.online */
+  /** Indirizzo dell'app (link d'invito), es. https://app.ricettedifamiglia.online */
   MENUAPP_URL_PUBBLICO: string
   /** Altre origini ammesse per le scritture, separate da virgole (es. www. o sviluppo). */
   MENUAPP_ORIGINI?: string

@@ -1,12 +1,13 @@
 // Prove dell'installazione Cloudflare sul Worker in locale (wrangler dev: workerd, Durable
 // Object SQLite, R2 simulato), SPEC §32.8: ciò che il server Debian non ha. Le regole comuni
 // (permessi, Famiglie, versioni) le provano la suite del server sul motore leggero e la e2e.
-import { type ChildProcess, spawn } from 'node:child_process'
-import { mkdtempSync, openSync, readFileSync, rmSync } from 'node:fs'
+import { type ChildProcess, execFileSync, spawn } from 'node:child_process'
+import { mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { unzipSync } from 'fflate'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { appDiProva } from '../../server/prova.ts'
 
 const PORTA = 4196
 const ORIGINE = `http://127.0.0.1:${PORTA}`
@@ -188,4 +189,77 @@ describe('installazione Cloudflare', () => {
     }
     throw new Error('Nessun backup giornaliero dopo il Cron Trigger')
   })
+
+  it('migrazione da Debian: contenuti sostituiti, utenti e sessioni di Cloudflare intatti, corrispondenza esplicita, annullamento', async () => {
+    // «Debian» di prova: Loris, Anna (c'è anche su Cloudflare, con un altro id) e Bruno (solo su Debian).
+    const d = await appDiProva()
+    try {
+      const annaD = d.utente('Anna')
+      const brunoD = d.utente('Bruno')
+      const q = '/api/v1'
+      const scrivi = async (c: { scrivi: typeof d.scrivi }, m: 'POST' | 'PUT', url: string, corpo: unknown) => {
+        const r = await c.scrivi(m, `${q}${url}`, corpo)
+        expect(r.statusCode, r.body).toBeLessThan(300)
+        return r.body ? JSON.parse(r.body) : null
+      }
+      const ev = await scrivi(annaD, 'POST', '/eventi', { id: 'ev-debian', nome: 'Pranzo di Pasqua', data: '2027-03-28', oraServizio: null, tipo: 'pranzo', occasione: '', adulti: 6, bambini: 0, note: '', gruppoId: 'gruppo-famiglia' })
+      await scrivi(annaD, 'PUT', `/eventi/ev-debian/condivisioni/${brunoD.id}`, { permesso: 'modifica' })
+      await scrivi(annaD, 'POST', '/eventi/ev-debian/voci', { voci: [{ id: 'v-colomba', portataId: ev.portate[4].id, nome: 'Colomba' }] })
+      await scrivi(brunoD, 'POST', '/eventi/ev-debian/cose', { id: 'c-vino', nome: 'Vino', prendo: true })
+      await scrivi(annaD, 'POST', '/piatti', { id: 'p-debian', nome: 'Pastiera' })
+      const foto = await d.app.inject({ method: 'POST', url: `${q}/piatti/p-debian/foto?id=f-debian`, headers: { origin: 'http://localhost:5173', 'content-type': 'image/jpeg', cookie: annaD.cookie! }, payload: Buffer.from(JPEG) })
+      expect(foto.statusCode, foto.body).toBe(201)
+      await scrivi(brunoD, 'POST', '/gruppi/gruppo-famiglia/messaggi', { id: 'm-debian', testo: 'Chi porta il vino?' })
+
+      const migra = (...argomenti: string[]) =>
+        execFileSync(process.execPath, ['scripts/cloudflare/migra.ts', ...argomenti], {
+          encoding: 'utf8',
+          env: { ...process.env, MENUAPP_DATI: d.cartella, MENUAPP_URL: ORIGINE, MENUAPP_CODICE_CONSOLE: CODICE, MENUAPP_R2_LOCALE: cartella },
+        })
+      const preparato = migra('prepara')
+      const id = /Esportazione (\d{8}-\d{4})/.exec(preparato)![1]!
+      expect(preparato).toContain('1 file')
+      const caricato = migra('carica', id)
+      expect(caricato).toContain('«Bruno» non esiste su Cloudflare')
+      const file = join(d.cartella, 'migrazione', id, 'corrispondenza.json')
+      const proposta = JSON.parse(readFileSync(file, 'utf8'))
+      expect(proposta.utenti['utente-amministratore'].utente).toBe('utente-amministratore')
+      expect(proposta.utenti[annaD.id].utente).toBe('u-anna')
+      expect(proposta.utenti[brunoD.id].nuovo).toEqual({ nome: 'Bruno', ruolo: 'utente' })
+      // Senza conferma esplicita non si va avanti.
+      expect(() => migra('conferma', id)).toThrow()
+      writeFileSync(file, JSON.stringify({ ...proposta, confermata: true }))
+      expect(migra('conferma', id)).toContain('nessuna modifica fatta')
+      expect((await loris.chiama('GET', '/eventi/ev')).stato).toBe(200)
+
+      const importato = migra('importa', id)
+      expect(importato).toContain('Verifica superata')
+      const backup = /(pre-migrazione-\S+\.json)/.exec(importato)![1]!
+
+      // Utenti e dispositivi di Cloudflare intatti; Bruno nuovo, senza dispositivi.
+      expect((await loris.chiama('GET', '/sessione')).corpo.utente.nome).toBe('Loris')
+      expect((await anna.chiama('GET', '/sessione')).corpo.utente.id).toBe('u-anna')
+      const utenti = (await loris.chiama('GET', '/admin/utenti')).corpo as { id: string; nome: string }[]
+      expect(utenti.map((u) => u.nome).sort()).toEqual(['Anna', 'Bruno', 'Loris'])
+      // Contenuti di prova sostituiti da quelli di Debian, con i riferimenti tradotti.
+      expect((await loris.chiama('GET', '/eventi/ev')).stato).toBe(404)
+      const evento = await anna.chiama('GET', '/eventi/ev-debian')
+      expect(evento.stato).toBe(200)
+      const riepilogo = ((await anna.chiama('GET', '/eventi')).corpo as { id: string; proprietario: { id: string }; permesso: string }[]).find((x) => x.id === 'ev-debian')!
+      expect([riepilogo.proprietario.id, riepilogo.permesso]).toEqual(['u-anna', 'proprietario'])
+      const accesso = (await anna.chiama('GET', '/eventi/ev-debian/accesso')).corpo
+      expect(JSON.stringify(accesso)).toContain(brunoD.id)
+      const fotoCf = await anna.chiama('GET', '/foto/f-debian')
+      expect(new Uint8Array(await fotoCf.risposta.arrayBuffer())).toEqual(JPEG)
+      expect((await anna.chiama('GET', '/piatti/p-debian')).corpo.proprietario.id).toBe('u-anna')
+      expect(JSON.stringify((await anna.chiama('GET', '/gruppi/gruppo-famiglia/bacheca')).corpo)).toContain('Chi porta il vino?')
+
+      // Annullamento: torna lo stato di prima (contenuti di prova).
+      expect(migra('annulla', backup)).toContain('Ripristinato')
+      expect((await loris.chiama('GET', '/eventi/ev')).stato).toBe(200)
+      expect((await anna.chiama('GET', '/eventi/ev-debian')).stato).toBe(404)
+    } finally {
+      d.chiudi()
+    }
+  }, 120_000)
 })

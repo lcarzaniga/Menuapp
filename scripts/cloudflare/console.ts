@@ -7,10 +7,11 @@
 //   … sessioni | revoca <id sessione | nome utente>
 //   … backup                      backup presenti in R2
 //   … ripristina <nome backup>    ripristino (salva prima i dati attuali)
+//   … utenti | proponi | piano | importa | verifica <id>   migrazione da Debian (usare scripts/cloudflare/migra.ts)
 //
 // Funziona solo mentre sul Worker è impostato lo stesso segreto (wrangler secret put
-// MENUAPP_CODICE_CONSOLE); indirizzo da MENUAPP_URL (predefinito https://ricettedifamiglia.online).
-const url = (process.env.MENUAPP_URL ?? 'https://ricettedifamiglia.online').replace(/\/+$/, '')
+// MENUAPP_CODICE_CONSOLE); indirizzo da MENUAPP_URL (predefinito https://app.ricettedifamiglia.online).
+const url = (process.env.MENUAPP_URL ?? 'https://app.ricettedifamiglia.online').replace(/\/+$/, '')
 const codice = process.env.MENUAPP_CODICE_CONSOLE
 const [comando = 'stato', ...argomenti] = process.argv.slice(2)
 

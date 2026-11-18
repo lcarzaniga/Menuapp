@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Rilascio manuale dell'installazione Cloudflare (SPEC §32.7, docs/CLOUDFLARE.md).
-# Uso: scripts/cloudflare/rilascia.sh [--senza-prove]
+# Uso: scripts/cloudflare/rilascia.sh [--senza-prove] [--transizione]
 # Rilascia il commit attuale di main (già pubblicato su GitHub da scripts/rilascia.sh): controlli,
-# prove sul Worker in locale, build, `wrangler deploy`, verifica su ricettedifamiglia.online.
+# prove sul Worker in locale, build, `wrangler deploy`, verifica su app.ricettedifamiglia.online.
+# --transizione: l'app risponde anche sul dominio principale (dove c'era prima), finché i
+# dispositivi non sono collegati al nuovo indirizzo; poi un rilascio normale lo toglie (SPEC §34).
 # Non tocca il server Debian, il suo database né i suoi servizi.
 # Credenziali in ~/.config/menuapp/cloudflare.env (CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID).
 source "$(dirname "$0")/../comuni.sh"
@@ -10,9 +12,11 @@ source "$(dirname "$0")/../comuni.sh"
 rilascia_cloudflare() {
 cd "$RADICE"
 SENZA_PROVE=0
+TRANSIZIONE=0
 for a in "$@"; do
   case "$a" in
     --senza-prove) SENZA_PROVE=1 ;;
+    --transizione) TRANSIZIONE=1 ;;
     *) errore "Opzione sconosciuta: $a" ;;
   esac
 done
@@ -51,17 +55,29 @@ if ! npx wrangler r2 bucket list 2>/dev/null | grep -q "menuapp-foto"; then
   ok "Bucket R2 menuapp-foto creato"
 fi
 
+APP=https://app.ricettedifamiglia.online
+PRINCIPALE=https://ricettedifamiglia.online
 info "Pubblicazione del Worker ($id)…"
-npx wrangler deploy --var "MENUAPP_RILASCIO:$id" || errore "wrangler deploy non riuscito"
+if [[ $TRANSIZIONE == 1 ]]; then
+  # Stesso Worker su entrambi i nomi; inviti e PWA già sul nuovo indirizzo.
+  npx wrangler deploy --var "MENUAPP_RILASCIO:$id" --var "MENUAPP_ORIGINI:$PRINCIPALE" \
+    --domain app.ricettedifamiglia.online --domain ricettedifamiglia.online || errore "wrangler deploy non riuscito"
+else
+  npx wrangler deploy --var "MENUAPP_RILASCIO:$id" || errore "wrangler deploy non riuscito"
+fi
 
-for _ in $(seq 1 30); do
-  salute=$(curl -fsS https://ricettedifamiglia.online/api/v1/salute 2>/dev/null || true)
+# Il certificato di un nome nuovo può richiedere qualche minuto.
+for _ in $(seq 1 60); do
+  salute=$(curl -fsS "$APP/api/v1/salute" 2>/dev/null || true)
   [[ "$salute" == '{"ok":true,"versioneApi":1}' ]] && break
-  sleep 2
+  sleep 5
 done
-[[ "$salute" == '{"ok":true,"versioneApi":1}' ]] || errore "ricettedifamiglia.online non risponde come previsto: $salute"
-[[ "$(curl -s -o /dev/null -w '%{http_code}' https://ricettedifamiglia.online/api/v1/eventi)" == 401 ]] || errore "Dati raggiungibili senza sessione"
-ok "Rilascio Cloudflare $id attivo su https://ricettedifamiglia.online"
+[[ "$salute" == '{"ok":true,"versioneApi":1}' ]] || errore "$APP non risponde come previsto: $salute"
+[[ "$(curl -s -o /dev/null -w '%{http_code}' "$APP/api/v1/eventi")" == 401 ]] || errore "Dati raggiungibili senza sessione"
+ok "Rilascio Cloudflare $id attivo su $APP"
+if [[ $TRANSIZIONE == 1 ]]; then
+  ok "Transizione: l'app risponde anche su $PRINCIPALE finché non rilasci il sito (scripts/cloudflare/rilascia-sito.sh)"
+fi
 }
 
 rilascia_cloudflare "$@"

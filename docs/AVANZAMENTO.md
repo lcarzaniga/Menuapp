@@ -386,7 +386,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   e costi del piano Free, decisioni D1–D5 in attesa di Loris. Nessun codice modificato; Debian
   invariata.
 
-## Installazione Cloudflare, fasi C0–C6 (18/11/2026, ramo `cloudflare`, da rilasciare)
+## Installazione Cloudflare, fasi C0–C6 (18/11/2026, in produzione: Debian `20261118-1258-1e63320`, Worker su ricettedifamiglia.online)
 
 - Decisioni di Loris: Durable Object SQLite, R2 privato, piano Free da misurare, amministrazione
   dall'app solo agli amministratori, ripristino solo da script, primo amministratore con segreto
@@ -414,3 +414,20 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   dall'app); e2e della revoca in bacheca resa deterministica (ricaricamento).
 - Rilascio Debian del ramo invariato nel comportamento (`! scripts/rilascia.sh cloudflare`), poi
   `scripts/cloudflare/rilascia.sh` dopo la preparazione su Cloudflare (docs/CLOUDFLARE.md).
+
+## Migrazione dei dati e nuovi domini (18/11/2026, ramo `migrazione-cloudflare`, da rilasciare)
+
+- Richiesta di Loris: Cloudflare copia completa dei contenuti Debian con gli utenti di Cloudflare;
+  app su `app.ricettedifamiglia.online`, dominio principale con la sola pagina «Sito in costruzione»
+  (nessun riferimento all'app). SPEC §33, §34; procedura in docs/CLOUDFLARE.md.
+- Schema reale analizzato (Debian, sola lettura): 4 utenti (Loris, Raffa, Lucia, Palli), una Famiglia;
+  23 colonne in 20 tabelle puntano agli utenti, più gli id nei dettagli delle notifiche e i nomi
+  nel testo (autore d'origine, partecipanti).
+- Codice: `cloudflare/importazione.ts` (corrispondenza esplicita, piano senza modifiche, importazione
+  in una transazione, verifica di conteggi, riferimenti e impronte dei file), comandi della console,
+  `scripts/cloudflare/migra.ts`; backup `pre-migrazione` in R2; `sito/` e
+  `scripts/cloudflare/rilascia-sito.sh`; `rilascia.sh --transizione`.
+- Prova completa in locale (`test/cloudflare/worker.test.ts`): Debian di prova con utente omonimo e
+  utente solo Debian, proposta, conferma obbligatoria, importazione, utenti e sessioni Cloudflare
+  intatti, riferimenti tradotti, foto in R2, annullamento.
+- Nessuna operazione eseguita su Cloudflare né sui dati di produzione.

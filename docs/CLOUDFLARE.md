@@ -1,8 +1,10 @@
 # Installazione Cloudflare — operazioni
 
-Installazione indipendente su `https://ricettedifamiglia.online` (SPEC §32): Worker `menuapp`,
-Durable Object `Archivio` (database SQLite), bucket R2 privato `menuapp-foto`. Dati e utenti
-propri, nessun legame con il server Debian, che resta invariato su Tailscale.
+App su `https://app.ricettedifamiglia.online` (SPEC §32, §34): Worker `menuapp`, Durable Object
+`Archivio` (database SQLite), bucket R2 privato `menuapp-foto`. Il dominio principale
+`ricettedifamiglia.online` è del Worker `ricettedifamiglia-sito` (cartella `sito/`): solo la pagina
+neutra «Sito in costruzione», senza alcun riferimento all'app. Il server Debian resta invariato su
+Tailscale finché Loris non ne conferma la dismissione.
 
 ## Preparazione (una volta, da Loris sulla dashboard Cloudflare)
 
@@ -40,7 +42,7 @@ scripts/cloudflare/rilascia.sh
 ```
 
 Controlli, prove sul Worker in locale, build, creazione del bucket se manca, `npx wrangler deploy`,
-verifica di `https://ricettedifamiglia.online/api/v1/salute` (`{"ok":true,"versioneApi":1}`) e
+verifica di `https://app.ricettedifamiglia.online/api/v1/salute` (`{"ok":true,"versioneApi":1}`) e
 del 401 senza sessione. Il primo rilascio crea il Durable Object (schema 15 e catalogo al primo
 accesso) e il dominio personalizzato (certificato in pochi minuti).
 
@@ -52,7 +54,7 @@ openssl rand -base64 36
 source ~/.config/menuapp/cloudflare.env && export CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID
 npx wrangler secret put MENUAPP_CODICE_CONSOLE
 # 2. invito per l'amministratore (utente «Loris» creato dalla migrazione)
-MENUAPP_CODICE_CONSOLE='…' node scripts/cloudflare/console.ts invito
+MENUAPP_CODICE_CONSOLE='…' node scripts/cloudflare/console.ts invito    # link su app.ricettedifamiglia.online
 # 3. aprire il link sul telefono, chiedere l'accesso, poi approvare col codice mostrato
 MENUAPP_CODICE_CONSOLE='…' node scripts/cloudflare/console.ts approva K7P-M2Q
 # 4. togliere il segreto: la console smette di esistere (404)
@@ -76,11 +78,38 @@ tutti i dispositivi. Altri comandi: `stato`, `rifiuta`, `sessioni`, `revoca`, `b
   Salva prima i dati attuali (`pre-ripristino-…`), sostituisce tutto il contenuto in una
   transazione, rimette dal cestino le foto che servono; i dispositivi restano collegati.
 
-## `www.ricettedifamiglia.online` (facoltativo)
+## Passaggio ad app.ricettedifamiglia.online e migrazione dei dati
 
-Rules → Redirect Rules: da `www.ricettedifamiglia.online/*` a `https://ricettedifamiglia.online/${1}`
-(301), con un record `www` proxied (es. AAAA `100::`). In alternativa aggiungere un secondo
-dominio personalizzato in `wrangler.jsonc` e l'origine in `MENUAPP_ORIGINI`.
+Ordine pensato perché l'accesso non si interrompa mai e Debian resti attivo fino alla fine.
+
+1. **Rilascio del codice**: `scripts/rilascia.sh migrazione-cloudflare` (Debian, comportamento
+   invariato), poi `scripts/cloudflare/rilascia.sh --transizione`: l'app risponde su
+   `app.ricettedifamiglia.online` **e** ancora sul dominio principale; inviti e PWA già sul nuovo nome.
+2. **Dispositivi sul nuovo indirizzo** (i cookie valgono per un solo nome, quindi ognuno va
+   ricollegato): da un dispositivo già collegato, Impostazioni → Il mio account → «Collega un nuovo
+   dispositivo», aprire il link su `app.…` e approvare il codice; per gli altri familiari un invito
+   dall'amministrazione. Reinstallare la PWA da `app.…`. Gli utenti restano gli stessi.
+3. **Migrazione dei dati** (segreto della console attivo; nessuno usa l'app nel frattempo, né su
+   Debian né su Cloudflare):
+   ```bash
+   export MENUAPP_CODICE_CONSOLE='…'   # lo stesso impostato con wrangler secret put
+   node scripts/cloudflare/migra.ts prepara          # backup Debian + esportazione e foto in dati/migrazione/<id>
+   node scripts/cloudflare/migra.ts carica <id>      # in R2 (zona di carico) + proposta di corrispondenza
+   #   controllare dati/migrazione/<id>/corrispondenza.json e mettere "confermata": true
+   node scripts/cloudflare/migra.ts conferma <id>    # piano di prova: tutti i controlli, nessuna modifica
+   node scripts/cloudflare/migra.ts importa <id>     # backup pre-migrazione, importazione, verifica
+   ```
+   In caso di problemi: `node scripts/cloudflare/migra.ts annulla pre-migrazione-….json` (il nome lo
+   stampa `importa`). Debian non viene modificato in nessun passo (solo un backup manuale).
+4. **Sito sul dominio principale**: togliere `ricettedifamiglia.online` dal Worker `menuapp`
+   (Workers & Pages → menuapp → Settings → Domains & Routes → rimuovere il dominio principale, lasciando
+   `app.…`), poi `scripts/cloudflare/rilascia-sito.sh` (controlla prima che l'app risponda su `app.…`).
+   I prossimi rilasci dell'app: `scripts/cloudflare/rilascia.sh` senza `--transizione`.
+5. **Dismissione di Debian e Funnel**: solo su conferma di Loris (docs/OPERAZIONI.md).
+
+Un telefono che aveva installato la PWA sul dominio principale, alla prima apertura dopo il passo 4
+mostra per un attimo l'app in cache, poi il sito la rimuove (service worker sostitutivo e
+`Clear-Site-Data`) e resta solo la pagina «Sito in costruzione».
 
 ## Misure da fare dopo il primo rilascio (piano Free)
 

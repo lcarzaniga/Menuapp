@@ -13,9 +13,9 @@ import type { TipoFoto } from '../src/contratto/foto.ts'
 import { CESTINO } from './cartella-r2.ts'
 
 export const PREFISSO_BACKUP = 'backup/'
-export type TipoBackupR2 = 'giornaliero' | 'manuale' | 'pre-ripristino'
-export const RE_NOME_BACKUP_R2 = /^(giornaliero|manuale|pre-ripristino)-(\d{8}-\d{6})-v(\d+)\.json$/
-const CONSERVAZIONE: Record<TipoBackupR2, number> = { giornaliero: 14, manuale: 10, 'pre-ripristino': 5 }
+export type TipoBackupR2 = 'giornaliero' | 'manuale' | 'pre-ripristino' | 'pre-migrazione'
+export const RE_NOME_BACKUP_R2 = /^(giornaliero|manuale|pre-ripristino|pre-migrazione)-(\d{8}-\d{6})-v(\d+)\.json$/
+const CONSERVAZIONE: Record<TipoBackupR2, number> = { giornaliero: 14, manuale: 10, 'pre-ripristino': 5, 'pre-migrazione': 5 }
 const GIORNI_CESTINO = 30
 const ORE = 3_600_000
 

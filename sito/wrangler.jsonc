@@ -1,0 +1,11 @@
+// Sito pubblico del dominio principale (SPEC §34): per ora solo la pagina «Sito in costruzione».
+// Worker separato, solo file statici. Rilascio manuale: scripts/cloudflare/rilascia-sito.sh.
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "ricettedifamiglia-sito",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "ricettedifamiglia.online", "custom_domain": true }],
+  "assets": { "directory": "./pubblico", "not_found_handling": "404-page", "html_handling": "auto-trailing-slash" }
+}

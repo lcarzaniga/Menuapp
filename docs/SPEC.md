@@ -2580,6 +2580,53 @@ verifica di salute e 401). Credenziali in `~/.config/menuapp/cloudflare.env` (60
   da confermare con le misure reali (primo avvio: migrazioni e catalogo ~90 ms).
 - Nessuna console SQL: si interviene dalla console e dalle funzioni d'amministrazione.
 
+## 33. Migrazione dei contenuti da Debian a Cloudflare (7.1)
+
+Decisione di Loris (18/11/2026): Cloudflare diventa una copia completa dei contenuti Debian;
+utenti, credenziali, sessioni e dispositivi di Cloudflare restano. Codice: `cloudflare/importazione.ts`,
+comandi della console `proponi`, `piano`, `importa`, `verifica`; procedura guidata
+`scripts/cloudflare/migra.ts` (docs/CLOUDFLARE.md).
+
+- **Cosa si importa**: tutte le tabelle di contenuto (§11.3) tranne l'identità di Cloudflare
+  (`utenti`, `sessioni`, `preferenze_notifiche`, oltre a `inviti` e `richieste_attivazione`, che non
+  sono contenuto): Famiglie e appartenenze, ricette e ingredienti, catalogo e reparti, impostazioni,
+  eventi, menù, spesa, piano, archivio, bacheca, sondaggi, proposte, chi porta, partecipanti,
+  persone esterne, ricorrenze, valutazioni, notifiche, foto e allegati. I contenuti di prova di
+  Cloudflare sono sostituiti.
+- **Utenti**: corrispondenza esplicita Debian → Cloudflare in `corrispondenza.json`, proposta per
+  nome normalizzato e **confermata da Loris** (`"confermata": true`). Omonimie e nomi senza
+  corrispondente non si risolvono mai in automatico; due utenti Debian sullo stesso utente
+  Cloudflare sono vietati; un utente Debian senza corrispondente è creato solo se indicato
+  («nuovo», senza dispositivi, mai con lo stesso nome di uno esistente). Ruolo e nome restano quelli
+  di Cloudflare. Ogni colonna che punta a `utenti` (lette dallo schema reale: proprietari, autori,
+  incaricati, membri, condivisioni, voti, partecipanti, notifiche…) e gli id dentro i dettagli delle
+  notifiche sono tradotti; un riferimento senza corrispondenza ferma tutto prima di toccare i dati.
+  I nomi «fotografati» nel testo (autore d'origine di una ricetta copiata, nome di un partecipante)
+  restano come sono.
+- **Sicurezza**: backup manuale verificato di Debian (`prepara`), esportazione dal backup e non dal
+  database in uso, impronta dell'esportazione e di ogni file controllate; `piano` esegue tutti i
+  controlli senza modificare nulla; `importa` salva Cloudflare in `pre-migrazione-…` (R2), copia i
+  file con l'impronta verificata, poi sostituisce i contenuti in una sola transazione con verifica
+  dei riferimenti e dei conteggi; `verifica` (ripetibile) confronta i conteggi con Debian, controlla
+  riferimenti e utenti, legge ogni foto e allegato da R2 e ne verifica l'impronta.
+- **Annullamento**: `migra.ts annulla pre-migrazione-…` (ripristino della console, §32.6).
+- Debian non è mai modificato (solo il backup manuale); resta attivo con il Funnel fino alla
+  dismissione confermata da Loris.
+
+## 34. Domini (7.1)
+
+- `app.ricettedifamiglia.online`: l'app (Worker `menuapp`): inviti, origine ammessa, cookie
+  `__Host-` e PWA su questo nome.
+- `ricettedifamiglia.online`: Worker separato `ricettedifamiglia-sito` (`sito/`), solo file statici:
+  pagina neutra «Sito in costruzione» (responsive, chiara e scura), 404 per tutto il resto,
+  `noindex` (intestazione, meta e `robots.txt`), CSP minima. **Nessun riferimento all'app**: niente
+  link, pulsanti, reindirizzamenti o nomi di funzioni (lo script di rilascio lo controlla). Un service
+  worker sostitutivo e `Clear-Site-Data` tolgono dai dispositivi l'app installata in passato su
+  questo nome. Predisposto per diventare una landing page.
+- Passaggio senza interruzioni: `rilascia.sh --transizione` pubblica l'app su entrambi i nomi
+  (origine del dominio principale ammessa in via temporanea); i dispositivi si ricollegano su `app.…`;
+  poi il dominio principale passa al sito.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2606,6 +2653,7 @@ verifica di salute e 401). Credenziali in `~/.config/menuapp/cloudflare.env` (60
 | 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |
 | 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |
 | 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |
+| 18/11/2026 | 7.1 — **Migrazione da Debian** (§33): importazione dei contenuti con corrispondenza esplicita degli utenti, piano di prova, backup pre-migrazione, verifica e annullamento; **domini** (§34): app su `app.ricettedifamiglia.online`, dominio principale con la sola pagina «Sito in costruzione» in un Worker separato |
 | 18/11/2026 | 7.0 — **Installazione su Cloudflare** (§32): Worker, Durable Object SQLite, R2 privato; motore leggero con le stesse rotte; interfacce `Db` e `CartellaFile` comuni; ingresso `unico`; console con segreto; backup in R2 e ripristino solo dalla console; rilascio manuale |
 | 18/11/2026 | 6.4.2 — Accesso con il dominio `ricettedifamiglia.online` accanto al Funnel: `MENUAPP_ALTRI_URL_PUBBLICI`, ingresso privato solo con nomi locali o del tailnet, `X-Robots-Tag` (§19.5) |
 | 17/11/2026 | 6.4.1 — Eventi: propri e condivisi in un solo elenco in ordine di data (niente sezione «Condivisi con me»); i condivisi si riconoscono dal badge, anche nel prossimo evento (richiesta di Loris, §31.1) |
