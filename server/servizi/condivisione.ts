@@ -7,6 +7,7 @@ import * as repoEventi from '../db/repo/eventi.ts'
 import { incrementaRevisione } from '../db/repo/meta.ts'
 import * as repoRic from '../db/repo/ricettario.ts'
 import { accessoNegato, conflittoVersione, nonTrovato, regolaViolata } from './errori.ts'
+import type { CartellaFile } from './cartella.ts'
 import { copiaFotoPiatto } from './foto.ts'
 import { avvisa } from './notifiche.ts'
 import { puoPartecipare, richiediEvento, richiediPiatto, type UtenteCorrente } from './permessi.ts'
@@ -90,7 +91,7 @@ export function revocaCondivisioneEvento(db: Db, u: UtenteCorrente, eventoId: st
  * proprietario: il nuovo riceve copie indipendenti e le voci si collegano alle copie. Il
  * vecchio proprietario mantiene la modifica.
  */
-export function trasferisciEvento(db: Db, cartellaFoto: string, u: UtenteCorrente, eventoId: string, nuovoId: string, versione: number, adesso = Date.now()): AccessoEvento {
+export function trasferisciEvento(db: Db, cartellaFoto: CartellaFile, u: UtenteCorrente, eventoId: string, nuovoId: string, versione: number, adesso = Date.now()): AccessoEvento {
   return transazione(db, () => {
     richiediEvento(db, u, eventoId, 'proprietario')
     const evento = repoEventi.leggiEvento(db, eventoId)!
@@ -188,7 +189,7 @@ export function impostaCondivisioniPiatto(db: Db, u: UtenteCorrente, piattoId: s
 }
 
 /** Copia indipendente (ingredienti e foto) nel ricettario di `proprietarioId`. Restituisce il nuovo id. */
-function copiaPiattoInterna(db: Db, cartellaFoto: string, piattoId: string, nuovoId: string, proprietarioId: string, adesso: number, opzioni = { indipendente: false }): string {
+function copiaPiattoInterna(db: Db, cartellaFoto: CartellaFile, piattoId: string, nuovoId: string, proprietarioId: string, adesso: number, opzioni = { indipendente: false }): string {
   const p = repoRic.leggiPiatto(db, piattoId)
   const prop = repoRic.proprietaPiatto(db, piattoId)
   if (!p || !prop) throw nonTrovato('Piatto')
@@ -215,7 +216,7 @@ function copiaPiattoInterna(db: Db, cartellaFoto: string, piattoId: string, nuov
  */
 export function copiaInFamiglia(
   db: Db,
-  cartellaFoto: string,
+  cartellaFoto: CartellaFile,
   u: UtenteCorrente,
   piattoId: string,
   d: { id: string; gruppoId: string; indicaFamiglia: boolean },
@@ -236,7 +237,7 @@ export function copiaInFamiglia(
 }
 
 /** «Copia nel mio ricettario» di una ricetta che l'utente può leggere. */
-export function copiaPiatto(db: Db, cartellaFoto: string, u: UtenteCorrente, piattoId: string, nuovoId: string, adesso = Date.now()): string {
+export function copiaPiatto(db: Db, cartellaFoto: CartellaFile, u: UtenteCorrente, piattoId: string, nuovoId: string, adesso = Date.now()): string {
   return transazione(db, () => {
     richiediPiatto(db, u, piattoId, 'lettura')
     const id = copiaPiattoInterna(db, cartellaFoto, piattoId, nuovoId, u.id, adesso)
@@ -250,7 +251,7 @@ export function copiaPiatto(db: Db, cartellaFoto: string, u: UtenteCorrente, pia
  * l'utente collega una ricetta che può leggere ma di un altro, il proprietario dell'evento ne
  * riceve una copia indipendente (riusata se esiste già). Da chiamare in una transazione.
  */
-export function piattoPerEvento(db: Db, cartellaFoto: string, u: UtenteCorrente, eventoId: string, piattoId: string, adesso = Date.now()): string {
+export function piattoPerEvento(db: Db, cartellaFoto: CartellaFile, u: UtenteCorrente, eventoId: string, piattoId: string, adesso = Date.now()): string {
   richiediPiatto(db, u, piattoId, 'lettura')
   const proprietarioEvento = repo.proprietarioEvento(db, eventoId)
   if (!proprietarioEvento) throw nonTrovato('Evento')

@@ -379,9 +379,38 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Pubblicazione: Cloudflare Workers non adatto (Node, SQLite e file sul server); da usare
   Cloudflare Tunnel verso 127.0.0.1:9873 (indicazioni date a Loris, nulla configurato).
 
-## Piano di migrazione a Cloudflare (18/11/2026, ramo `piano-cloudflare`, solo documento)
+## Piano di migrazione a Cloudflare (18/11/2026, documento; realizzato nel ramo `cloudflare`)
 
 - Analisi di fattibilità in `docs/PIANO-CLOUDFLARE.md`: Workers + R2 come proposto; database in
   un Durable Object SQLite invece che in D1 (transazioni sincrone come oggi); fasi C0–C7, limiti
   e costi del piano Free, decisioni D1–D5 in attesa di Loris. Nessun codice modificato; Debian
   invariata.
+
+## Installazione Cloudflare, fasi C0–C6 (18/11/2026, ramo `cloudflare`, da rilasciare)
+
+- Decisioni di Loris: Durable Object SQLite, R2 privato, piano Free da misurare, amministrazione
+  dall'app solo agli amministratori, ripristino solo da script, primo amministratore con segreto
+  temporaneo. Installazione indipendente: dati e utenti propri, nessuna sincronizzazione (C7).
+- C0 (prototipo in workerd): Fastify non gira su Workers (`new Function`); SQLite del Durable
+  Object con `transactionSync`, chiavi esterne attive, niente `user_version`/`integrity_check`,
+  massimo 100 parametri per query.
+- C1–C3 (codice comune, comportamento Debian invariato): interfaccia `Db` con apertura
+  `node:sqlite` in `server/db/sqlite-node.ts`; migrazioni senza file in `applica.ts`;
+  `CartellaFile` (disco/R2) per foto e allegati; configurazione dell'app separata dal motore
+  (`server/api/applicazione.ts`); **motore leggero** compatibile con le rotte (`server/motore-leggero.ts`);
+  backup su file solo nel montaggio Debian; liste di id della bacheca come parametro JSON.
+- C4–C5 (`cloudflare/`): Worker con Static Assets e `_headers` generato, Durable Object `Archivio`,
+  R2 con copie a fine richiesta e cestino, ingresso `unico`, console con segreto
+  (`scripts/cloudflare/console.ts`), backup in R2, ripristino dalla console, manutenzione notturna.
+  Pagina «Dati e backup» senza ripristino su Cloudflare.
+- C6: `wrangler.jsonc` (dominio personalizzato, bucket, Cron), `scripts/cloudflare/rilascia.sh`
+  (manuale), `docs/CLOUDFLARE.md` (preparazione sulla dashboard, primo amministratore, backup,
+  misure). Nessuna operazione su Cloudflare eseguita: account, token e DNS restano a Loris.
+- Problemi trovati e corretti: DELETE senza corpo arriva a Cloudflare con `content-length: 0`
+  (prima 415); bacheca con più di 100 messaggi oltre il limite dei parametri; menù, inserimento
+  rapido: con una rete lenta il cursore tornava al campo precedente e l'Invio finiva lì (anche Debian).
+- Test: suite del server due volte (Fastify e motore leggero), `npm run test:cloudflare`,
+  `npm run test:e2e:cloudflare` (la e2e su Cloudflare: ripristino dalla console invece che
+  dall'app); e2e della revoca in bacheca resa deterministica (ricaricamento).
+- Rilascio Debian del ramo invariato nel comportamento (`! scripts/rilascia.sh cloudflare`), poi
+  `scripts/cloudflare/rilascia.sh` dopo la preparazione su Cloudflare (docs/CLOUDFLARE.md).

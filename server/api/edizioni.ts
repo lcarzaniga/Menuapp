@@ -14,13 +14,13 @@ import { chi, type Contesto, valida } from './aiuti.ts'
 type ConId = { Params: { id: string } }
 
 export function rotteEdizioni(app: FastifyInstance, ctx: Contesto): void {
-  const { db, config } = ctx
+  const { db } = ctx
   const P = PREFISSO_API
 
   app.post<ConId>(`${P}/eventi/:id/duplica`, async (req, reply) => {
     const u = chi(req)
     richiediEvento(db, u, req.params.id, 'lettura')
-    return reply.code(201).send(duplicazione.duplica(db, config.cartellaFoto, u, req.params.id, valida(SchemaDuplica, req.body)))
+    return reply.code(201).send(duplicazione.duplica(db, ctx.foto, u, req.params.id, valida(SchemaDuplica, req.body)))
   })
   app.get<ConId>(`${P}/eventi/:id/confronto`, async (req) => {
     const u = chi(req)

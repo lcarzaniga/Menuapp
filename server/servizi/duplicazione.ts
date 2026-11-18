@@ -20,6 +20,7 @@ import * as repoRic from '../db/repo/ricettario.ts'
 import * as repoRicorrenze from '../db/repo/ricorrenze.ts'
 import * as repoStampa from '../db/repo/stampa.ts'
 import { copiaPiattoDaSnapshot, eventoDaSnapshot, snapshotValido } from './archivio.ts'
+import type { CartellaFile } from './cartella.ts'
 import { creaAttivita, elencaAttivita } from './attivita.ts'
 import { piattoPerEvento } from './condivisione.ts'
 import { ErroreApi, nonTrovato, regolaViolata } from './errori.ts'
@@ -30,7 +31,7 @@ import { permessoEvento, richiediEvento, type UtenteCorrente } from './permessi.
 
 const puoModificare = (p: string | null) => p === 'proprietario' || p === 'modifica'
 
-export function duplica(db: Db, cartellaFoto: string, u: UtenteCorrente, origineId: string, d: Duplica, adesso = Date.now()): EsitoDuplica {
+export function duplica(db: Db, cartellaFoto: CartellaFile, u: UtenteCorrente, origineId: string, d: Duplica, adesso = Date.now()): EsitoDuplica {
   return transazione(db, () => {
     richiediEvento(db, u, origineId, 'lettura')
     // Ripetizione della stessa richiesta: l'evento c'è già ed è di chi lo ha chiesto.

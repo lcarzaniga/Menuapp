@@ -10,14 +10,23 @@ import { PREFISSO_API } from '../../src/contratto/comune.ts'
 import { percorsoBackup, RE_NOME_BACKUP } from '../backup/backup.ts'
 import { esporta, nomeFileEsportazione } from '../backup/esportazione.ts'
 import { eseguiRipristino, verificaRipristino } from '../backup/ripristino.ts'
-import { LIMITE_CORPO_RIPRISTINO } from '../app.ts'
+import type { RegistroRipristini } from '../backup/ripristino.ts'
 import { eseguiBackup, registraEsportazione, statoBackup } from '../servizi/backup.ts'
-import { nomeFile, recuperaFotoMancanti, sincronizzaFotoNelBackup } from '../servizi/foto.ts'
+import { recuperaFotoMancanti, sincronizzaFotoNelBackup } from '../backup/foto.ts'
+import { nomeFile } from '../servizi/foto.ts'
 import { nonTrovato, richiestaNonValida } from '../servizi/errori.ts'
 import { richiediSistema } from '../servizi/permessi.ts'
 import { chi, type Contesto, valida } from './aiuti.ts'
 
-export function rotteBackup(app: FastifyInstance, ctx: Contesto): void {
+export const LIMITE_CORPO_RIPRISTINO = 50 * 1024 * 1024
+
+/** Contesto del server Debian: in più i ripristini da file. */
+export interface ContestoServer extends Contesto {
+  ripristini: RegistroRipristini
+}
+
+/** Backup su file, esportazione e ripristino: solo sul server Debian (SPEC §11, §32.6). */
+export function rotteBackup(app: FastifyInstance, ctx: ContestoServer): void {
   const { db, config } = ctx
 
   // Funzioni di sistema: amministratore dall'ingresso privato (l'ingresso pubblico non le

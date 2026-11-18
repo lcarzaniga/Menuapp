@@ -2485,6 +2485,101 @@ indirizzi dopo il ricaricamento, vista cucina, indietro, azioni per ruolo, dupli
 lettura, Me ne occupo e Per te, archivio, ricetta, Famiglia, impostazioni) e gli e2e esistenti
 aggiornati alla nuova navigazione.
 
+## 32. Installazione su Cloudflare (7.0)
+
+Decisione di Loris (18/11/2026, piano `docs/PIANO-CLOUDFLARE.md`): una seconda installazione,
+**indipendente** da Debian, su `ricettedifamiglia.online`, con database e utenti propri. Il server
+Debian resta com'è (stesso codice comune, stesso comportamento); nessuna sincronizzazione dei dati
+(fase C7, più avanti). Operazioni in `docs/CLOUDFLARE.md`.
+
+### 32.1 Architettura
+
+- **Worker** `menuapp` (`cloudflare/worker.ts`): file dell'app dagli Static Assets
+  (`dist-cloudflare/`, SPA, `_headers` generato da `scripts/cloudflare/intestazioni.ts` con le
+  stesse intestazioni di sicurezza e di cache del server); ogni `/api/*` va al Durable Object.
+- **Durable Object** `Archivio`, una sola istanza: database SQLite, foto in R2, stesse rotte del
+  server. Fastify non può girare su Workers (genera codice con `new Function`): le rotte girano sul
+  **motore leggero** (`server/motore-leggero.ts`), che imita la parte di Fastify usata
+  (hook, decorazioni, analisi del corpo, errori, 404, HEAD, `inject`). La configurazione comune
+  (`server/api/applicazione.ts`: origini, tipo JSON, intestazioni, errori, autenticazione, rotte)
+  è la stessa sui due motori; tutta la suite del server gira anche sul motore leggero
+  (`MENUAPP_MOTORE=leggero`).
+- **Cron Trigger** alle 02:45 UTC: manutenzione notturna (§32.6).
+
+### 32.2 Database
+
+- Interfaccia `Db` (`server/db/connessione.ts`) soddisfatta da `DatabaseSync` (Debian, aperto in
+  `server/db/sqlite-node.ts`) e da `DbDurable` (`cloudflare/db-durable.ts`, SQLite del Durable
+  Object). Servizi e repository invariati.
+- Nel Durable Object: transazioni con `transactionSync` (BEGIN/COMMIT vietati; annidate
+  partecipano a quella esterna), righe modificate con `changes()`, niente `PRAGMA user_version`
+  né `integrity_check` (versione dello schema da `migrazioni_applicate`), chiavi esterne sempre
+  attive, **al massimo 100 parametri per query**: le liste di id (commenti, reazioni e allegati dei
+  200 messaggi di una bacheca) passano come un solo parametro JSON (`json_each`).
+- Migrazioni: `server/db/migrazioni/applica.ts` (senza file), gli stessi `.sql` inclusi come
+  testo (`cloudflare/migrazioni.ts`, un test verifica che ci siano tutti), applicate all'avvio
+  dell'oggetto con `blockConcurrencyWhile`, poi il catalogo (`eseguiSeed`).
+
+### 32.3 Foto e allegati
+
+`CartellaFile` (`server/servizi/cartella.ts`): disco su Debian (`server/cartella-disco.ts`),
+bucket R2 **privato** `menuapp-foto` su Cloudflare (`cloudflare/cartella-r2.ts`). Prima il file e
+poi la riga; le copie fatte dentro una transazione (copia di una ricetta con le foto) partono alla
+fine della richiesta; un file eliminato va in `cestino/` (svuotato dopo 30 giorni) per i
+ripristini. Le foto si leggono solo dall'API, con il permesso sulla ricetta o sul messaggio.
+
+### 32.4 Accesso e console
+
+- Inviti, codice di verifica, approvazione, sessioni, cookie `__Host-` e revoche identici a §19;
+  link d'invito su `MENUAPP_URL_PUBBLICO` (`https://ricettedifamiglia.online`); scritture solo da
+  quell'origine (più `MENUAPP_ORIGINI`). IP dei tentativi da `CF-Connecting-IP`.
+- **Console** (`cloudflare/console.ts`, `POST /api/v1/console`): sostituisce il terminale del
+  server per primo amministratore, approvazioni, sessioni, revoche, elenco dei backup e
+  **ripristino**. Esiste solo mentre è impostato il segreto `MENUAPP_CODICE_CONSOLE` (almeno 32
+  caratteri, confronto a tempo costante, 10 tentativi ogni 15 minuti per indirizzo); senza segreto
+  risponde 404. Script: `scripts/cloudflare/console.ts`.
+
+### 32.5 Ingresso `unico`
+
+L'installazione Cloudflare ha un solo ingresso, `unico`: amministrazione di utenti, inviti e
+dispositivi e funzioni di sistema dall'app **solo agli amministratori** (`richiediSistema` nega
+solo l'ingresso `pubblico`); salute minima senza sessione; niente controllo dei nomi locali, del
+Funnel né rete di casa. Rotte di ripristino assenti (404).
+
+### 32.6 Backup
+
+Esportazioni complete JSON (stesso formato di §11.3) in R2 sotto `backup/`: `giornaliero` (14),
+`manuale` (10), `pre-ripristino` (5). La pagina «Dati e backup» le elenca, le crea e le scarica;
+niente ripristino dall'app. Manutenzione notturna: backup giornaliero, file non più citati da più
+di un giorno nel cestino, cestino svuotato dopo 30 giorni. Ripristino solo dalla console
+(`ripristina <nome>`): verifica di formato, impronta e schema, backup `pre-ripristino`, sostituzione
+del contenuto in una transazione, file delle foto rimessi dal cestino; le sessioni restano valide.
+Esportazione JSON e ZIP con le foto per l'amministratore come su Debian.
+
+### 32.7 Rilascio
+
+Solo manuale, mai dal collegamento Git: `scripts/cloudflare/rilascia.sh` da `main` già pubblicato
+(controlli, prove sul Worker in locale, build, creazione del bucket se manca, `wrangler deploy`,
+verifica di salute e 401). Credenziali in `~/.config/menuapp/cloudflare.env` (600).
+
+### 32.8 Test
+
+- Suite del server due volte: Fastify e motore leggero.
+- `npm run test:cloudflare` (`test/cloudflare/worker.test.ts`, `wrangler dev` con workerd,
+  Durable Object e R2 locali): intestazioni, console, primo amministratore, ingresso `unico`,
+  permessi e Famiglie, foto in R2 e copie, backup, esportazione ZIP, ripristino e cestino, Cron.
+- `npm run test:e2e:cloudflare`: la suite e2e completa contro il Worker in locale (tranne
+  l'aggiornamento della PWA fra due build).
+- `test/architettura.test.ts`: il Worker non importa `node:fs`, `node:sqlite`, Fastify; tutte le
+  migrazioni incluse.
+
+### 32.9 Limiti noti
+
+- Piano Free: 100.000 richieste al giorno al Worker e al Durable Object, 10 ms di CPU per
+  richiesta al Worker (che inoltra soltanto); per il Durable Object la documentazione indica 30 s,
+  da confermare con le misure reali (primo avvio: migrazioni e catalogo ~90 ms).
+- Nessuna console SQL: si interviene dalla console e dalle funzioni d'amministrazione.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2511,5 +2606,6 @@ aggiornati alla nuova navigazione.
 | 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |
 | 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |
 | 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |
+| 18/11/2026 | 7.0 — **Installazione su Cloudflare** (§32): Worker, Durable Object SQLite, R2 privato; motore leggero con le stesse rotte; interfacce `Db` e `CartellaFile` comuni; ingresso `unico`; console con segreto; backup in R2 e ripristino solo dalla console; rilascio manuale |
 | 18/11/2026 | 6.4.2 — Accesso con il dominio `ricettedifamiglia.online` accanto al Funnel: `MENUAPP_ALTRI_URL_PUBBLICI`, ingresso privato solo con nomi locali o del tailnet, `X-Robots-Tag` (§19.5) |
 | 17/11/2026 | 6.4.1 — Eventi: propri e condivisi in un solo elenco in ordine di data (niente sezione «Condivisi con me»); i condivisi si riconoscono dal badge, anche nel prossimo evento (richiesta di Loris, §31.1) |

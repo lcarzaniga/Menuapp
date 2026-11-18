@@ -1,35 +1,34 @@
-// Connessione SQLite e transazioni (SPEC §6.3, §12.3).
-import { DatabaseSync, type SQLInputValue, type StatementSync } from 'node:sqlite'
+// Connessione SQLite e transazioni (SPEC §6.3, §12.3). Il motore è `node:sqlite` sul server
+// (apertura in `sqlite-node.ts`) o lo SQLite di un Durable Object su Cloudflare (SPEC §32):
+// qui solo ciò che vale per entrambi.
 
-export type Db = DatabaseSync
-export type Parametro = SQLInputValue | boolean | undefined
-export type Riga = Record<string, SQLInputValue>
+/** Valore accettato da SQLite come parametro o restituito in una colonna. */
+export type ValoreSql = null | number | bigint | string | Uint8Array
+export type Parametro = ValoreSql | boolean | undefined
+export type Riga = Record<string, ValoreSql>
 
-/** Apre il database con le impostazioni di produzione. */
-export function apriDatabase(percorso: string, opzioni: { soloLettura?: boolean } = {}): Db {
-  const db = new DatabaseSync(percorso, { readOnly: opzioni.soloLettura ?? false })
-  db.exec('PRAGMA busy_timeout = 5000')
-  db.exec('PRAGMA foreign_keys = ON')
-  if (!opzioni.soloLettura) {
-    db.exec('PRAGMA journal_mode = WAL')
-    db.exec('PRAGMA synchronous = FULL')
-  }
-  return db
+export interface Istruzione {
+  all(...parametri: ValoreSql[]): unknown[]
+  get(...parametri: ValoreSql[]): unknown
+  run(...parametri: ValoreSql[]): { changes: number | bigint }
 }
 
-export function chiudiDatabase(db: Db): void {
-  if (!db.isOpen) return
-  try {
-    db.exec('PRAGMA wal_checkpoint(TRUNCATE)')
-  } catch {
-    // database in sola lettura o già chiuso: niente da consolidare
-  }
-  db.close()
+/** Il sottoinsieme di `DatabaseSync` usato dall'app; `DatabaseSync` lo soddisfa così com'è. */
+export interface Db {
+  prepare(sql: string): Istruzione
+  exec(sql: string): void
+  readonly isOpen: boolean
+  readonly isTransaction: boolean
+  /**
+   * Motore senza BEGIN/COMMIT e senza `PRAGMA user_version` (Durable Object): transazioni con
+   * l'API del motore, versione dello schema da `migrazioni_applicate`.
+   */
+  readonly nativo?: { transazione<T>(fn: () => T): T }
 }
 
-const cache = new WeakMap<Db, Map<string, StatementSync>>()
+const cache = new WeakMap<Db, Map<string, Istruzione>>()
 
-function prepara(db: Db, sql: string): StatementSync {
+function prepara(db: Db, sql: string): Istruzione {
   let m = cache.get(db)
   if (!m) {
     m = new Map()
@@ -43,7 +42,7 @@ function prepara(db: Db, sql: string): StatementSync {
   return st
 }
 
-function valori(parametri: Parametro[]): SQLInputValue[] {
+function valori(parametri: Parametro[]): ValoreSql[] {
   return parametri.map((p) => (p === undefined ? null : typeof p === 'boolean' ? (p ? 1 : 0) : p))
 }
 
@@ -65,6 +64,13 @@ export function esegui(db: Db, sql: string, ...parametri: Parametro[]): number {
  */
 export function transazione<T>(db: Db, fn: () => T): T {
   if (db.isTransaction) return fn()
+  if (db.nativo) {
+    return db.nativo.transazione(() => {
+      const risultato = fn()
+      if (risultato instanceof Promise) throw new Error('transazione: fn non può essere asincrona')
+      return risultato
+    })
+  }
   db.exec('BEGIN IMMEDIATE')
   try {
     const risultato = fn()
@@ -80,6 +86,8 @@ export function transazione<T>(db: Db, fn: () => T): T {
 /** Transazione di sola lettura: istantanea coerente di più letture. */
 export function lettura<T>(db: Db, fn: () => T): T {
   if (db.isTransaction) return fn()
+  // Durable Object: una richiesta alla volta, nessuna scrittura concorrente durante fn.
+  if (db.nativo) return db.nativo.transazione(fn)
   db.exec('BEGIN')
   try {
     return fn()
@@ -89,6 +97,10 @@ export function lettura<T>(db: Db, fn: () => T): T {
 }
 
 export function versioneSchema(db: Db): number {
+  if (db.nativo) {
+    const tabella = uno(db, "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'migrazioni_applicate'")
+    return tabella ? Number(uno<{ v: number | null }>(db, 'SELECT max(versione) AS v FROM migrazioni_applicate')?.v ?? 0) : 0
+  }
   return Number((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version)
 }
 

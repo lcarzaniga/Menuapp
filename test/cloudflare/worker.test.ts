@@ -1,0 +1,191 @@
+// Prove dell'installazione Cloudflare sul Worker in locale (wrangler dev: workerd, Durable
+// Object SQLite, R2 simulato), SPEC §32.8: ciò che il server Debian non ha. Le regole comuni
+// (permessi, Famiglie, versioni) le provano la suite del server sul motore leggero e la e2e.
+import { type ChildProcess, spawn } from 'node:child_process'
+import { mkdtempSync, openSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { unzipSync } from 'fflate'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+
+const PORTA = 4196
+const ORIGINE = `http://127.0.0.1:${PORTA}`
+const CODICE = 'codice-console-della-prova-cloudflare-0123456789'
+const P = `${ORIGINE}/api/v1`
+let wrangler: ChildProcess
+let cartella: string
+
+async function console_(comando: string, ...argomenti: string[]): Promise<{ stato: number; testo: string }> {
+  const r = await fetch(`${P}/console`, { method: 'POST', headers: { authorization: `Bearer ${CODICE}`, 'content-type': 'application/json' }, body: JSON.stringify({ comando, argomenti }) })
+  const c = (await r.json()) as { testo?: string; errore?: { messaggio: string } }
+  return { stato: r.status, testo: c.testo ?? c.errore?.messaggio ?? '' }
+}
+
+class Browser {
+  cookie = ''
+  async chiama(metodo: string, url: string, corpo?: unknown, tipo = 'application/json', origine = ORIGINE): Promise<{ stato: number; corpo: any; risposta: Response }> {
+    const binario = corpo instanceof Uint8Array
+    const r = await fetch(`${P}${url}`, {
+      method: metodo,
+      headers: { ...(this.cookie ? { cookie: this.cookie } : {}), ...(metodo === 'GET' ? {} : { origin: origine }), ...(corpo === undefined ? {} : { 'content-type': tipo }) },
+      body: corpo === undefined ? undefined : binario ? corpo : JSON.stringify(corpo),
+    })
+    for (const c of r.headers.getSetCookie()) {
+      const [coppia] = c.split(';')
+      const [nome] = coppia!.split('=')
+      this.cookie = [...this.cookie.split('; ').filter((x) => x && !x.startsWith(`${nome}=`)), coppia].join('; ')
+    }
+    const testo = r.headers.get('content-type')?.includes('json') ? await r.text() : null
+    return { stato: r.status, corpo: testo ? JSON.parse(testo) : null, risposta: r }
+  }
+}
+
+/** Dispositivo autorizzato come in produzione: invito, richiesta, approvazione, completamento. */
+async function collega(link: string, approva: (codice: string) => Promise<void>): Promise<Browser> {
+  const b = new Browser()
+  const token = link.split('/#/attiva/')[1]!
+  const r = await b.chiama('POST', '/accesso/richiesta', { invito: token, dispositivo: 'Prova' })
+  expect(r.stato, JSON.stringify(r.corpo)).toBe(201)
+  await approva(r.corpo.codice)
+  expect((await b.chiama('POST', '/accesso/completa', {})).stato).toBe(200)
+  return b
+}
+
+const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, ...Array.from({ length: 200 }, (_, i) => i % 256)])
+
+beforeAll(async () => {
+  cartella = mkdtempSync(join(tmpdir(), 'menuapp-cf-'))
+  wrangler = spawn(
+    process.execPath,
+    ['node_modules/wrangler/bin/wrangler.js', 'dev', '--port', String(PORTA), '--ip', '127.0.0.1', '--local-upstream', `127.0.0.1:${PORTA}`, '--persist-to', cartella, '--test-scheduled', '--log-level', 'warn',
+      '--var', `MENUAPP_URL_PUBBLICO:${ORIGINE}`, '--var', `MENUAPP_CODICE_CONSOLE:${CODICE}`],
+    {
+      stdio: ['ignore', openSync(join(cartella, 'wrangler.log'), 'w'), openSync(join(cartella, 'wrangler.log'), 'a')],
+      detached: true,
+      // Senza le variabili di vitest: wrangler le riconosce e cambia comportamento.
+      env: Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('VITEST') && k !== 'NODE_ENV' && k !== 'TEST')),
+    },
+  )
+  for (let i = 0; i < 120; i++) {
+    if (await fetch(`${P}/salute`).then((r) => r.ok, () => false)) return
+    await new Promise((ok) => setTimeout(ok, 500))
+  }
+  throw new Error(`wrangler dev non risponde (uscita ${wrangler.exitCode} ${wrangler.signalCode}):\n${readFileSync(join(cartella, 'wrangler.log'), 'utf8').slice(-2000)}`)
+}, 90_000)
+
+afterAll(() => {
+  if (wrangler.pid) process.kill(-wrangler.pid, 'SIGKILL')
+  rmSync(cartella, { recursive: true, force: true })
+})
+
+describe('installazione Cloudflare', () => {
+  let loris: Browser
+  let anna: Browser
+
+  it('senza sessione: salute minima, dati 401, file dell\'app con le intestazioni di sicurezza', async () => {
+    expect(await (await fetch(`${P}/salute`)).json()).toEqual({ ok: true, versioneApi: 1 })
+    expect((await fetch(`${P}/eventi`)).status).toBe(401)
+    const pagina = await fetch(`${ORIGINE}/`)
+    expect(pagina.status).toBe(200)
+    expect(pagina.headers.get('content-security-policy')).toContain("default-src 'self'")
+    expect(pagina.headers.get('x-robots-tag')).toBe('noindex, nofollow')
+    expect(pagina.headers.get('cache-control')).toBe('no-cache')
+  })
+
+  it('console: segreto obbligatorio; primo amministratore con invito e approvazione', async () => {
+    const sbagliato = await fetch(`${P}/console`, { method: 'POST', headers: { authorization: 'Bearer altro' } })
+    expect(sbagliato.status).toBe(401)
+    expect((await fetch(`${P}/console`)).status).toBe(404)
+    const invito = await console_('invito')
+    expect(invito.testo).toContain('Invito per Loris')
+    const link = /https?:\/\/\S+\/#\/attiva\/\S+/.exec(invito.testo)![0]
+    loris = await collega(link, async (codice) => {
+      expect((await console_('approva', codice)).testo).toContain('Approvata')
+    })
+    const s = await loris.chiama('GET', '/sessione')
+    expect(s.corpo).toMatchObject({ utente: { nome: 'Loris', ruolo: 'amministratore' }, ingresso: 'unico' })
+    expect(loris.cookie).toContain('__Host-menuapp-sessione=')
+    // Link già usato: nessun'altra richiesta.
+    expect((await new Browser().chiama('POST', '/accesso/richiesta', { invito: link.split('/#/attiva/')[1], dispositivo: 'X' })).stato).toBe(404)
+  })
+
+  it('amministrazione dall\'app per l\'amministratore; ripristino e backup su file assenti', async () => {
+    expect((await loris.chiama('POST', '/admin/utenti', { id: 'u-anna', nome: 'Anna' })).stato).toBe(201)
+    const invito = (await loris.chiama('POST', '/admin/utenti/u-anna/inviti', {})).corpo
+    anna = await collega(invito.link, async (codice) => {
+      const r = (await loris.chiama('GET', '/admin/richieste')).corpo.find((x: { codice: string }) => x.codice === codice)
+      expect((await loris.chiama('POST', `/richieste/${r.id}/approva`, {})).stato).toBe(200)
+    })
+    expect((await anna.chiama('GET', '/admin/utenti')).stato).toBe(403)
+    expect((await anna.chiama('GET', '/backup')).stato).toBe(403)
+    for (const url of ['/ripristino/verifica', '/ripristino/esegui']) expect((await loris.chiama('POST', url, {})).stato, url).toBe(404)
+    // Scritture da un'altra origine rifiutate anche con una sessione valida.
+    expect((await loris.chiama('POST', '/piatti', { id: 'x', nome: 'X' }, 'application/json', 'https://altro.example')).stato).toBe(403)
+  })
+
+  it('permessi e Famiglie isolati come sul server', async () => {
+    expect((await loris.chiama('POST', '/eventi', { id: 'ev', nome: 'Natale', data: '2026-12-25', oraServizio: null, tipo: 'pranzo', occasione: '', adulti: 4, bambini: 0, note: '' })).stato).toBe(201)
+    expect((await anna.chiama('GET', '/eventi/ev')).stato).toBe(404)
+    expect((await anna.chiama('POST', '/famiglie', { id: 'f-anna', nome: 'Casa di Anna' })).stato).toBe(201)
+    expect((await loris.chiama('GET', '/gruppi/f-anna/bacheca')).stato).toBe(404)
+  })
+
+  it('foto in R2: caricamento, lettura con permesso, copia della ricetta, eliminazione nel cestino', async () => {
+    expect((await loris.chiama('POST', '/piatti', { id: 'p1', nome: 'Tiramisù' })).stato).toBe(201)
+    const f = await loris.chiama('POST', '/piatti/p1/foto?id=f1', JPEG, 'image/jpeg')
+    expect(f.stato, JSON.stringify(f.corpo)).toBe(201)
+    const file = await loris.chiama('GET', '/foto/f1')
+    expect(new Uint8Array(await file.risposta.arrayBuffer())).toEqual(JPEG)
+    // Ricetta di famiglia: Anna la legge e la copia; la copia ha un file proprio.
+    const copia = await anna.chiama('POST', '/piatti/p1/copia', { id: 'p-anna' })
+    expect(copia.stato, JSON.stringify(copia.corpo)).toBe(201)
+    const fotoCopia = (await anna.chiama('GET', '/piatti/p-anna')).corpo.foto[0]
+    expect(fotoCopia.id).not.toBe('f1')
+    expect(new Uint8Array(await (await anna.chiama('GET', `/foto/${fotoCopia.id}`)).risposta.arrayBuffer())).toEqual(JPEG)
+    // Ricetta privata: Anna non vede più le foto dell'originale.
+    const p = (await loris.chiama('GET', '/piatti/p1')).corpo
+    expect((await loris.chiama('PUT', '/piatti/p1/visibilita', { visibilita: 'privata', versione: p.versione })).stato).toBeLessThan(300)
+    expect((await anna.chiama('GET', '/foto/f1')).stato).toBe(404)
+  })
+
+  it('backup in R2, esportazione con le foto, ripristino dalla console e cestino', async () => {
+    const fotoCopiaId = (await anna.chiama('GET', '/piatti/p-anna')).corpo.foto[0].id as string
+    const b = await loris.chiama('POST', '/backup', {})
+    expect(b.stato).toBe(201)
+    expect(b.corpo).toMatchObject({ tipo: 'manuale', verificato: true, conteggi: { eventi: 1 } })
+    const stato = (await loris.chiama('GET', '/backup')).corpo
+    expect(stato.backup.map((x: { nome: string }) => x.nome)).toContain(b.corpo.nome)
+    const scaricato = await loris.chiama('GET', `/backup/${b.corpo.nome}`)
+    expect(scaricato.corpo).toMatchObject({ formato: 'menuapp-esportazione', conteggi: { eventi: 1 } })
+
+    const zip = unzipSync(new Uint8Array(await (await fetch(`${P}/esportazione?foto=1`, { headers: { cookie: loris.cookie } })).arrayBuffer()))
+    // La ricetta originale e la copia di Anna, ognuna con il suo file.
+    expect(Object.keys(zip).sort()).toEqual(['esportazione.json', `foto/${fotoCopiaId}.jpg`, 'foto/f1.jpg'].sort())
+    expect(zip['foto/f1.jpg']).toEqual(JPEG)
+
+    // Dopo il backup: evento e foto eliminati, poi ripristino dalla console.
+    const ev = (await loris.chiama('GET', '/eventi/ev')).corpo
+    expect((await loris.chiama('DELETE', `/eventi/ev?versione=${ev.versione}`)).stato).toBe(204)
+    const foto = (await loris.chiama('GET', '/piatti/p1')).corpo.foto[0]
+    expect((await loris.chiama('DELETE', `/foto/f1?versione=${foto.versione}`)).stato).toBe(204)
+    expect((await loris.chiama('GET', '/foto/f1')).stato).toBe(404)
+    expect((await console_('backup')).testo).toContain(b.corpo.nome)
+    const esito = await console_('ripristina', b.corpo.nome)
+    expect(esito.stato, esito.testo).toBe(200)
+    expect(esito.testo).toContain('Dati precedenti salvati in pre-ripristino-')
+    expect((await loris.chiama('GET', '/eventi/ev')).stato).toBe(200)
+    expect(new Uint8Array(await (await loris.chiama('GET', '/foto/f1')).risposta.arrayBuffer())).toEqual(JPEG)
+    // Le sessioni restano valide dopo il ripristino.
+    expect((await anna.chiama('GET', '/sessione')).stato).toBe(200)
+  })
+
+  it('manutenzione notturna (Cron Trigger): backup giornaliero', async () => {
+    expect((await fetch(`${ORIGINE}/cdn-cgi/local/scheduled?cron=45+2+*+*+*`)).status).toBe(200)
+    for (let i = 0; i < 20; i++) {
+      const tipi = (await loris.chiama('GET', '/backup')).corpo.backup.map((x: { tipo: string }) => x.tipo)
+      if (tipi.includes('giornaliero')) return
+      await new Promise((ok) => setTimeout(ok, 250))
+    }
+    throw new Error('Nessun backup giornaliero dopo il Cron Trigger')
+  })
+})

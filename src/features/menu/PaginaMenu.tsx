@@ -128,7 +128,10 @@ function InserimentoRapido({ evento, portata, autoFocus }: { evento: Evento; por
     const r = await crea.esegui(voci)
     if (r) setTesto('')
     setAttivo(-1)
-    rif.current?.focus()
+    // Di nuovo qui solo se nel frattempo non si scrive altrove: con una rete lenta la risposta
+    // arriva quando si è già passati a un'altra portata, e l'Invio finirebbe nel campo sbagliato.
+    const altrove = document.activeElement
+    if (!altrove || altrove === document.body || altrove === rif.current) rif.current?.focus()
   }
 
   function tasto(ev: KeyboardEvent<HTMLInputElement>) {

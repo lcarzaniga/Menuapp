@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { apiLeggi, apiScrivi, riattaccaServer, staccaServer, vaiA } from './aiuti'
+import { apiLeggi, apiScrivi, riattaccaServer, staccaServer, SU_CLOUDFLARE, vaiA } from './aiuti'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -41,6 +41,11 @@ test('backup ora, esportazione e ripristino dal backup', async ({ page, request 
   const json = page.waitForEvent('download')
   await page.getByRole('link', { name: 'Solo dati (JSON)' }).click()
   expect((await json).suggestedFilename()).toMatch(/^menuapp-esportazione-.*\.json$/)
+  if (SU_CLOUDFLARE) {
+    // Su Cloudflare il ripristino si fa solo dalla console (SPEC §32.6, test/cloudflare).
+    await expect(page.getByRole('button', { name: /Ripristina/ })).toHaveCount(0)
+    return
+  }
 
   const revisione = (await apiLeggi<{ revisione: number }>(request, '/revisione')).revisione
   await page.getByRole('button', { name: 'Ripristina' }).first().click()

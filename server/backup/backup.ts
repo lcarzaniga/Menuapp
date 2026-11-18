@@ -2,8 +2,9 @@
 import { createHash } from 'node:crypto'
 import { copyFile, mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { backup as backupSqlite } from 'node:sqlite'
-import { apriDatabase, type Db, tutti } from '../db/connessione.ts'
+import { backup as backupSqlite, type DatabaseSync } from 'node:sqlite'
+import { type Db, tutti } from '../db/connessione.ts'
+import { apriDatabase } from '../db/sqlite-node.ts'
 
 export const TIPI_BACKUP = ['giornaliero', 'settimanale', 'pre-migrazione', 'pre-ripristino', 'manuale'] as const
 export type TipoBackup = (typeof TIPI_BACKUP)[number]
@@ -87,7 +88,8 @@ export async function creaBackup(
   await mkdir(cartella, { recursive: true })
   const temporaneo = join(cartella, `.temp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.db`)
   try {
-    await backupSqlite(db, temporaneo)
+    // Solo sul server Debian: il database è sempre un DatabaseSync.
+    await backupSqlite(db as DatabaseSync, temporaneo)
     const { versioneSchema, conteggi } = verificaFile(temporaneo)
     await sincronizza(temporaneo)
     const base = `${tipo}-${marcaTemporale(adesso)}`

@@ -6,7 +6,6 @@ import { rotteSessione } from './sessione.ts'
 import { rotteFamiglia } from './famiglia.ts'
 import { rottePartecipanti } from './partecipanti.ts'
 import { rotteEdizioni } from './edizioni.ts'
-import { rotteBackup } from './backup.ts'
 import { rotteEventi } from './eventi.ts'
 import { rotteRicettario } from './ricettario.ts'
 import { rotteSpesa } from './spesa.ts'
@@ -17,7 +16,6 @@ import { rotteStampa } from './stampa.ts'
 export function registraRotte(app: FastifyInstance, ctx: Contesto, ingresso: Ingresso): void {
   rotteSistema(app, ctx, ingresso)
   rotteSessione(app, ctx, ingresso)
-  rotteBackup(app, ctx)
   rotteEventi(app, ctx)
   rotteRicettario(app, ctx)
   rotteSpesa(app, ctx)

@@ -8,12 +8,16 @@
     "dev:server": "MENUAPP_PORTA=9871 MENUAPP_DATI=./dati-sviluppo node --watch server/main.ts",
     "admin": "MENUAPP_DATI=./dati-sviluppo MENUAPP_URL_PRIVATO=https://loris-srv01.dala-tortoise.ts.net:8443 node server/amministrazione.ts",
     "build": "vite build",
+    "build:cloudflare": "vite build --outDir dist-cloudflare --emptyOutDir && node scripts/cloudflare/intestazioni.ts dist-cloudflare",
+    "typecheck:cloudflare": "tsc -p cloudflare --noEmit",
     "typecheck": "tsc -b",
     "lint": "oxlint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:cloudflare": "npm run build:cloudflare && vitest run -c vitest.cloudflare.config.ts",
+    "test:e2e:cloudflare": "npm run build:cloudflare && MENUAPP_E2E_CLOUDFLARE=1 playwright test -c playwright.cloudflare.config.ts",
     "test:e2e": "vite build --outDir test-results/dist-e2e --emptyOutDir && MENUAPP_COMMIT=pwa-nuova vite build --outDir test-results/dist-pwa-nuova --emptyOutDir && playwright test",
-    "check": "npm run lint && npm run typecheck && npm test && npm run build",
+    "check": "npm run lint && npm run typecheck && npm run typecheck:cloudflare && npm test && npm run build",
     "generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 public/logo.svg"
   },
   "dependencies": {
@@ -38,6 +42,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261118.1",
     "@playwright/test": "^1.65.0",
     "@tailwindcss/vite": "^4.3.5",
     "@testing-library/jest-dom": "^7.0.1",
@@ -55,7 +60,8 @@
     "typescript": "~7.0.2",
     "vite": "^8.3.6",
     "vite-plugin-pwa": "^2.0.0",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "wrangler": "^4.164.0"
   },
   "engines": {
     "node": ">=22.12"
@@ -64,5 +70,9 @@
     "workbox-build": {
       "glob": "^14.0.5"
     }
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261117.1": true
   }
 }

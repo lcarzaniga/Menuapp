@@ -62,6 +62,8 @@ export function PaginaDati() {
 }
 
 function Dati() {
+  // Su Cloudflare i backup stanno in R2 e il ripristino passa solo dallo script amministrativo.
+  const { cloudflare } = useUtenteCorrente()
   const salute = useSalute()
   const stato = useStatoBackup()
   const puoScrivere = usePuoScrivere()
@@ -202,7 +204,9 @@ function Dati() {
           <CardHeader>
             <CardTitle>Backup sul server</CardTitle>
             <p className="text-sm text-testo-tenue">
-              Il server salva una copia verificata ogni notte e prima di ogni aggiornamento o ripristino.
+              {cloudflare
+                ? 'Ogni notte una copia completa dei dati va nello spazio privato dell\'app. Il ripristino si fa con lo script amministrativo.'
+                : 'Il server salva una copia verificata ogni notte e prima di ogni aggiornamento o ripristino.'}
             </p>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
@@ -231,14 +235,16 @@ function Dati() {
                           <Download />
                         </a>
                       </Button>
-                      <Button
-                        variante="fantasma"
-                        misura="piccolo"
-                        disabled={!puoScrivere || verifica}
-                        onClick={() => void verificaSorgente({ origine: 'backup', nome: b.nome })}
-                      >
-                        <RotateCcw /> Ripristina
-                      </Button>
+                      {cloudflare ? null : (
+                        <Button
+                          variante="fantasma"
+                          misura="piccolo"
+                          disabled={!puoScrivere || verifica}
+                          onClick={() => void verificaSorgente({ origine: 'backup', nome: b.nome })}
+                        >
+                          <RotateCcw /> Ripristina
+                        </Button>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -251,7 +257,7 @@ function Dati() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Esportazione e ripristino da file</CardTitle>
+            <CardTitle>{cloudflare ? 'Esportazione' : 'Esportazione e ripristino da file'}</CardTitle>
             <p className="text-sm text-testo-tenue">
               Scarica regolarmente un'esportazione su un altro dispositivo: protegge i dati anche se il disco del server si guasta.
               {st?.ultimaEsportazione ? ` Ultima: ${dataOra(st.ultimaEsportazione)}.` : ''}
@@ -268,10 +274,14 @@ function Dati() {
                 <Download /> Solo dati (JSON)
               </a>
             </Button>
-            <Button variante="contorno" disabled={!puoScrivere || verifica} onClick={() => fileRef.current?.click()}>
-              <Upload /> {verifica ? 'Verifica in corso…' : 'Ripristina da file…'}
-            </Button>
-            <input ref={fileRef} type="file" accept="application/json,.json,application/zip,.zip" className="hidden" onChange={(e) => void daFile(e.target.files?.[0])} />
+            {cloudflare ? null : (
+              <>
+                <Button variante="contorno" disabled={!puoScrivere || verifica} onClick={() => fileRef.current?.click()}>
+                  <Upload /> {verifica ? 'Verifica in corso…' : 'Ripristina da file…'}
+                </Button>
+                <input ref={fileRef} type="file" accept="application/json,.json,application/zip,.zip" className="hidden" onChange={(e) => void daFile(e.target.files?.[0])} />
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

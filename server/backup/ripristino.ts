@@ -2,14 +2,15 @@
 import { randomBytes } from 'node:crypto'
 import { mkdir, readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
-import { backup as backupSqlite } from 'node:sqlite'
+import { backup as backupSqlite, type DatabaseSync } from 'node:sqlite'
 import {
   FORMATO_ESPORTAZIONE,
   type RiepilogoRipristino,
   type RichiestaVerifica,
   SchemaEsportazione,
 } from '../../src/contratto/backup.ts'
-import { apriDatabase, chiudiDatabase, type Db, esegui, tutti, versioneSchema } from '../db/connessione.ts'
+import { type Db, esegui, tutti, versioneSchema } from '../db/connessione.ts'
+import { apriDatabase, chiudiDatabase } from '../db/sqlite-node.ts'
 import { applicaMigrazioni, ultimaVersione } from '../db/migrazioni/esegui.ts'
 import { incrementaRevisione } from '../db/repo/meta.ts'
 import { ErroreApi, regolaViolata, richiestaNonValida } from '../servizi/errori.ts'
@@ -88,7 +89,7 @@ export async function verificaRipristino(
   const avvisi: string[] = []
   let origine: string
   let dataDati: string
-  let db: Db | null = null
+  let db: DatabaseSync | null = null
   try {
     if (richiesta.origine === 'file') {
       const r = SchemaEsportazione.safeParse(richiesta.contenuto)

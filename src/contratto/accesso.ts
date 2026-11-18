@@ -11,7 +11,8 @@ export type PermessoCondivisione = (typeof PERMESSI_EVENTO)[number]
 export type PermessoEvento = PermessoCondivisione | 'proprietario'
 
 /** Ingresso da cui arriva la richiesta: le funzioni di sistema solo da quello privato. */
-export const INGRESSI = ['privato', 'pubblico'] as const
+/** `unico`: l'installazione su Cloudflare (SPEC §32.5), con le funzioni d'amministrazione ma senza backup su file. */
+export const INGRESSI = ['privato', 'pubblico', 'unico'] as const
 export type Ingresso = (typeof INGRESSI)[number]
 
 export const SchemaUtente = z.object({

@@ -144,7 +144,7 @@ describe('menù', () => {
   it('aggiungere un nome non crea un piatto', async () => {
     const e = await creaNatale()
     await aggiungi(['Lasagne'], e.portate[1]!.id)
-    expect(t.db.prepare('SELECT count(*) AS n FROM piatti').get()?.n).toBe(0)
+    expect((t.db.prepare('SELECT count(*) AS n FROM piatti').get() as { n: number }).n).toBe(0)
   })
 
   it('modifica di una voce, conflitto e piatto inesistente', async () => {

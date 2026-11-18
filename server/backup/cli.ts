@@ -2,7 +2,7 @@
 // Apre il database in un processo separato: in WAL la copia a caldo è coerente mentre il
 // servizio continua a scrivere.
 import { leggiConfig } from '../config.ts'
-import { apriDatabase, chiudiDatabase } from '../db/connessione.ts'
+import { apriDatabase, chiudiDatabase } from '../db/sqlite-node.ts'
 import { eseguiBackup } from '../servizi/backup.ts'
 import { TIPI_BACKUP, type TipoBackup } from './backup.ts'
 

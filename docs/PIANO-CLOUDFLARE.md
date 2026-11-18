@@ -1,7 +1,14 @@
 # Piano di migrazione a Cloudflare (Workers, Durable Objects SQLite, R2)
 
-Analisi del 18/11/2026 sul codice del rilascio `20261118-1021-5b2a63d` (schema 15). Nessuna
-modifica al codice: questo documento descrive fattibilità, incompatibilità, costi e fasi.
+Analisi del 18/11/2026 sul codice del rilascio `20261118-1021-5b2a63d` (schema 15).
+
+> **Stato (18/11/2026)**: fasi C0–C6 sviluppate e provate in locale sul ramo `cloudflare`
+> (SPEC §32, operazioni in `docs/CLOUDFLARE.md`). Decisioni di Loris: Durable Object SQLite, R2
+> privato, piano Free da misurare, amministrazione dall'app solo agli amministratori, ripristino
+> solo da script, primo amministratore con segreto temporaneo. Differenza dal piano emersa nel
+> prototipo C0: **Fastify non gira su Workers** (genera codice con `new Function`) e al posto di
+> Hono le stesse rotte girano su un motore leggero compatibile (`server/motore-leggero.ts`), così
+> Debian e Cloudflare condividono tutto il codice delle rotte senza riscriverle.
 
 Obiettivo finale: togliere il server applicativo Debian e Tailscale Funnel. Prima fase:
 un'installazione **indipendente** su `ricettedifamiglia.online` (dati e utenti propri, nessuna

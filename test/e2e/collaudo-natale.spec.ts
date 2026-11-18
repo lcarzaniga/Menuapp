@@ -1,6 +1,6 @@
 // Collaudo completo (mandato §12): pranzo di Natale 2026 da due dispositivi.
 import { expect, type Page, test } from '@playwright/test'
-import { apiLeggi, apiScrivi } from './aiuti'
+import { apiLeggi, apiScrivi, console_, SU_CLOUDFLARE } from './aiuti'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -136,10 +136,16 @@ test('Natale 2026: dal menù alla tavola, da due dispositivi', async ({ page, br
   await apiScrivi(request, 'delete', `/eventi/${eventoId}?versione=${(await apiLeggi<{ versione: number }>(request, `/eventi/${eventoId}`)).versione}`)
   expect((await apiLeggi<unknown[]>(request, '/eventi')).find((e) => (e as { id: string }).id === eventoId)).toBeUndefined()
   await page.goto('/#/impostazioni/dati')
-  await page.getByRole('listitem').filter({ hasText: 'Manuale' }).first().getByRole('button', { name: 'Ripristina' }).click()
-  await page.getByLabel(/Per confermare/).fill('RIPRISTINA')
-  await page.getByRole('dialog').getByRole('button', { name: 'Ripristina' }).click()
-  await expect(page.getByText('Ripristino completato')).toBeVisible()
+  if (SU_CLOUDFLARE) {
+    // Su Cloudflare il ripristino si fa solo dalla console (SPEC §32.6).
+    await expect(page.getByRole('button', { name: 'Ripristina' })).toHaveCount(0)
+    expect(console_('ripristina', (backup.corpo as { nome: string }).nome)).toContain('Ripristinato')
+  } else {
+    await page.getByRole('listitem').filter({ hasText: 'Manuale' }).first().getByRole('button', { name: 'Ripristina' }).click()
+    await page.getByLabel(/Per confermare/).fill('RIPRISTINA')
+    await page.getByRole('dialog').getByRole('button', { name: 'Ripristina' }).click()
+    await expect(page.getByText('Ripristino completato')).toBeVisible()
+  }
   expect((await apiLeggi<{ impronta: string }>(request, '/esportazione')).impronta).toBe(prima)
   // il PC vede di nuovo l'evento senza ricaricare a mano
   await p2.goto('/')

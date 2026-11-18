@@ -2,7 +2,8 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { apriDatabase, chiudiDatabase, type Db } from './db/connessione.ts'
+import { type Db } from './db/connessione.ts'
+import { apriDatabase, chiudiDatabase } from './db/sqlite-node.ts'
 import { applicaMigrazioni } from './db/migrazioni/esegui.ts'
 import { eseguiSeed } from './db/seed/seed.ts'
 
@@ -39,7 +40,10 @@ export async function dbDiProva(opzioni: { seed?: boolean } = {}): Promise<DbDiP
 }
 
 import type { FastifyInstance, InjectOptions } from 'fastify'
-import { costruisciApp, type TipoIngresso } from './app.ts'
+import { costruisciApp, type ContestoServer, type TipoIngresso } from './app.ts'
+import { rotteBackup } from './api/backup.ts'
+import { costruisciAppLeggera } from './app-leggera.ts'
+import { CartellaDisco } from './cartella-disco.ts'
 import * as identita from './servizi/identita.ts'
 import type { Contesto } from './api/aiuti.ts'
 import { leggiConfig } from './config.ts'
@@ -88,14 +92,19 @@ export async function appDiProva(opzioni: { statici?: string; lan?: boolean; ing
     ...leggiConfig({ MENUAPP_DATI: p.cartella, MENUAPP_ORIGINI: ORIGINE_PROVA, ...opzioni.config }),
     cartellaStatici: opzioni.statici ?? null,
   }
-  const ctx: Contesto = {
+  const ctx: ContestoServer = {
     db: p.db,
     config,
     stato: { manutenzione: false },
     versioneApp: '0.0.0-test',
     ripristini: new RegistroRipristini(join(p.cartella, 'ripristino-temp')),
+    foto: new CartellaDisco(config.cartellaFoto),
   }
-  const app = await costruisciApp(ctx, { lan: opzioni.lan, ingresso: opzioni.ingresso })
+  // MENUAPP_MOTORE=leggero: la stessa suite sul motore usato da Cloudflare (SPEC §32.1).
+  const app =
+    process.env.MENUAPP_MOTORE === 'leggero'
+      ? (costruisciAppLeggera(ctx, opzioni.ingresso ?? (opzioni.lan ? 'lan' : 'privato'), (a) => rotteBackup(a, ctx)) as unknown as FastifyInstance)
+      : await costruisciApp(ctx, { lan: opzioni.lan, ingresso: opzioni.ingresso })
   const client = (token: string | null): ClientDiProva => {
     const cookie = token ? `${NOME_COOKIE}=${token}` : null
     const base = cookie ? { cookie } : {}

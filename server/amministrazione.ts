@@ -10,7 +10,8 @@
 //
 // In produzione: scripts/amministra.sh, che usa i dati e il Node del servizio.
 import { leggiConfig } from './config.ts'
-import { apriDatabase, chiudiDatabase, versioneSchema } from './db/connessione.ts'
+import { versioneSchema } from './db/connessione.ts'
+import { apriDatabase, chiudiDatabase } from './db/sqlite-node.ts'
 import { norm } from '../src/domain/testo.ts'
 import * as identita from './servizi/identita.ts'
 

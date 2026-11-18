@@ -114,6 +114,8 @@ test('famiglia: bacheca e sondaggio, evento con proposta, chi porta cosa, stelle
   // ── Revoca: per Lucia l'evento (e la sua bacheca) non esistono più
   await apiScrivi(request, 'delete', `/eventi/ev-famiglia/condivisioni/${lucia.id}`)
   await lucia.page.goto('/#/eventi/ev-famiglia/bacheca')
+  // Ricarica: senza, la pagina se ne accorge al controllo della revisione (ogni 10 s).
+  await lucia.page.reload()
   await expect(lucia.page.getByText('Questo evento non è disponibile')).toBeVisible()
   await lucia.ctx.close()
 })

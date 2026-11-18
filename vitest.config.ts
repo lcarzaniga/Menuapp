@@ -27,6 +27,17 @@ export default defineConfig({
         },
       },
       {
+        // Stessa suite sul motore leggero, quello dell'installazione Cloudflare (SPEC §32.1).
+        test: {
+          name: 'server-leggero',
+          environment: 'node',
+          include: ['server/**/*.test.ts'],
+          env: { MENUAPP_MOTORE: 'leggero' },
+          pool: 'forks',
+          testTimeout: 20000,
+        },
+      },
+      {
         plugins: [react()],
         resolve: { alias },
         define: { __VERSIONE_APP__: JSON.stringify('0.0.0-test') },

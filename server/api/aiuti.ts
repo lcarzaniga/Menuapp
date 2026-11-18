@@ -2,9 +2,9 @@
 import type { z } from 'zod'
 import type { Config } from '../config.ts'
 import type { Db } from '../db/connessione.ts'
-import type { RegistroRipristini } from '../backup/ripristino.ts'
 import type { FastifyRequest } from 'fastify'
 import { nonAutenticato, richiestaNonValida } from '../servizi/errori.ts'
+import type { CartellaFile } from '../servizi/cartella.ts'
 import type { UtenteCorrente } from '../servizi/permessi.ts'
 
 declare module 'fastify' {
@@ -30,7 +30,8 @@ export interface Contesto {
   config: Config
   stato: StatoServizio
   versioneApp: string
-  ripristini: RegistroRipristini
+  /** File di foto e allegati: dati/foto sul server, R2 su Cloudflare. */
+  foto: CartellaFile
 }
 
 /** Valida un ingresso con lo schema del contratto; 400 con i dettagli per campo. */

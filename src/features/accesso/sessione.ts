@@ -31,8 +31,10 @@ export function useUtenteCorrente() {
   return {
     utente: s?.utente ?? null,
     amministratore: s?.utente.ruolo === 'amministratore',
-    /** Funzioni di sistema e gestione utenti: solo dall'indirizzo privato (Tailscale). */
-    ingressoPrivato: s?.ingresso === 'privato',
+    /** Funzioni di sistema e gestione utenti: dall'indirizzo privato (Tailscale) o su Cloudflare. */
+    ingressoPrivato: s?.ingresso === 'privato' || s?.ingresso === 'unico',
+    /** Installazione Cloudflare: backup in R2, ripristino solo dallo script amministrativo. */
+    cloudflare: s?.ingresso === 'unico',
   }
 }
 

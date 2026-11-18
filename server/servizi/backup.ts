@@ -1,9 +1,9 @@
 // Casi d'uso dei backup: registrazione dell'esito e avvisi (SPEC §11.2, §11.6).
 import type { StatoBackup } from '../../src/contratto/backup.ts'
-import type { Db } from '../db/connessione.ts'
+import { type Db, uno } from '../db/connessione.ts'
 import { leggiMeta, scriviMeta } from '../db/repo/meta.ts'
 import { creaBackup, elencaBackup, type InfoBackup, type TipoBackup } from '../backup/backup.ts'
-import { sincronizzaFotoNelBackup } from './foto.ts'
+import { sincronizzaFotoNelBackup } from '../backup/foto.ts'
 
 interface UltimoBackup {
   nome: string
@@ -48,7 +48,7 @@ export async function statoBackup(db: Db, cartella: string, adesso = Date.now())
   const avvisi: string[] = []
   if (ultimo?.esito === 'errore') avvisi.push(`L'ultimo backup (${ultimo.tipo}) non è riuscito: ${ultimo.messaggio ?? 'errore'}`)
   const giornaliero = backup.find((b) => b.tipo === 'giornaliero')
-  const eventi = Number(db.prepare('SELECT count(*) AS n FROM eventi').get()?.n ?? 0)
+  const eventi = Number(uno<{ n: number }>(db, 'SELECT count(*) AS n FROM eventi')?.n ?? 0)
   if (eventi > 0 && (!giornaliero || adesso - Date.parse(giornaliero.creatoIl) > 36 * ORE)) {
     avvisi.push('Nessun backup giornaliero riuscito nelle ultime 36 ore.')
   }

@@ -19,14 +19,14 @@ type ConId = { Params: { id: string } }
 const SchemaQueryVersione = z.object({ versione: z.coerce.number().int().min(0) })
 
 export function rotteFoto(app: FastifyInstance, ctx: Contesto): void {
-  const { db, config } = ctx
+  const { db } = ctx
   const P = PREFISSO_API
 
   app.post<ConId>(`${P}/piatti/:id/foto`, async (req, reply) => {
     richiediPiatto(db, chi(req), req.params.id, 'proprietario')
     const q = valida(SchemaQueryCaricaFoto, req.query)
-    if (!Buffer.isBuffer(req.body)) return reply.code(415).send({ errore: { codice: 'tipo_non_supportato', messaggio: 'Invia il file dell\'immagine' } })
-    const f = await foto.caricaFoto(db, config.cartellaFoto, req.params.id, { id: q.id, dati: req.body, didascalia: q.didascalia, principale: q.principale === '1', passo: q.passo ?? null })
+    if (!(req.body instanceof Uint8Array)) return reply.code(415).send({ errore: { codice: 'tipo_non_supportato', messaggio: 'Invia il file dell\'immagine' } })
+    const f = await foto.caricaFoto(db, ctx.foto, req.params.id, { id: q.id, dati: req.body, didascalia: q.didascalia, principale: q.principale === '1', passo: q.passo ?? null })
     return reply.code(201).send(f)
   })
 
@@ -34,7 +34,7 @@ export function rotteFoto(app: FastifyInstance, ctx: Contesto): void {
   app.get<ConId>(`${P}/foto/:id`, async (req, reply) => {
     richiediFoto(db, chi(req), req.params.id, 'lettura')
     const f = foto.leggiFoto(db, req.params.id)
-    const dati = await foto.leggiFile(config.cartellaFoto, f)
+    const dati = await foto.leggiFile(ctx.foto, f)
     // id unico e contenuto immutabile: il browser può tenerla in cache a lungo.
     return reply.header('content-type', f.tipo).header('cache-control', 'private, max-age=31536000, immutable').send(dati)
   })
@@ -46,15 +46,15 @@ export function rotteFoto(app: FastifyInstance, ctx: Contesto): void {
 
   app.delete<ConId>(`${P}/foto/:id`, async (req, reply) => {
     richiediFoto(db, chi(req), req.params.id, 'proprietario')
-    await foto.eliminaFoto(db, config.cartellaFoto, req.params.id, valida(SchemaQueryVersione, req.query).versione)
+    await foto.eliminaFoto(db, ctx.foto, req.params.id, valida(SchemaQueryVersione, req.query).versione)
     return reply.code(204).send()
   })
 
   /** Rimette il file di una foto registrata ma mancante (ripristino da esportazione ZIP). */
   app.put<ConId>(`${P}/foto/:id/file`, async (req, reply) => {
     richiediSistema(chi(req))
-    if (!Buffer.isBuffer(req.body)) return reply.code(415).send({ errore: { codice: 'tipo_non_supportato', messaggio: 'Invia il file dell\'immagine' } })
-    await foto.rimettiFile(db, config.cartellaFoto, req.params.id, req.body)
+    if (!(req.body instanceof Uint8Array)) return reply.code(415).send({ errore: { codice: 'tipo_non_supportato', messaggio: 'Invia il file dell\'immagine' } })
+    await foto.rimettiFile(db, ctx.foto, req.params.id, req.body)
     return reply.code(204).send()
   })
 
@@ -66,7 +66,7 @@ export function rotteFoto(app: FastifyInstance, ctx: Contesto): void {
     const voci = []
     for (const [k, f] of elenco.entries()) {
       const nome = `foto/${k + 1}.${foto.ESTENSIONI[f.tipo]}`
-      file[nome] = await foto.leggiFile(config.cartellaFoto, f)
+      file[nome] = await foto.leggiFile(ctx.foto, f)
       voci.push({ file: nome, didascalia: f.didascalia, principale: f.principale, ...(f.passo === null ? {} : { passo: f.passo + 1 }) })
     }
     file['ricetta.json'] = strToU8(JSON.stringify(daPiatto(p, voci), null, 2))
@@ -91,7 +91,7 @@ export function rotteFoto(app: FastifyInstance, ctx: Contesto): void {
       for (const [k, f] of p.foto.entries()) {
         const nome = `ricette/${p.id}/foto/${k + 1}.${foto.ESTENSIONI[f.tipo]}`
         try {
-          file[nome] = await foto.leggiFile(config.cartellaFoto, f)
+          file[nome] = await foto.leggiFile(ctx.foto, f)
           voci.push({ file: nome, didascalia: f.didascalia, principale: f.principale, ...(f.passo === null ? {} : { passo: f.passo + 1 }) })
         } catch {
           // file mancante: la ricetta si esporta senza quella foto

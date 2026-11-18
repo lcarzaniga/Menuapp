@@ -33,8 +33,19 @@ export async function vaiA(page: Page, sezione: 'Eventi' | 'Ricettario' | 'Famig
 
 const DATI_E2E = 'test-results/dati-e2e'
 
+/** Segreto della console del Worker nelle prove su Cloudflare (playwright.cloudflare.config.ts). */
+export const CODICE_CONSOLE_E2E = 'codice-console-e2e-lungo-almeno-trentadue-caratteri'
+export const SU_CLOUDFLARE = process.env.MENUAPP_E2E_CLOUDFLARE === '1'
+
 /** Console di amministrazione sul database del server di prova (come dal terminale del server). */
 export function console_(...argomenti: string[]): string {
+  // Su Cloudflare: la console del Worker protetta dal segreto (scripts/cloudflare/console.ts).
+  if (SU_CLOUDFLARE) {
+    return execFileSync(process.execPath, ['scripts/cloudflare/console.ts', ...argomenti], {
+      env: { ...process.env, MENUAPP_URL: ORIGINE, MENUAPP_CODICE_CONSOLE: CODICE_CONSOLE_E2E },
+      encoding: 'utf8',
+    })
+  }
   return execFileSync(process.execPath, ['server/amministrazione.ts', ...argomenti], {
     env: { ...process.env, MENUAPP_DATI: DATI_E2E, MENUAPP_URL_PRIVATO: ORIGINE },
     encoding: 'utf8',

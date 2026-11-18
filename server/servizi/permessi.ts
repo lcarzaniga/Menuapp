@@ -108,10 +108,10 @@ export function richiediAmministratore(u: UtenteCorrente): void {
 }
 
 /**
- * Funzioni di sistema (backup, ripristino, esportazione completa): amministratore e solo
- * dall'ingresso privato. Dall'ingresso pubblico la rotta risponde come inesistente.
+ * Funzioni di sistema (backup, ripristino, esportazione completa): amministratore, dall'ingresso
+ * privato o dall'installazione Cloudflare. Dall'ingresso pubblico la rotta risponde come inesistente.
  */
 export function richiediSistema(u: UtenteCorrente): void {
-  if (u.ingresso !== 'privato') throw nonTrovato('Risorsa')
+  if (u.ingresso === 'pubblico') throw nonTrovato('Risorsa')
   richiediAmministratore(u)
 }

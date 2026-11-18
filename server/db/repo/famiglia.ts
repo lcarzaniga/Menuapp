@@ -59,12 +59,14 @@ export interface RigaCommento {
   creato_il: number
   modificato_il: number | null
 }
+// Elenchi di id come un solo parametro JSON: lo SQLite di Cloudflare ammette al massimo 100
+// parametri per query e una bacheca ne mostra fino a 200 (SPEC §32.2).
 export const commentiMessaggi = (db: Db, ids: string[]) =>
   ids.length
     ? tutti<RigaCommento>(
         db,
-        `SELECT c.*, u.nome AS autore_nome FROM commenti c JOIN utenti u ON u.id = c.autore_id WHERE c.messaggio_id IN (${ids.map(() => '?').join(',')}) ORDER BY c.creato_il`,
-        ...ids,
+        `SELECT c.*, u.nome AS autore_nome FROM commenti c JOIN utenti u ON u.id = c.autore_id WHERE c.messaggio_id IN (SELECT value FROM json_each(?)) ORDER BY c.creato_il`,
+        JSON.stringify(ids),
       )
     : []
 export const leggiCommento = (db: Db, id: string) =>
@@ -83,8 +85,8 @@ export const reazioniMessaggi = (db: Db, ids: string[]) =>
   ids.length
     ? tutti<{ messaggio_id: string; utente_id: string; nome: string; reazione: string }>(
         db,
-        `SELECT r.messaggio_id, r.utente_id, u.nome, r.reazione FROM reazioni r JOIN utenti u ON u.id = r.utente_id WHERE r.messaggio_id IN (${ids.map(() => '?').join(',')}) ORDER BY r.creato_il`,
-        ...ids,
+        `SELECT r.messaggio_id, r.utente_id, u.nome, r.reazione FROM reazioni r JOIN utenti u ON u.id = r.utente_id WHERE r.messaggio_id IN (SELECT value FROM json_each(?)) ORDER BY r.creato_il`,
+        JSON.stringify(ids),
       )
     : []
 export const aggiungiReazione = (db: Db, messaggioId: string, utenteId: string, reazione: string, adesso: number) =>
@@ -103,7 +105,7 @@ export interface RigaAllegato {
   sha256: string
 }
 export const allegatiMessaggi = (db: Db, ids: string[]) =>
-  ids.length ? tutti<RigaAllegato>(db, `SELECT * FROM allegati WHERE messaggio_id IN (${ids.map(() => '?').join(',')}) ORDER BY ordine`, ...ids) : []
+  ids.length ? tutti<RigaAllegato>(db, 'SELECT * FROM allegati WHERE messaggio_id IN (SELECT value FROM json_each(?)) ORDER BY ordine', JSON.stringify(ids)) : []
 export const leggiAllegato = (db: Db, id: string) => uno<RigaAllegato>(db, 'SELECT * FROM allegati WHERE id = ?', id)
 export const allegatiEvento = (db: Db, eventoId: string) =>
   tutti<RigaAllegato>(db, 'SELECT a.* FROM allegati a JOIN messaggi m ON m.id = a.messaggio_id WHERE m.evento_id = ?', eventoId)

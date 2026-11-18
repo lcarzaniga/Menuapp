@@ -4,9 +4,10 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pacchetto from '../package.json' with { type: 'json' }
 import { costruisciApp } from './app.ts'
+import { CartellaDisco } from './cartella-disco.ts'
 import { RegistroRipristini } from './backup/ripristino.ts'
 import { leggiConfig } from './config.ts'
-import { apriDatabase, chiudiDatabase } from './db/connessione.ts'
+import { apriDatabase, chiudiDatabase } from './db/sqlite-node.ts'
 import { applicaMigrazioni, CODICE_USCITA_CONFIGURAZIONE, ErroreMigrazione } from './db/migrazioni/esegui.ts'
 import { eseguiSeed } from './db/seed/seed.ts'
 
@@ -27,7 +28,7 @@ async function avvia(): Promise<void> {
 
   const ripristini = new RegistroRipristini(join(config.cartellaDati, 'ripristino-temp'))
   await ripristini.pulisciTutto()
-  const ctx = { db, config, stato: { manutenzione: false }, versioneApp: pacchetto.version, ripristini }
+  const ctx = { db, config, stato: { manutenzione: false }, versioneApp: pacchetto.version, ripristini, foto: new CartellaDisco(config.cartellaFoto) }
   const app = await costruisciApp(ctx, { log: true })
 
   let inChiusura = false

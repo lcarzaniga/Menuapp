@@ -126,7 +126,7 @@ export function rotteFamiglia(app: FastifyInstance, ctx: Contesto): void {
   })
   app.delete<ConId>(`${P}/messaggi/:id`, async (req, reply) => {
     const file = bacheca.elimina(db, chi(req), req.params.id)
-    await bacheca.togliFile(config.cartellaFoto, file)
+    await bacheca.togliFile(ctx.foto, file)
     return reply.code(204).send()
   })
   app.put<ConId>(`${P}/messaggi/:id/fissato`, async (req) => {
@@ -160,12 +160,12 @@ export function rotteFamiglia(app: FastifyInstance, ctx: Contesto): void {
   app.post<ConId>(`${P}/messaggi/:id/allegati`, async (req, reply) => {
     const u = messaggio(req)
     const q = valida(SchemaQueryAllegato, req.query)
-    if (!Buffer.isBuffer(req.body)) throw richiestaNonValida('Invia il file dell\'immagine')
-    return reply.code(201).send(await bacheca.allega(db, config.cartellaFoto, u, req.params.id, { id: q.id, dati: req.body }))
+    if (!(req.body instanceof Uint8Array)) throw richiestaNonValida('Invia il file dell\'immagine')
+    return reply.code(201).send(await bacheca.allega(db, ctx.foto, u, req.params.id, { id: q.id, dati: req.body }))
   })
   app.get<ConId>(`${P}/allegati/:id`, async (req, reply) => {
     const a = bacheca.leggiAllegato(db, chi(req), req.params.id)
-    const dati = await leggiFile(config.cartellaFoto, a)
+    const dati = await leggiFile(ctx.foto, a)
     return reply.header('content-type', a.tipo).header('cache-control', 'private, max-age=31536000, immutable').send(dati)
   })
 
@@ -185,7 +185,7 @@ export function rotteFamiglia(app: FastifyInstance, ctx: Contesto): void {
   app.post<ConId>(`${P}/messaggi/:id/inserisci`, async (req) => {
     const u = messaggio(req)
     bacheca.richiediDecisione(db, u, req.params.id)
-    return bacheca.inserisciNelMenu(db, config.cartellaFoto, u, req.params.id, valida(SchemaInserisciProposta, req.body).portataId)
+    return bacheca.inserisciNelMenu(db, ctx.foto, u, req.params.id, valida(SchemaInserisciProposta, req.body).portataId)
   })
 
   // ── Notifiche ──

@@ -12,8 +12,8 @@ import { chi, type Contesto, valida } from './aiuti.ts'
 export function rotteSistema(app: FastifyInstance, ctx: Contesto, ingresso: Ingresso): void {
   const { db } = ctx
 
-  // Pubblica: sull'ingresso esterno, senza sessione, dice solo se il servizio risponde.
-  app.get(`${PREFISSO_API}/salute`, async (req): Promise<Salute | { ok: boolean; versioneApi: 1 }> => ingresso === 'pubblico' && !req.utente ? { ok: !ctx.stato.manutenzione, versioneApi: 1 } : ({
+  // Pubblica: sugli ingressi raggiungibili da Internet, senza sessione, dice solo se il servizio risponde.
+  app.get(`${PREFISSO_API}/salute`, async (req): Promise<Salute | { ok: boolean; versioneApi: 1 }> => ingresso !== 'privato' && !req.utente ? { ok: !ctx.stato.manutenzione, versioneApi: 1 } : ({
     ok: !ctx.stato.manutenzione,
     versioneApp: ctx.versioneApp,
     versioneApi: 1,

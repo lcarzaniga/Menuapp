@@ -1,6 +1,6 @@
 // Regole di dipendenza fra livelli (SPEC §12.3), verificate sugli import reali.
 import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const RADICE = join(import.meta.dirname, '..')
@@ -28,7 +28,33 @@ function violazioni(cartella: string, vietati: RegExp[]): string[] {
   )
 }
 
+/** Moduli raggiunti da `inizio` con import di valori (gli `import type` spariscono nel pacchetto). */
+function grafoValori(inizio: string): Map<string, string[]> {
+  const visti = new Map<string, string[]>()
+  const coda = [inizio]
+  while (coda.length) {
+    const f = coda.pop()!
+    if (visti.has(f)) continue
+    const testo = readFileSync(join(RADICE, f), 'utf8')
+    const imp = [...testo.matchAll(/^(?:import|export)\s+(?!type\b)[^'"]*?from\s+['"]([^'"]+)['"]/gm)].map((m) => m[1]!)
+    visti.set(f, imp)
+    for (const i of imp) if (i.startsWith('.') && /\.tsx?$/.test(i)) coda.push(relative(RADICE, resolve(RADICE, dirname(f), i)))
+  }
+  return visti
+}
+
 describe('architettura', () => {
+  it('il Worker di Cloudflare non carica moduli che lì non esistono (SPEC §32)', () => {
+    const vietati = [/^node:(fs|fs\/promises|sqlite|os|child_process|net|http)$/, /^fastify$/, /^@fastify\//]
+    const errori = [...grafoValori('cloudflare/worker.ts')].flatMap(([f, imp]) => imp.filter((i) => vietati.some((v) => v.test(i))).map((i) => `${f} importa ${i}`))
+    expect(errori).toEqual([])
+  })
+  it('il Worker include tutte le migrazioni del server', () => {
+    const sql = readdirSync(join(RADICE, 'server/db/migrazioni')).filter((f) => /^\d{4}_.*\.sql$/.test(f))
+    const elenco = readFileSync(join(RADICE, 'cloudflare/migrazioni.ts'), 'utf8')
+    expect(sql.filter((f) => !elenco.includes(`'../server/db/migrazioni/${f}'`))).toEqual([])
+  })
+
   it('il dominio è puro: niente React, Fastify, SQLite, Node, rete', () => {
     expect(violazioni('src/domain', [/^react/, /fastify/, /^node:/, /zod/, /\.\.\/(api|app|features|components|contratto|connessione)/, /server\//])).toEqual([])
   })

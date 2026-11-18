@@ -29,3 +29,8 @@ dati-sviluppo/
 rilasci/
 test-results/
 playwright-report/
+
+# Cloudflare: build e stato locale di wrangler
+dist-cloudflare
+.wrangler
+.dev.vars

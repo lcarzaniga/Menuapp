@@ -1,9 +1,11 @@
+import type { DatabaseSync } from 'node:sqlite'
 import { copyFileSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { elencaBackup } from '../../backup/backup.ts'
 import { cartellaTemporanea } from '../../prova.ts'
-import { apriDatabase, chiudiDatabase, type Db, tutti, uno, versioneSchema } from '../connessione.ts'
+import { tutti, uno, versioneSchema } from '../connessione.ts'
+import { apriDatabase, chiudiDatabase } from '../sqlite-node.ts'
 import { CARTELLA_MIGRAZIONI, applicaMigrazioni, ErroreMigrazione, ultimaVersione } from './esegui.ts'
 import { eseguiSeed } from '../seed/seed.ts'
 
@@ -14,7 +16,7 @@ afterEach(() => {
 
 function preparaCartella() {
   const t = cartellaTemporanea()
-  const dbs: Db[] = []
+  const dbs: DatabaseSync[] = []
   pulizie.push(() => {
     dbs.forEach((d) => d.isOpen && chiudiDatabase(d))
     t.elimina()

@@ -1,0 +1,143 @@
+// Configurazione dell'app comune al server Debian (Fastify) e a Cloudflare (motore leggero,
+// SPEC §32): controlli d'origine e di tipo, intestazioni, errori, autenticazione, rotte.
+import type { FastifyError, FastifyInstance } from 'fastify'
+import { PREFISSO_API, type RispostaErrore } from '../../src/contratto/comune.ts'
+import type { Ingresso } from '../../src/contratto/accesso.ts'
+import { LIMITE_BYTE_FOTO, TIPI_FOTO } from '../../src/contratto/foto.ts'
+import { revisione } from '../db/repo/meta.ts'
+import { ErroreApi } from '../servizi/errori.ts'
+import type { Contesto } from './aiuti.ts'
+import { registraRotte } from './rotte.ts'
+import { registraAutenticazione } from './sessione.ts'
+
+const RE_ROTTE_FOTO = /^\/api\/v1\/(piatti\/[^/]+\/foto|foto\/[^/]+\/file|messaggi\/[^/]+\/allegati)$/
+
+const METODI_SCRITTURA = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+export const LIMITE_CORPO = 1024 * 1024
+
+export const SICUREZZA: Record<string, string> = {
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'no-referrer',
+  'x-frame-options': 'DENY',
+  // App privata: nessuna pagina nei motori di ricerca, nemmeno quella di accesso.
+  'x-robots-tag': 'noindex, nofollow',
+  'permissions-policy': 'camera=(), microphone=(), geolocation=(), screen-wake-lock=(self)',
+  'content-security-policy':
+    "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+}
+
+function corpoErrore(codice: RispostaErrore['errore']['codice'], messaggio: string, dettagli?: unknown): RispostaErrore {
+  return { errore: dettagli === undefined ? { codice, messaggio } : { codice, messaggio, dettagli } }
+}
+
+/** Nomi host ammessi sull'ascolto di rete locale: IP privati e nomi della macchina, mai domini esterni (DNS rebinding). */
+export function hostLocale(host: string | undefined): boolean {
+  if (!host) return false
+  const nome = host.replace(/:\d+$/, '').replace(/^\[|\]$/g, '').toLowerCase()
+  if (nome === 'localhost' || nome === 'loris-srv01' || nome.endsWith('.local') || nome.endsWith('.lan') || nome.endsWith('.home')) return true
+  // Tailscale: nomi MagicDNS del tailnet e indirizzi 100.64.0.0/10.
+  if (nome.endsWith('.ts.net')) return true
+  const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(nome)
+  if (!m) return false
+  const [a, b] = [Number(m[1]), Number(m[2])]
+  return a === 10 || a === 127 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31) || (a === 100 && b >= 64 && b <= 127)
+}
+
+/**
+ * Ingressi (SPEC §19.5, §32): `privato` = Tailscale Serve (tutte le funzioni), `pubblico` =
+ * Tailscale Funnel (niente funzioni di sistema), `lan` = HTTP dalla rete di casa: senza
+ * HTTPS i cookie di sessione non sono sicuri, quindi rimanda all'indirizzo HTTPS;
+ * `unico` = Cloudflare (amministrazione per gli amministratori, niente backup su file né ripristino).
+ */
+export type TipoIngresso = Ingresso | 'lan'
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    rotte: { metodo: string; url: string }[]
+  }
+}
+
+/**
+ * Registra controlli, gestori e rotte su `app` (Fastify o il motore leggero, che ne imita
+ * l'interfaccia). `rotteAggiuntive`: rotte proprie della piattaforma (backup su file, console).
+ */
+export function configuraApp(app: FastifyInstance, ctx: Contesto, ingresso: TipoIngresso, rotteAggiuntive?: (app: FastifyInstance) => void): void {
+  // Protezione dalle richieste di altri siti (SPEC §12.7) e manutenzione.
+  app.addHook('onRequest', async (req, reply) => {
+    const percorso = req.url.split('?')[0] ?? ''
+    if (ingresso === 'lan') {
+      if (!hostLocale(req.headers.host)) return reply.code(403).send(corpoErrore('origine_non_ammessa', 'Indirizzo non ammesso sulla rete locale'))
+      const https = ctx.config.urlPubblico ?? ctx.config.urlPrivato
+      if (!percorso.startsWith('/api/') && https) return reply.redirect(https, 302)
+      return reply.code(403).send(corpoErrore('origine_non_ammessa', 'Dalla rete di casa usa l\'indirizzo HTTPS dell\'app'))
+    }
+    // Il Funnel marca le richieste che arrivano da Internet; un altro proxy pubblico (es. il dominio
+    // proprio) porta il suo nome di dominio: sull'ingresso privato non devono esserci né l'uno né l'altro.
+    if (ingresso === 'privato' && (req.headers['tailscale-funnel-request'] !== undefined || !hostLocale(req.headers.host))) {
+      return reply.code(403).send(corpoErrore('origine_non_ammessa', 'Ingresso non ammesso'))
+    }
+    if (!percorso.startsWith('/api/')) return
+    if (ctx.stato.manutenzione && percorso !== `${PREFISSO_API}/salute`) {
+      return reply.code(503).send(corpoErrore('servizio_non_pronto', 'Operazione di manutenzione in corso, riprova tra poco'))
+    }
+    if (!METODI_SCRITTURA.has(req.method)) return
+    const origine = req.headers.origin
+    if (!origine || !ctx.config.origini.includes(origine)) {
+      return reply.code(403).send(corpoErrore('origine_non_ammessa', 'Richiesta da un\'origine non ammessa'))
+    }
+    // DELETE senza corpo: Cloudflare aggiunge «content-length: 0», che vale come nessun corpo.
+    if (req.method !== 'DELETE' || Number(req.headers['content-length'] ?? 0) > 0) {
+      const tipo = (req.headers['content-type'] ?? '').split(';')[0]?.trim()
+      const immagine = RE_ROTTE_FOTO.test(percorso) && (TIPI_FOTO as readonly string[]).includes(tipo ?? '')
+      if (tipo !== 'application/json' && !immagine) {
+        return reply.code(415).send(corpoErrore('tipo_non_supportato', 'Le scritture richiedono un corpo JSON'))
+      }
+    }
+  })
+
+  app.addHook('onSend', async (req, reply, payload) => {
+    for (const [k, v] of Object.entries(SICUREZZA)) reply.header(k, v)
+    const percorso = req.url.split('?')[0] ?? ''
+    if (percorso.startsWith('/api/')) {
+      reply.header('cache-control', 'no-store')
+      if (METODI_SCRITTURA.has(req.method) && ctx.db.isOpen) reply.header('x-revisione', String(revisione(ctx.db)))
+    }
+    return payload
+  })
+
+  app.setErrorHandler((errore: FastifyError | ErroreApi | Error, req, reply) => {
+    if (errore instanceof ErroreApi) {
+      return reply.code(errore.stato).send(corpoErrore(errore.codice, errore.message, errore.dettagli))
+    }
+    const f = errore as FastifyError
+    if (f.code === 'FST_ERR_CTP_INVALID_MEDIA_TYPE') {
+      return reply.code(415).send(corpoErrore('tipo_non_supportato', 'Tipo di contenuto non supportato'))
+    }
+    if (f.code === 'FST_ERR_CTP_BODY_TOO_LARGE') {
+      return reply.code(413).send(corpoErrore('troppo_grande', 'Richiesta troppo grande'))
+    }
+    if (f.statusCode && f.statusCode >= 400 && f.statusCode < 500) {
+      return reply.code(400).send(corpoErrore('richiesta_non_valida', f.message))
+    }
+    req.log.error(errore)
+    return reply.code(500).send(corpoErrore('errore_interno', 'Errore interno del server'))
+  })
+
+  app.setNotFoundHandler((req, reply) => {
+    reply.code(404).send(corpoErrore('non_trovato', `Risorsa non trovata: ${req.method} ${req.url.split('?')[0]}`))
+  })
+
+  // Elenco delle rotte registrate: i test di sicurezza le provano tutte.
+  const rotte: { metodo: string; url: string }[] = []
+  app.addHook('onRoute', (r) => {
+    for (const m of [r.method].flat()) if (m !== 'HEAD') rotte.push({ metodo: m, url: r.url })
+  })
+  app.decorate('rotte', rotte)
+  app.addContentTypeParser([...TIPI_FOTO], { parseAs: 'buffer', bodyLimit: LIMITE_BYTE_FOTO }, (_req, corpo, fatto) => fatto(null, corpo))
+  if (ingresso !== 'lan') {
+    registraAutenticazione(app, ctx, ingresso)
+    registraRotte(app, ctx, ingresso)
+    rotteAggiuntive?.(app)
+  }
+
+}

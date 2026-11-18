@@ -2,8 +2,6 @@
 // fotografie, sondaggi e proposte di piatti. Un solo modello per tutti: il messaggio sta in
 // un gruppo o in un evento e ne eredita i permessi.
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdir, rename, rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
 import type { Bacheca, Commento, Messaggio, NuovoMessaggio, Reazione } from '../../src/contratto/famiglia.ts'
 import { MASSIMO_ALLEGATI, REAZIONI } from '../../src/contratto/famiglia.ts'
 import { LIMITE_BYTE_FOTO } from '../../src/contratto/foto.ts'
@@ -17,6 +15,7 @@ import { piattoPerEvento } from './condivisione.ts'
 import { accessoNegato, conflittoVersione, nonTrovato, regolaViolata, richiestaNonValida } from './errori.ts'
 import { creaVoci } from './eventi.ts'
 import { fotoPrincipali, nomeFile, tipoDaContenuto } from './foto.ts'
+import type { CartellaFile } from './cartella.ts'
 import { avvisa, membriGruppo, personeEvento } from './notifiche.ts'
 import { permessoEvento, puoPartecipare, richiediEvento, richiediGruppo, richiediPiatto, type UtenteCorrente } from './permessi.ts'
 
@@ -341,7 +340,7 @@ export function reagisci(db: Db, u: UtenteCorrente, messaggioId: string, reazion
 
 // ── Fotografie ──────────────────────────────────────────────
 
-export async function allega(db: Db, cartella: string, u: UtenteCorrente, messaggioId: string, d: { id: string; dati: Buffer }, adesso = Date.now()): Promise<Messaggio> {
+export async function allega(db: Db, cartella: CartellaFile, u: UtenteCorrente, messaggioId: string, d: { id: string; dati: Uint8Array }, adesso = Date.now()): Promise<Messaggio> {
   const m = richiediMessaggio(db, u, messaggioId, 'scrittura')
   if (m.autore_id !== u.id) throw accessoNegato('Puoi aggiungere foto solo ai tuoi messaggi')
   if (d.dati.length === 0 || d.dati.length > LIMITE_BYTE_FOTO) throw richiestaNonValida('Foto vuota o più grande di 8 MB')
@@ -350,10 +349,8 @@ export async function allega(db: Db, cartella: string, u: UtenteCorrente, messag
   if (repo.leggiAllegato(db, d.id)) throw regolaViolata('id_esistente', 'Identificativo di foto già usato')
   const presenti = repo.allegatiMessaggi(db, [messaggioId]).length
   if (presenti >= MASSIMO_ALLEGATI) throw regolaViolata('troppe_foto', `Al massimo ${MASSIMO_ALLEGATI} foto per messaggio`)
-  await mkdir(cartella, { recursive: true })
-  const finale = join(cartella, nomeFile({ id: d.id, tipo }))
-  await writeFile(`${finale}.tmp-${process.pid}`, d.dati)
-  await rename(`${finale}.tmp-${process.pid}`, finale)
+  const finale = nomeFile({ id: d.id, tipo })
+  await cartella.scrivi(finale, d.dati)
   try {
     return transazione(db, () => {
       repo.inserisciAllegato(db, { id: d.id, messaggio_id: messaggioId, ordine: presenti, tipo, byte: d.dati.length, sha256: createHash('sha256').update(d.dati).digest('hex') }, adesso)
@@ -361,7 +358,7 @@ export async function allega(db: Db, cartella: string, u: UtenteCorrente, messag
       return leggiMessaggio(db, u, messaggioId, adesso)
     })
   } catch (e) {
-    await rm(finale, { force: true })
+    await cartella.elimina(finale)
     throw e
   }
 }
@@ -381,8 +378,8 @@ export function leggiAllegato(db: Db, u: UtenteCorrente, id: string): repo.RigaA
 /** File degli allegati di un evento (da togliere quando l'evento viene eliminato). */
 export const fileAllegatiEvento = (db: Db, eventoId: string) => repo.allegatiEvento(db, eventoId).map((x) => nomeFile(x))
 
-export async function togliFile(cartella: string, nomi: string[]): Promise<void> {
-  for (const n of nomi) await rm(join(cartella, n), { force: true })
+export async function togliFile(cartella: CartellaFile, nomi: string[]): Promise<void> {
+  for (const n of nomi) await cartella.elimina(n)
 }
 
 // ── Sondaggi ────────────────────────────────────────────────
@@ -456,7 +453,7 @@ export function decidi(db: Db, u: UtenteCorrente, id: string, stato: 'in_valutaz
  * La ricetta proposta entra come copia nel ricettario del proprietario dell'evento, con
  * l'accesso di chi l'ha proposta; se nel frattempo non è più leggibile, entra il solo nome.
  */
-export function inserisciNelMenu(db: Db, cartellaFoto: string, u: UtenteCorrente, id: string, portataId: string, adesso = Date.now()): Messaggio {
+export function inserisciNelMenu(db: Db, cartellaFoto: CartellaFile, u: UtenteCorrente, id: string, portataId: string, adesso = Date.now()): Messaggio {
   return transazione(db, () => {
     const { m, p, eventoId } = richiediProposta(db, u, id)
     const voceId = `${id}:voce`

@@ -29,7 +29,7 @@ export function rotteEventi(app: FastifyInstance, ctx: Contesto): void {
   const { db } = ctx
   const P = PREFISSO_API
   const risolvi = (u: UtenteCorrente, eventoId: string) => (piattoId: string) =>
-    condivisione.piattoPerEvento(db, ctx.config.cartellaFoto, u, eventoId, piattoId)
+    condivisione.piattoPerEvento(db, ctx.foto, u, eventoId, piattoId)
   /** Modifiche importanti al menù: una notifica raggruppata per evento. */
   const menuCambiato = (u: UtenteCorrente, eventoId: string, testo: string) =>
     avvisa(db, { tipo: 'menu', attoreId: u.id, destinatari: personeEvento(db, eventoId), chiave: `menu:${eventoId}`, eventoId, testo })
@@ -74,7 +74,7 @@ export function rotteEventi(app: FastifyInstance, ctx: Contesto): void {
     // Le foto della bacheca dell'evento spariscono con lui.
     const file = fileAllegatiEvento(db, req.params.id)
     eventi.eliminaEvento(db, req.params.id, valida(SchemaQueryVersione, req.query).versione)
-    await togliFile(ctx.config.cartellaFoto, file)
+    await togliFile(ctx.foto, file)
     return reply.code(204).send()
   })
 
@@ -156,6 +156,6 @@ export function rotteEventi(app: FastifyInstance, ctx: Contesto): void {
     const u = chi(req)
     richiediEvento(db, u, req.params.id, 'proprietario')
     const d = valida(SchemaTrasferisci, req.body)
-    return condivisione.trasferisciEvento(db, ctx.config.cartellaFoto, u, req.params.id, d.utenteId, d.versione)
+    return condivisione.trasferisciEvento(db, ctx.foto, u, req.params.id, d.utenteId, d.versione)
   })
 }
