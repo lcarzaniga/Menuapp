@@ -438,4 +438,12 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   script ora interrogano 1.1.1.1.
 - Decisioni di Loris (18/11): utenti Debian assenti su Cloudflare creati come «nuovi», senza
   dispositivi; ruoli: restano quelli di Cloudflare.
-- Prossimi passi: dispositivi su `app.…`, migrazione (momento scelto da Loris), sito.
+- Rilascio `rilascio-dns` (18/11 16:25): Debian `20261118-1625-14fddc5`, Worker in transizione.
+- **Migrazione eseguita il 18/11/2026** (`20261118-1631`, autorizzata da Loris): backup Debian
+  `manuale-20261118-163128-v15.db`; corrispondenza confermata (Loris e Lucia esistenti, Raffa e Palli
+  nuovi senza dispositivi, ruoli di Cloudflare); piano superato; importazione con backup
+  `pre-migrazione-20261118-153446-v15.json` (annullamento: `migra.ts annulla` con quel nome); verifica
+  superata (conteggi uguali a Debian, riferimenti integri, 48 foto presenti e identiche). Sessioni di
+  Loris su Cloudflare intatte. Debian non modificato, ancora attivo con il Funnel.
+- Prossimi passi: controllo dall'app, console da spegnere, sito sul dominio principale, inviti a
+  Raffa e Palli, dismissione di Debian su conferma di Loris.
