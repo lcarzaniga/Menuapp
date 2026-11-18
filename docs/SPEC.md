@@ -1752,7 +1752,8 @@ schermo acceso in vista cucina · stampa/Salva PDF · tema scuro · riavvio del 
 Decisione di Loris (13/11/2026): Menù & Co. diventa multiutente per la famiglia, con
 accesso da Internet tramite **Tailscale Funnel** senza installare Tailscale sui dispositivi
 dei familiari. Restano PWA, Fastify, SQLite centrale; niente app native, niente database
-locali, niente dominio proprio, niente password, niente login Google.
+locali, niente password, niente login Google. Dal 18/11/2026 anche il dominio proprio
+`ricettedifamiglia.online` porta allo stesso ingresso pubblico (§19.5).
 
 ### 19.1 Utenti e sessioni
 
@@ -1826,19 +1827,28 @@ locali, niente dominio proprio, niente password, niente login Google.
 | Ingresso | Ascolto | Cosa offre |
 |---|---|---|
 | Privato (Tailscale Serve `:9870`) | 127.0.0.1:9870 | Tutto, comprese le funzioni di sistema per l'amministratore |
-| Pubblico (Tailscale Funnel `:443`) | 127.0.0.1:9873 (`MENUAPP_PORTA_PUBBLICA`) | App e API utente; `/admin/*`, `/backup*`, `/esportazione`, `/ripristino/*`, `/foto/:id/file` **non esistono** (404 come una rotta sconosciuta), anche per l'amministratore |
+| Pubblico (Tailscale Funnel `:443` e dominio proprio `ricettedifamiglia.online`) | 127.0.0.1:9873 (`MENUAPP_PORTA_PUBBLICA`) | App e API utente; `/admin/*`, `/backup*`, `/esportazione`, `/ripristino/*`, `/foto/:id/file` **non esistono** (404 come una rotta sconosciuta), anche per l'amministratore |
 | Rete di casa HTTP `:9880` | 0.0.0.0:9880 | Nessun dato (senza HTTPS il cookie Secure non esiste): API 403, pagine → reindirizzate all'indirizzo HTTPS configurato |
 
 - Senza sessione rispondono solo `GET /salute` (sull'ingresso pubblico solo `{ok, versioneApi}`)
   e le rotte di attivazione; ogni altra rotta API risponde 401. I file statici (codice
   dell'app, font, icone) sono pubblici: non contengono dati. Le foto passano dalle API con
   controllo del permesso sulla ricetta.
-- Sull'ingresso privato le richieste marcate dal Funnel (`Tailscale-Funnel-Request`) sono
-  rifiutate. Scritture: origine ammessa (URL privato, URL pubblico) e corpo JSON come prima
+- Sull'ingresso privato le richieste marcate dal Funnel (`Tailscale-Funnel-Request`) e quelle
+  con un nome host che non è locale o del tailnet (`hostLocale`, es. il dominio pubblico portato
+  per errore sulla 9870) sono rifiutate (403). Scritture: origine ammessa (URL privato, URL pubblico) e corpo JSON come prima
   (§12.7), più `SameSite` dei cookie.
 - Configurazione in `dati/server.json` (stesse chiavi delle variabili d'ambiente, che hanno la
-  precedenza): `MENUAPP_PORTA_PUBBLICA`, `MENUAPP_URL_PUBBLICO` (link d'invito),
-  `MENUAPP_URL_PRIVATO`. Nessun indirizzo scritto nel codice.
+  precedenza): `MENUAPP_PORTA_PUBBLICA`, `MENUAPP_URL_PUBBLICO` (indirizzo principale, usato
+  nei link d'invito), `MENUAPP_ALTRI_URL_PUBBLICI` (altri indirizzi HTTPS dello stesso ingresso,
+  separati da virgole: origini ammesse per le scritture), `MENUAPP_URL_PRIVATO`. Nessun
+  indirizzo scritto nel codice.
+- **Due indirizzi pubblici** (6.4.2): il dominio `ricettedifamiglia.online` e il nome Funnel
+  arrivano allo stesso ingresso pubblico e funzionano entrambi. I cookie `__Host-` valgono solo
+  per il nome con cui sono stati creati: un dispositivo collegato da un indirizzo non è collegato
+  sull'altro (serve un nuovo collegamento con invito e approvazione, come per un altro browser).
+  Nessuna sessione condivisa fra domini, nessuna autenticazione aggiuntiva.
+- Tutte le risposte hanno `X-Robots-Tag: noindex, nofollow`: l'app è privata.
 
 ### 19.6 Autorizzazione nel codice
 
@@ -2501,4 +2511,5 @@ aggiornati alla nuova navigazione.
 | 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |
 | 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |
 | 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |
+| 18/11/2026 | 6.4.2 — Accesso con il dominio `ricettedifamiglia.online` accanto al Funnel: `MENUAPP_ALTRI_URL_PUBBLICI`, ingresso privato solo con nomi locali o del tailnet, `X-Robots-Tag` (§19.5) |
 | 17/11/2026 | 6.4.1 — Eventi: propri e condivisi in un solo elenco in ordine di data (niente sezione «Condivisi con me»); i condivisi si riconoscono dal badge, anche nel prossimo evento (richiesta di Loris, §31.1) |

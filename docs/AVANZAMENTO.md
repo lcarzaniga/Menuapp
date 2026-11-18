@@ -349,11 +349,29 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   sicura in basso su iPhone/PWA installata, Echo Show 15 (testo grande).
 - Rilasciato il 17/11 alle 15:48; verificati salute (schema 15), dati e integrità, `/per-te` 401 senza sessione.
 
-## Eventi in un solo elenco (17/11/2026, ramo `eventi-elenco-unico`, da rilasciare)
+## Eventi in un solo elenco (17/11/2026, in produzione)
 
 - Richiesta di Loris: niente divisione fra eventi miei e condivisi. Un solo elenco in ordine di
   data; i condivisi hanno il badge «di … · sola lettura / puoi modificare», anche nel riquadro del
   prossimo evento (che ora può essere uno condiviso). SPEC 6.4.1.
 - Solo interfaccia, nessuna migrazione. e2e `multiutente.spec.ts` e `riorganizzazione.spec.ts`
   aggiornati (ordine, badge, nessuna sezione «Condivisi con me»).
-- Rilascio: `! scripts/rilascia.sh eventi-elenco-unico`.
+- Rilasciato il 17/11 alle 16:15 (`20261117-1615-090ef7d`); verificati salute, servizio e registro.
+
+## Accesso per il dominio `ricettedifamiglia.online` (18/11/2026, ramo `accesso-dominio-pubblico`, da rilasciare)
+
+- Verifica dell'accesso in vista della pubblicazione (SPEC §19, 6.4.2): nessuna registrazione
+  autonoma (solo invito monouso + approvazione del dispositivo), ogni rotta API senza sessione 401,
+  funzioni di sistema assenti dall'ingresso pubblico, permessi per utente invariati.
+- Problemi trovati e corretti:
+  - un secondo indirizzo pubblico non poteva scrivere (origine non ammessa) e non c'era modo di
+    aggiungerlo senza toccare il servizio systemd: nuova chiave `MENUAPP_ALTRI_URL_PUBBLICI`;
+  - l'ingresso privato si difendeva solo dall'intestazione del Funnel: un proxy del dominio
+    puntato per errore alla 9870 avrebbe esposto le funzioni di sistema. Ora risponde solo a nomi
+    locali e del tailnet;
+  - pagina di accesso indicizzabile: `X-Robots-Tag: noindex, nofollow`.
+- Test: `accesso.test.ts` (due indirizzi pubblici: invito, approvazione, sessione, scritture;
+  origine estranea 403; ingresso privato con nomi pubblici 403; configurazione solo HTTPS).
+- Nessuna migrazione. Dopo il rilascio non cambia nulla finché non si aggiorna `dati/server.json`
+  e non si collega il dominio (OPERAZIONI, «Dominio proprio»).
+- Rilascio: `! scripts/rilascia.sh accesso-dominio-pubblico`.

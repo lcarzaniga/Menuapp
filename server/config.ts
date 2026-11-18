@@ -17,6 +17,12 @@ const Schema = z.object({
   MENUAPP_HOST_LAN: z.string().default('0.0.0.0'),
   /** Indirizzo HTTPS esterno (Tailscale Funnel) usato nei link d'invito. Assente = nessun accesso esterno. */
   MENUAPP_URL_PUBBLICO: z.url({ protocol: /^https$/ }).optional(),
+  /** Altri indirizzi HTTPS pubblici dello stesso ingresso (es. il nome Funnel accanto al dominio), separati da virgole. */
+  MENUAPP_ALTRI_URL_PUBBLICI: z
+    .string()
+    .default('')
+    .transform((s) => s.split(',').map((u) => u.trim()).filter(Boolean))
+    .pipe(z.array(z.url({ protocol: /^https$/ }))),
   /** Indirizzo privato (Tailscale Serve): link d'invito quando manca quello pubblico. */
   MENUAPP_URL_PRIVATO: z.url({ protocol: /^https?$/ }).optional(),
   /** Ascolto su loopback dedicato all'ingresso pubblico (Funnel): senza funzioni di sistema. */
@@ -76,7 +82,7 @@ export function leggiConfig(env: NodeJS.ProcessEnv = process.env): Config {
     origini: [
       ...new Set([
         ...e.MENUAPP_ORIGINI.split(',').map((s) => s.trim()).filter(Boolean),
-        ...[e.MENUAPP_URL_PUBBLICO, e.MENUAPP_URL_PRIVATO].filter((u) => u !== undefined).map(origine),
+        ...[e.MENUAPP_URL_PUBBLICO, ...e.MENUAPP_ALTRI_URL_PUBBLICI, e.MENUAPP_URL_PRIVATO].filter((u) => u !== undefined).map(origine),
       ]),
     ],
     rilascio: e.MENUAPP_RILASCIO ?? 'sviluppo',

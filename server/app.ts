@@ -22,6 +22,8 @@ const SICUREZZA: Record<string, string> = {
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'no-referrer',
   'x-frame-options': 'DENY',
+  // App privata: nessuna pagina nei motori di ricerca, nemmeno quella di accesso.
+  'x-robots-tag': 'noindex, nofollow',
   'permissions-policy': 'camera=(), microphone=(), geolocation=(), screen-wake-lock=(self)',
   'content-security-policy':
     "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
@@ -74,8 +76,9 @@ export async function costruisciApp(ctx: Contesto, opzioni: { log?: boolean; lan
       if (!percorso.startsWith('/api/') && https) return reply.redirect(https, 302)
       return reply.code(403).send(corpoErrore('origine_non_ammessa', 'Dalla rete di casa usa l\'indirizzo HTTPS dell\'app'))
     }
-    // Il Funnel marca le richieste che arrivano da Internet: sull'ingresso privato non devono esserci.
-    if (ingresso === 'privato' && req.headers['tailscale-funnel-request'] !== undefined) {
+    // Il Funnel marca le richieste che arrivano da Internet; un altro proxy pubblico (es. il dominio
+    // proprio) porta il suo nome di dominio: sull'ingresso privato non devono esserci né l'uno né l'altro.
+    if (ingresso === 'privato' && (req.headers['tailscale-funnel-request'] !== undefined || !hostLocale(req.headers.host))) {
       return reply.code(403).send(corpoErrore('origine_non_ammessa', 'Ingresso non ammesso'))
     }
     if (!percorso.startsWith('/api/')) return

@@ -103,6 +103,34 @@ Coesiste con i serve già attivi (9870 e 8443, solo tailnet): Funnel usa solo la
 Spegnimento: `tailscale funnel --https=443 off` (l'app resta raggiungibile via Tailscale).
 Mai `tailscale funnel reset` / `tailscale serve reset`: cancellano anche gli altri serve.
 
+## Dominio proprio (`ricettedifamiglia.online`)
+
+Stesso ingresso pubblico del Funnel (127.0.0.1:9873, senza funzioni di sistema); il Funnel resta
+attivo. Il dominio ha i DNS su Cloudflare; al 18/11/2026 punta ancora a un hosting esterno
+(195.110.124.133), non a questo server.
+
+1. Collegamento (scelta di Loris, fuori dall'app): il proxy del dominio deve portare **solo** a
+   `http://127.0.0.1:9873`, mai alla 9870 (che comunque risponde 403 a nomi non locali). Con
+   Cloudflare Tunnel: servizio `http://127.0.0.1:9873` per `ricettedifamiglia.online`;
+   disattivare Rocket Loader e l'offuscamento delle email (inseriscono script che la CSP blocca).
+2. `dati/server.json` (poi `systemctl --user restart menuapp`):
+   ```json
+   {
+     "MENUAPP_PORTA_PUBBLICA": 9873,
+     "MENUAPP_URL_PUBBLICO": "https://ricettedifamiglia.online",
+     "MENUAPP_ALTRI_URL_PUBBLICI": "https://loris-srv01.dala-tortoise.ts.net",
+     "MENUAPP_URL_PRIVATO": "https://loris-srv01.dala-tortoise.ts.net:9870"
+   }
+   ```
+   I nuovi link d'invito usano il dominio; il Funnel continua ad accettare accessi e scritture.
+   Se si usa anche `www.`, va aggiunto ad `MENUAPP_ALTRI_URL_PUBBLICI` (o reindirizzato al dominio).
+3. Verifica: `curl https://ricettedifamiglia.online/api/v1/salute` → `{"ok":true,"versioneApi":1}`;
+   `/api/v1/eventi` → 401; `/api/v1/admin/utenti` → 404.
+
+Chi è già collegato dal Funnel resta collegato lì; per usare il dominio ogni dispositivo si
+collega di nuovo («Collega un nuovo dispositivo» + approvazione): i cookie non passano da un
+dominio all'altro.
+
 ## Ritorno indietro dalla versione multiutente
 
 La migrazione `0005_utenti.sql` aggiunge tabelle e colonne; il codice precedente non sa

@@ -1,6 +1,7 @@
 // Sicurezza dell'accesso (SPEC §19): inviti, attivazione dei dispositivi, sessioni, ingressi.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { esegui, uno } from '../db/connessione.ts'
+import { leggiConfig } from '../config.ts'
 import * as identita from '../servizi/identita.ts'
 import { appDiProva, type AppDiProva, ID_AMMINISTRATORE, ORIGINE_PROVA } from '../prova.ts'
 
@@ -293,5 +294,71 @@ describe('ingressi', () => {
   it('richieste marcate dal Funnel rifiutate sull\'ingresso privato', async () => {
     const r = await t.inietta({ method: 'GET', url: `${P}/eventi`, headers: { 'tailscale-funnel-request': '?1' } })
     expect(r.statusCode).toBe(403)
+  })
+
+  it('l\'ingresso privato risponde solo ai nomi locali e del tailnet, mai a un dominio pubblico', async () => {
+    for (const host of ['ricettedifamiglia.online', 'www.ricettedifamiglia.online', 'evil.example']) {
+      expect((await t.inietta({ method: 'GET', url: `${P}/eventi`, headers: { host } })).statusCode, host).toBe(403)
+      expect((await t.inietta({ method: 'GET', url: '/', headers: { host } })).statusCode, host).toBe(403)
+    }
+    for (const host of ['loris-srv01.dala-tortoise.ts.net:9870', '127.0.0.1:9870', 'localhost:5173']) {
+      expect((await t.inietta({ method: 'GET', url: `${P}/eventi`, headers: { host } })).statusCode, host).toBe(200)
+    }
+  })
+})
+
+describe('due indirizzi pubblici (dominio proprio e Funnel)', () => {
+  const DOMINIO = 'https://ricettedifamiglia.online'
+  const FUNNEL = 'https://loris-srv01.dala-tortoise.ts.net'
+  let pub: AppDiProva
+  beforeEach(async () => {
+    pub = await appDiProva({ ingresso: 'pubblico', config: { MENUAPP_URL_PUBBLICO: DOMINIO, MENUAPP_ALTRI_URL_PUBBLICI: FUNNEL } })
+  })
+  afterEach(() => pub.chiudi())
+
+  it('origini ammesse: principale, altri indirizzi pubblici e privato; solo HTTPS', () => {
+    const c = leggiConfig({ MENUAPP_DATI: '/nonexistent-menuapp', MENUAPP_ORIGINI: '', MENUAPP_URL_PUBBLICO: `${DOMINIO}/`, MENUAPP_ALTRI_URL_PUBBLICI: ` ${FUNNEL} , https://www.ricettedifamiglia.online`, MENUAPP_URL_PRIVATO: `${FUNNEL}:9870` })
+    expect(c.origini).toEqual([DOMINIO, FUNNEL, 'https://www.ricettedifamiglia.online', `${FUNNEL}:9870`])
+    expect(c.urlPubblico).toBe(`${DOMINIO}/`)
+    expect(() => leggiConfig({ MENUAPP_DATI: '/nonexistent-menuapp', MENUAPP_ALTRI_URL_PUBBLICI: 'http://ricettedifamiglia.online' })).toThrow(/MENUAPP_ALTRI_URL_PUBBLICI/)
+  })
+
+  /** Richiesta di un browser che ha aperto l'app da `indirizzo`. */
+  const da = (indirizzo: string, metodo: 'GET' | 'POST', url: string, cookie?: string, corpoJson?: unknown) =>
+    pub.app.inject({
+      method: metodo,
+      url,
+      headers: { host: new URL(indirizzo).host, ...(metodo === 'POST' ? { origin: indirizzo, 'content-type': 'application/json' } : {}), ...(cookie ? { cookie } : {}) },
+      ...(metodo === 'POST' ? { payload: JSON.stringify(corpoJson ?? {}) } : {}),
+    })
+
+  it('su entrambi: invito, approvazione, sessione e scritture; i link d\'invito usano l\'indirizzo principale', async () => {
+    const anna = pub.utente('Anna')
+    // Anna, già collegata, crea il link per un nuovo dispositivo: punta al dominio principale.
+    const invito = corpo(await da(FUNNEL, 'POST', `${P}/account/inviti`, anna.cookie!))
+    expect(invito.link.startsWith(`${DOMINIO}/#/attiva/`)).toBe(true)
+    for (const indirizzo of [DOMINIO, FUNNEL]) {
+      const token = corpo(await da(FUNNEL, 'POST', `${P}/account/inviti`, anna.cookie!)).link.split('/#/attiva/')[1]
+      const richiesta = await da(indirizzo, 'POST', `${P}/accesso/richiesta`, undefined, { invito: token, dispositivo: `Telefono (${indirizzo})` })
+      expect(richiesta.statusCode, indirizzo).toBe(201)
+      const segreto = cookieDa(richiesta, '__Host-menuapp-richiesta')!
+      // Approvata dal dispositivo già collegato, anche se è sull'altro indirizzo.
+      const id = corpo(await da(FUNNEL, 'GET', `${P}/account/richieste`, anna.cookie!))[0].id
+      expect((await da(FUNNEL, 'POST', `${P}/richieste/${id}/approva`, anna.cookie!)).statusCode).toBe(200)
+      const completa = await da(indirizzo, 'POST', `${P}/accesso/completa`, `__Host-menuapp-richiesta=${segreto}`)
+      expect(completa.statusCode, indirizzo).toBe(200)
+      const sessione = `__Host-menuapp-sessione=${cookieDa(completa, '__Host-menuapp-sessione')}`
+      expect(corpo(await da(indirizzo, 'GET', `${P}/sessione`, sessione)).utente.nome).toBe('Anna')
+      expect((await da(indirizzo, 'POST', `${P}/famiglie`, sessione, { id: `f-${new URL(indirizzo).hostname}`, nome: 'Casa' })).statusCode, indirizzo).toBe(201)
+      // Funzioni di sistema assenti su entrambi.
+      expect((await da(indirizzo, 'GET', `${P}/admin/utenti`, pub.cookie!)).statusCode).toBe(404)
+    }
+    // Un'origine non configurata non scrive, nemmeno con una sessione valida.
+    const r = await pub.app.inject({ method: 'POST', url: `${P}/famiglie`, headers: { host: 'altro.example', origin: 'https://altro.example', 'content-type': 'application/json', cookie: anna.cookie! }, payload: '{"id":"f-x","nome":"X"}' })
+    expect(r.statusCode).toBe(403)
+    // Senza sessione nessun dato e nessuna pagina indicizzabile.
+    const anonimo = await da(DOMINIO, 'GET', `${P}/eventi`)
+    expect(anonimo.statusCode).toBe(401)
+    expect(anonimo.headers['x-robots-tag']).toBe('noindex, nofollow')
   })
 })
