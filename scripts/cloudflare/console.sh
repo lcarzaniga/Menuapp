@@ -32,9 +32,11 @@ attiva() {
   printf '%s' "$codice" | npx wrangler secret put MENUAPP_CODICE_CONSOLE >/dev/null || { rm -f "$nuovo"; errore "wrangler secret put non riuscito"; }
   mv "$nuovo" "$CREDENZIALI"
   export MENUAPP_CODICE_CONSOLE=$codice
-  for _ in $(seq 1 30); do
+  # Il segreto può impiegare qualche minuto ad arrivare a tutte le istanze del Worker.
+  info "Attendo che la console risponda (fino a 5 minuti)…"
+  for _ in $(seq 1 60); do
     "${CONSOLE[@]}" stato >/dev/null 2>&1 && break
-    sleep 2
+    sleep 5
   done
   "${CONSOLE[@]}" stato || errore "La console non risponde"
   ok "Console attiva (segreto in $CREDENZIALI). Spegnila con: scripts/cloudflare/console.sh disattiva"
@@ -88,12 +90,12 @@ disattiva() {
   mv "$nuovo" "$CREDENZIALI"
   unset MENUAPP_CODICE_CONSOLE
   # Con il segreto tolto la console risponde 404 (dopo qualche secondo).
-  for _ in $(seq 1 30); do
+  for _ in $(seq 1 60); do
     # Con pipefail il codice d'uscita della prova (1) nasconderebbe il grep: prima l'uscita, poi il controllo.
     local esito
     esito=$(MENUAPP_CODICE_CONSOLE=x "${CONSOLE[@]}" stato 2>&1 || true)
     [[ "$esito" == *"Console non attiva"* ]] && { ok "Console spenta"; return; }
-    sleep 2
+    sleep 5
   done
   errore "La console risponde ancora: controlla con «npx wrangler secret list»"
 }
