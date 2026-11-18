@@ -436,4 +436,6 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   controllo finale dello script era fallito solo perché il DNS del router di casa ricordava il nome
   `app.` come inesistente: verificato col DNS di Cloudflare. Ramo `rilascio-dns`: le verifiche degli
   script ora interrogano 1.1.1.1.
-- Prossimi passi: dispositivi su `app.…`, decisioni sulla corrispondenza, migrazione, sito.
+- Decisioni di Loris (18/11): utenti Debian assenti su Cloudflare creati come «nuovi», senza
+  dispositivi; ruoli: restano quelli di Cloudflare.
+- Prossimi passi: dispositivi su `app.…`, migrazione (momento scelto da Loris), sito.
