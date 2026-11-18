@@ -17,7 +17,9 @@ set +a
 
 APP=https://app.ricettedifamiglia.online
 SITO=https://ricettedifamiglia.online
-[[ "$(curl -fsS "$APP/api/v1/salute" 2>/dev/null)" == '{"ok":true,"versioneApi":1}' ]] || errore "L'app non risponde su $APP: il dominio principale resta com'è"
+# Verifiche col DNS di Cloudflare: quello di casa può ricordare per un po' che un nome nuovo non esisteva.
+risolvi() { local h=${1#https://}; local ip; ip=$(dig +short @1.1.1.1 "$h" A | grep -E '^[0-9.]+$' | head -1); [[ -n "$ip" ]] && echo "--resolve $h:443:$ip"; }
+[[ "$(curl -fsS $(risolvi "$APP") "$APP/api/v1/salute" 2>/dev/null)" == '{"ok":true,"versioneApi":1}' ]] || errore "L'app non risponde su $APP: il dominio principale resta com'è"
 # Nessun riferimento all'app nei file del sito.
 ! grep -rqiE "app\.|ricette|menu|famiglia" sito/pubblico || errore "I file del sito contengono riferimenti all'app"
 

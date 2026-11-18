@@ -57,6 +57,8 @@ fi
 
 APP=https://app.ricettedifamiglia.online
 PRINCIPALE=https://ricettedifamiglia.online
+# Verifiche col DNS di Cloudflare: quello di casa può ricordare per un po' che un nome nuovo non esisteva.
+risolvi() { local h=${1#https://}; local ip; ip=$(dig +short @1.1.1.1 "$h" A | grep -E '^[0-9.]+$' | head -1); [[ -n "$ip" ]] && echo "--resolve $h:443:$ip"; }
 info "Pubblicazione del Worker ($id)…"
 if [[ $TRANSIZIONE == 1 ]]; then
   # Stesso Worker su entrambi i nomi; inviti e PWA già sul nuovo indirizzo.
@@ -68,12 +70,12 @@ fi
 
 # Il certificato di un nome nuovo può richiedere qualche minuto.
 for _ in $(seq 1 60); do
-  salute=$(curl -fsS "$APP/api/v1/salute" 2>/dev/null || true)
+  salute=$(curl -fsS $(risolvi "$APP") "$APP/api/v1/salute" 2>/dev/null || true)
   [[ "$salute" == '{"ok":true,"versioneApi":1}' ]] && break
   sleep 5
 done
 [[ "$salute" == '{"ok":true,"versioneApi":1}' ]] || errore "$APP non risponde come previsto: $salute"
-[[ "$(curl -s -o /dev/null -w '%{http_code}' "$APP/api/v1/eventi")" == 401 ]] || errore "Dati raggiungibili senza sessione"
+[[ "$(curl -s $(risolvi "$APP") -o /dev/null -w '%{http_code}' "$APP/api/v1/eventi")" == 401 ]] || errore "Dati raggiungibili senza sessione"
 ok "Rilascio Cloudflare $id attivo su $APP"
 if [[ $TRANSIZIONE == 1 ]]; then
   ok "Transizione: l'app risponde anche su $PRINCIPALE finché non rilasci il sito (scripts/cloudflare/rilascia-sito.sh)"

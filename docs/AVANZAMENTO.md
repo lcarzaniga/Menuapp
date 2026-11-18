@@ -415,7 +415,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Rilascio Debian del ramo invariato nel comportamento (`! scripts/rilascia.sh cloudflare`), poi
   `scripts/cloudflare/rilascia.sh` dopo la preparazione su Cloudflare (docs/CLOUDFLARE.md).
 
-## Migrazione dei dati e nuovi domini (18/11/2026, ramo `migrazione-cloudflare`, da rilasciare)
+## Migrazione dei dati e nuovi domini (18/11/2026, codice in produzione; migrazione dei dati da fare)
 
 - Richiesta di Loris: Cloudflare copia completa dei contenuti Debian con gli utenti di Cloudflare;
   app su `app.ricettedifamiglia.online`, dominio principale con la sola pagina «Sito in costruzione»
@@ -431,3 +431,9 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   utente solo Debian, proposta, conferma obbligatoria, importazione, utenti e sessioni Cloudflare
   intatti, riferimenti tradotti, foto in R2, annullamento.
 - Nessuna operazione eseguita su Cloudflare né sui dati di produzione.
+- Rilasciato il 18/11: Debian `20261118-1535-71ef495` (salute ok, schema 15); Worker in transizione
+  (versione `af913611`) su `app.ricettedifamiglia.online` e ancora sul dominio principale. Il
+  controllo finale dello script era fallito solo perché il DNS del router di casa ricordava il nome
+  `app.` come inesistente: verificato col DNS di Cloudflare. Ramo `rilascio-dns`: le verifiche degli
+  script ora interrogano 1.1.1.1.
+- Prossimi passi: dispositivi su `app.…`, decisioni sulla corrispondenza, migrazione, sito.
