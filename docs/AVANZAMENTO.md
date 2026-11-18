@@ -358,7 +358,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   aggiornati (ordine, badge, nessuna sezione «Condivisi con me»).
 - Rilasciato il 17/11 alle 16:15 (`20261117-1615-090ef7d`); verificati salute, servizio e registro.
 
-## Accesso per il dominio `ricettedifamiglia.online` (18/11/2026, ramo `accesso-dominio-pubblico`, da rilasciare)
+## Accesso per il dominio `ricettedifamiglia.online` (18/11/2026, in produzione)
 
 - Verifica dell'accesso in vista della pubblicazione (SPEC §19, 6.4.2): nessuna registrazione
   autonoma (solo invito monouso + approvazione del dispositivo), ogni rotta API senza sessione 401,
@@ -374,4 +374,14 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   origine estranea 403; ingresso privato con nomi pubblici 403; configurazione solo HTTPS).
 - Nessuna migrazione. Dopo il rilascio non cambia nulla finché non si aggiorna `dati/server.json`
   e non si collega il dominio (OPERAZIONI, «Dominio proprio»).
-- Rilascio: `! scripts/rilascia.sh accesso-dominio-pubblico`.
+- Rilasciato il 18/11 alle 10:21 (`20261118-1021-5b2a63d`); verificati salute (privato e pubblico),
+  9870 con nome pubblico → 403, 9873 senza sessione → 401, admin → 404, `X-Robots-Tag`.
+- Pubblicazione: Cloudflare Workers non adatto (Node, SQLite e file sul server); da usare
+  Cloudflare Tunnel verso 127.0.0.1:9873 (indicazioni date a Loris, nulla configurato).
+
+## Piano di migrazione a Cloudflare (18/11/2026, ramo `piano-cloudflare`, solo documento)
+
+- Analisi di fattibilità in `docs/PIANO-CLOUDFLARE.md`: Workers + R2 come proposto; database in
+  un Durable Object SQLite invece che in D1 (transazioni sincrone come oggi); fasi C0–C7, limiti
+  e costi del piano Free, decisioni D1–D5 in attesa di Loris. Nessun codice modificato; Debian
+  invariata.
