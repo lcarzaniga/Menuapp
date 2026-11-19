@@ -9,7 +9,7 @@ import type { Config } from '../server/config.ts'
 import { applicaElenco } from '../server/db/migrazioni/applica.ts'
 import { eseguiSeed } from '../server/db/seed/seed.ts'
 import type { AppLeggera } from '../server/motore-leggero.ts'
-import { manutenzioneNotturna } from './backup.ts'
+import { creaBackupR2, manutenzioneNotturna } from './backup.ts'
 import { CartellaR2 } from './cartella-r2.ts'
 import { gestisciConsole, PERCORSO_CONSOLE } from './console.ts'
 import { DbDurable } from './db-durable.ts'
@@ -69,9 +69,11 @@ export class Archivio extends DurableObject<Ambiente> {
     this.db = new DbDurable(stato.storage)
     this.foto = new CartellaR2(env.FOTO)
     this.contesto = { db: this.db, config: configDa(env), stato: { manutenzione: false }, versioneApp: pacchetto.version, foto: this.foto }
-    // Migrazioni e catalogo prima di qualunque richiesta (blockConcurrencyWhile).
+    // Migrazioni e catalogo prima di qualunque richiesta (blockConcurrencyWhile). Prima di
+    // migrare uno schema esistente, un backup «pre-migrazione» in R2 (come su Debian): se non
+    // riesce, nessuna migrazione viene applicata.
     void stato.blockConcurrencyWhile(async () => {
-      await applicaElenco(this.db, MIGRAZIONI)
+      await applicaElenco(this.db, MIGRAZIONI, async () => (await creaBackupR2(this.db, env.FOTO, 'pre-migrazione', pacchetto.version)).nome)
       eseguiSeed(this.db)
       this.app = costruisciAppLeggera(this.contesto, 'unico', (app) => rotteCloudflare(app, this.contesto, env.FOTO))
     })

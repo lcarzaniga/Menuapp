@@ -560,10 +560,20 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   sulla voce (migrazione 0019, trigger senza ricetta), «Piatto a scelta» e «Precisa» in Chi porta,
   «da definire» nel menù e nell'editor, spesa e riepilogo coerenti, duplicazione. SPEC §39.
 
-## Memoria di famiglia (19/11/2026, ramo `memoria-famiglia`, schema 20)
+## Memoria di famiglia (19/11/2026, su TEST `20261119-1434-d949431`, schema 20)
 
 - Richiesta di Loris (19/11). Tabella `memorie` (storia / ricordo / esperienza, con Famiglia: pronta
   per un archivio senza ricetta), foto in `foto_piatti` con `memoria_id` (stessi file e backup),
   regole di lettura e scrittura in `permessi.ts` (anche per le foto), sezione nella scheda. La
   scheda di una ricetta altrui è in sola lettura: la memoria usa solo lo stato della connessione,
   il server applica i permessi. SPEC §40.
+
+## Rilascio unico in produzione (19/11/2026)
+
+- Su conferma di Loris: Cloudflare `20261119-1453-d949431` (versione `45d4ee02`), schema 15 → 20 (fasi
+  1A, 1B, ricette della Famiglia, riepilogo, riuso degli eventi, regia, chi porta flessibile, memoria).
+  Verificato: salute ok, 401 senza sessione anche sulle rotte nuove, dominio principale ancora sul sito.
+- Trovato dopo il rilascio: il Durable Object applicava le migrazioni **senza** backup pre-migrazione
+  in R2 (avevo detto il contrario). Copertura: giornaliero `giornaliero-20261119-024549-v15.json`;
+  migrazioni solo additive, già provate su una copia dei dati di TEST. Corretto nel ramo
+  `backup-migrazioni-cloudflare` (backup `pre-migrazione` prima di ogni migrazione nel Worker).

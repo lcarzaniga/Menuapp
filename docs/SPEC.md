@@ -2586,6 +2586,9 @@ di un giorno nel cestino, cestino svuotato dopo 30 giorni. Ripristino solo dalla
 (`ripristina <nome>`): verifica di formato, impronta e schema, backup `pre-ripristino`, sostituzione
 del contenuto in una transazione, file delle foto rimessi dal cestino; le sessioni restano valide.
 Esportazione JSON e ZIP con le foto per l'amministratore come su Debian.
+- Migrazioni di schema: all'avvio del Durable Object, dopo un backup `pre-migrazione` in R2 (dalla
+  7.9.1; il rilascio del 19/11/2026, schema 15 → 20, è avvenuto senza: copriva il giornaliero delle
+  02:45). Se il backup non riesce, nessuna migrazione viene applicata.
 
 ### 32.7 Rilascio
 
