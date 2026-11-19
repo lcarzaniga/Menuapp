@@ -536,7 +536,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   «da risolvere» solo se qualcosa è andato storto (responsabile assente, attività in ritardo,
   quantità da verificare); menù vuoto, coperti mancanti e cose senza nessuno diventano «aperti».
 
-## Fase 2 del piano — Riuso degli eventi (19/11/2026, su TEST `20261119-1302-878b0a0`, schema 18)
+## Fase 2 del piano — Riuso degli eventi (19/11/2026, su TEST `20261119-1336-1e2d0cc`, schema 18)
 
 - Estesa «Duplica evento»: scelte (menù, partecipanti, chi porta cosa, piano, stampa), anteprima
   senza scritture (`anteprima: true`), incarichi da riassegnare con promemoria (`incarico_precedente`,
@@ -546,3 +546,9 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   (sembrava che le altre non funzionassero) → ogni scelta spuntata ha la sua riga, anche vuota;
   la barra di scorrimento usciva dal bordo arrotondato → in tutte le finestre scorre solo il
   contenuto, titolo e pulsanti restano fermi (`src/components/ui/dialog.tsx`).
+
+## Fase 4 del piano — Regia della cucina (19/11/2026, ramo `regia-cucina`)
+
+- `/eventi/:id/regia` sul piano esistente: In ritardo / Adesso / Più tardi / Fatto, filtri per
+  attrezzatura e giorno, attrezzature dal testo delle ricette, «Ricetta in cucina», spunta, testo
+  grande, Wake Lock condiviso; «Prepara il piano dai piatti» con l'ora suggerita. SPEC §38.

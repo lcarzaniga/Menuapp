@@ -2742,6 +2742,30 @@ altrove lo si copia in un'altra Famiglia o come ricetta personale. Nessuna migra
   non cambiano.
 - Test: `server/api/ricette-famiglia.test.ts`, e2e `multi-famiglia.spec.ts`.
 
+## 38. Regia della cucina (7.7)
+
+Fase 4 del piano di evoluzione (D10, D11). Nessuna migrazione, nessun secondo sistema di attività:
+la regia è una vista del **piano delle attività** con i dati delle ricette del menù.
+
+- `/eventi/:id/regia` (dal piano: «Regia della cucina»), pensata per tablet e schermi grandi e
+  usabile da telefono. `GET /eventi/:id/regia`: attività, tutti i piatti del menù con tempi
+  (preparazione, cottura, riposo), attrezzature scritte nella ricetta e quelle ricavate dal testo
+  (forno, fornelli, frigo: parole comuni di attrezzature e procedimento, un'indicazione), permesso
+  di spuntare come nel piano.
+- Colonne (una sotto l'altra sul telefono): **In ritardo** (giorno passato o ora passata, ora
+  italiana), **Adesso** (oggi senza ora o entro la prossima ora), **Più tardi** (si anticipa
+  spuntando prima), **Fatto**. Filtri: attrezzatura, solo oggi. Ogni attività: ora, piatto, tempi,
+  attrezzature, «Ricetta in cucina» (vista cucina della voce, alle porzioni dell'evento), spunta
+  grande (stessa scrittura del piano, con versione: gli altri dispositivi si aggiornano con la
+  revisione). «Testo grande» per leggere a distanza (ricordato sul dispositivo); schermo sempre
+  acceso con lo stesso Wake Lock della vista cucina (`src/lib/schermo.ts`). Ora aggiornata ogni
+  mezzo minuto.
+- Piano vuoto: «Prepara il piano dai piatti» propone un'attività per piatto il giorno dell'evento,
+  con l'ora di inizio suggerita dai tempi della ricetta e dall'ora del servizio (al quarto d'ora
+  prima; nessuna se manca un dato o cadrebbe il giorno prima). Si rivede (titolo, ora, quali) e si
+  conferma; mai automatico. Nessuna pianificazione delle risorse.
+- Test: `src/domain/regia.test.ts`, `server/api/regia.test.ts`, e2e `regia.spec.ts`.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2768,6 +2792,7 @@ altrove lo si copia in un'altra Famiglia o come ricetta personale. Nessuna migra
 | 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |
 | 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |
 | 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |
+| 19/11/2026 | 7.7 — **Regia della cucina** (§38): vista del piano per il giorno dell'evento, colonne per fase, filtri, attrezzature dal testo delle ricette, testo grande, schermo acceso, «Prepara il piano dai piatti» |
 | 19/11/2026 | 7.6 — **Riuso degli eventi** (§25): scelta di cosa copiare, anteprima senza scritture, chi porta cosa da riassegnare con il promemoria di chi se ne occupava (migrazione 0018) |
 | 19/11/2026 | 7.5 — **Riepilogo a gruppi** (§26): Da organizzare, Da acquistare, Da preparare; livelli da risolvere / aperto / suggerimento; ritardo con l'ora italiana, prossima attività, piatti senza ricetta o ingredienti come suggerimento, evento passato |
 | 19/11/2026 | 7.4 — **Ricette della Famiglia attiva** (§37): personali sempre visibili, quelle di una Famiglia solo con quella attiva; nei menù una ricetta di un'altra Famiglia entra come copia |

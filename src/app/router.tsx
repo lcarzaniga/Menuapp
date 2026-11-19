@@ -45,6 +45,7 @@ export const router = createHashRouter([
           { path: 'chi-porta', element: pigra(() => import('@/features/famiglia/PaginaChiPorta'), (m) => m.PaginaChiPorta) },
         ],
       },
+      { path: '/eventi/:id/regia', element: <ConPermessoEvento>{pigra(() => import('@/features/cucina/PaginaRegia'), (m) => m.PaginaRegia)}</ConPermessoEvento> },
       { path: '/eventi/:id/stampa', element: <ConPermessoEvento>{pigra(() => import('@/features/stampa/PaginaStampa'), (m) => m.PaginaStampa)}</ConPermessoEvento> },
       {
         path: '/eventi/:id/voci/:voceId/cucina',

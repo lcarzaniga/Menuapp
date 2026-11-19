@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { fattoreAnomalo, fattoreScalatura, formattaCoperti, scala } from '@/domain/porzioni.ts'
 import type { IngredientePiatto, Piatto } from '@/domain/tipi.ts'
 import { formattaQuantita } from '@/domain/unita.ts'
+import { useSchermoAcceso } from '@/lib/schermo'
 import { cn } from '@/lib/utils'
 
 function useSpunte(chiave: string) {
@@ -29,36 +30,6 @@ function useSpunte(chiave: string) {
   return [spunte, cambia] as const
 }
 
-/** Tiene lo schermo acceso finché la vista è aperta (Screen Wake Lock, dove supportato). */
-function useSchermoAcceso(): boolean {
-  const [attivo, setAttivo] = useState(false)
-  useEffect(() => {
-    let blocco: WakeLockSentinel | null = null
-    let chiuso = false
-    const richiedi = async () => {
-      if (!('wakeLock' in navigator) || document.visibilityState !== 'visible') return
-      try {
-        blocco = await navigator.wakeLock.request('screen')
-        if (chiuso) await blocco.release()
-        else {
-          setAttivo(true)
-          blocco.addEventListener('release', () => setAttivo(false))
-        }
-      } catch {
-        setAttivo(false)
-      }
-    }
-    void richiedi()
-    const visibile = () => void richiedi()
-    document.addEventListener('visibilitychange', visibile)
-    return () => {
-      chiuso = true
-      document.removeEventListener('visibilitychange', visibile)
-      void blocco?.release()
-    }
-  }, [])
-  return attivo
-}
 
 /** Foto collegate a un passaggio (solo per i piatti del ricettario, non per gli snapshot). */
 function fotoDelPasso(piatto: Piatto, passo: number): string[] {

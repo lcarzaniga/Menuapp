@@ -1,6 +1,7 @@
 // Evento — Piano: attività per giorno e checklist (SPEC F6, §7.7).
 import { Check, ChefHat, Plus } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { api } from '@/api/client'
 import { useAttivita, useMenu } from '@/api/query'
 import { useScrittura } from '@/api/scrittura'
@@ -43,9 +44,17 @@ export function PaginaPiano() {
       <div className="mb-4 flex items-center justify-between gap-2">
         <p className="text-sm text-testo-tenue">{attivita.length ? `${fatte} di ${attivita.length} fatte` : 'Pianifica le preparazioni dei giorni prima.'}</p>
         {!solaLettura ? (
-          <Button misura="piccolo" disabled={!puoScrivere} onClick={() => setAperta('nuova')}>
-            <Plus /> Attività
-          </Button>
+          <div className="flex flex-wrap justify-end gap-2">
+            {/* Il giorno dell'evento: cosa fare adesso, dopo, in ritardo (SPEC §38). */}
+            <Button asChild variante="contorno" misura="piccolo">
+              <Link to={`/eventi/${e.id}/regia`}>
+                <ChefHat /> Regia della cucina
+              </Link>
+            </Button>
+            <Button misura="piccolo" disabled={!puoScrivere} onClick={() => setAperta('nuova')}>
+              <Plus /> Attività
+            </Button>
+          </div>
         ) : null}
       </div>
       {attivita.length === 0 ? (

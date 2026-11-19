@@ -1,4 +1,5 @@
 // Rotte della spesa, dell'archivio e del piano (SPEC §12.4).
+import { regia } from '../servizi/regia.ts'
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { SchemaAggiornaAttivita, SchemaCopiaPiatto, SchemaNuovaAttivita, SchemaSpostaAttivita } from '../../src/contratto/archivio.ts'
@@ -85,6 +86,8 @@ export function rotteSpesa(app: FastifyInstance, ctx: Contesto): void {
   })
 
   // ── Piano ──
+  // Regia della cucina (SPEC §38): piano, piatti, tempi e attrezzature in una sola lettura.
+  app.get<ConId>(`${P}/eventi/:id/regia`, async (req) => regia(db, chi(req), req.params.id))
   app.get<ConId>(`${P}/eventi/:id/attivita`, async (req) => {
     leggi(req)
     return leggiEvento(db, req.params.id).stato === 'archiviato' ? archivio.attivitaDaSnapshot(db, req.params.id) : attivita.elencaAttivita(db, req.params.id)
