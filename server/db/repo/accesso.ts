@@ -214,6 +214,7 @@ export const eventoDiAttivita = (db: Db, id: string) => uno<{ evento_id: string 
 export const eventoDiArticolo = (db: Db, id: string) => uno<{ evento_id: string }>(db, 'SELECT evento_id FROM articoli_spesa WHERE id = ?', id)?.evento_id
 export const eventoDiSnapshot = (db: Db, id: string) => uno<{ evento_id: string }>(db, 'SELECT evento_id FROM snapshot_eventi WHERE id = ?', id)?.evento_id
 export const famigliaOriginePiatto = (db: Db, piattoId: string) => uno<{ g: string | null }>(db, 'SELECT famiglia_origine_id AS g FROM piatti WHERE id = ?', piattoId)?.g ?? null
+export const propostaDiFoto = (db: Db, id: string) => uno<{ proposta_id: string | null }>(db, 'SELECT proposta_id FROM foto_piatti WHERE id = ?', id)?.proposta_id ?? null
 export const memoriaDiFoto = (db: Db, id: string) => uno<{ memoria_id: string | null }>(db, 'SELECT memoria_id FROM foto_piatti WHERE id = ?', id)?.memoria_id ?? null
 export const piattoDiFoto = (db: Db, id: string) => uno<{ piatto_id: string }>(db, 'SELECT piatto_id FROM foto_piatti WHERE id = ?', id)?.piatto_id
 export const proprietarioPiatto = (db: Db, id: string) => uno<{ proprietario_id: string }>(db, 'SELECT proprietario_id FROM piatti WHERE id = ?', id)?.proprietario_id
@@ -246,6 +247,24 @@ export function piattoLeggibileDaAltri(db: Db, piattoId: string, utenteId: strin
       utenteId,
       piattoId,
       pubbliche ? 1 : 0,
+    ) !== undefined
+  )
+}
+
+/**
+ * La ricetta è condivisa con l'utente (non proprietario): una Famiglia di cui fanno parte entrambi,
+ * o una condivisione personale. Non basta vederla perché pubblica o perché collegata a un evento.
+ */
+export function piattoCondivisoCon(db: Db, piattoId: string, utenteId: string): boolean {
+  return (
+    uno(
+      db,
+      `SELECT 1 FROM piatti p WHERE p.id = ? AND p.proprietario_id <> ? AND (${CONDIVISA_CON_LE_MIE_FAMIGLIE}
+         OR EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id AND c.utente_id = ?))`,
+      piattoId,
+      utenteId,
+      utenteId,
+      utenteId,
     ) !== undefined
   )
 }

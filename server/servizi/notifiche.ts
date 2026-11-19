@@ -83,6 +83,8 @@ function collegamento(n: repo.RigaNotifica, messaggioId = n.messaggio_id, ancora
     return `/eventi/${n.evento_id}/bacheca${messaggio ? `?${messaggio}` : ''}`
   }
   if (n.gruppo_id) return `/famiglia?famiglia=${encodeURIComponent(n.gruppo_id)}${messaggio ? `&${messaggio}` : ''}`
+  // Proposte di modifica: la proposta precisa (SPEC §41).
+  if (n.piatto_id && ancora?.startsWith('proposta:')) return `/ricettario/${n.piatto_id}/proposte?proposta=${encodeURIComponent(ancora.slice(9))}`
   if (n.piatto_id) return `/ricettario/${n.piatto_id}`
   return '/notifiche'
 }

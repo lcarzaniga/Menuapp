@@ -1,4 +1,7 @@
 // Rotte delle foto e dell'esportazione della ricetta (formato v1).
+import { transazione } from '../db/connessione.ts'
+import * as repoAccesso from '../db/repo/accesso.ts'
+import { registraEvento } from '../servizi/revisioni.ts'
 import type { FastifyInstance } from 'fastify'
 import { strToU8, zipSync } from 'fflate'
 import { z } from 'zod'
@@ -27,6 +30,9 @@ export function rotteFoto(app: FastifyInstance, ctx: Contesto): void {
     const q = valida(SchemaQueryCaricaFoto, req.query)
     if (!(req.body instanceof Uint8Array)) return reply.code(415).send({ errore: { codice: 'tipo_non_supportato', messaggio: 'Invia il file dell\'immagine' } })
     const f = await foto.caricaFoto(db, ctx.foto, req.params.id, { id: q.id, dati: req.body, didascalia: q.didascalia, principale: q.principale === '1', passo: q.passo ?? null })
+    // Cronologia della ricetta (SPEC §41).
+    const u = chi(req)
+    transazione(db, () => registraEvento(db, req.params.id, { tipo: 'foto', autore: { id: u.id, nome: u.nome } }, [{ campo: 'foto', prima: null, dopo: { id: f.id, didascalia: f.didascalia, passo: f.passo } }], Date.now()))
     return reply.code(201).send(f)
   })
 
@@ -45,8 +51,12 @@ export function rotteFoto(app: FastifyInstance, ctx: Contesto): void {
   })
 
   app.delete<ConId>(`${P}/foto/:id`, async (req, reply) => {
-    richiediFoto(db, chi(req), req.params.id, 'proprietario')
+    const u = chi(req)
+    const piatto = richiediFoto(db, u, req.params.id, 'proprietario')
+    const f = foto.leggiFoto(db, req.params.id)
+    const ufficiale = !repoAccesso.memoriaDiFoto(db, f.id)
     await foto.eliminaFoto(db, ctx.foto, req.params.id, valida(SchemaQueryVersione, req.query).versione)
+    if (ufficiale) transazione(db, () => registraEvento(db, piatto, { tipo: 'foto', autore: { id: u.id, nome: u.nome } }, [{ campo: 'foto', prima: { id: f.id, didascalia: f.didascalia, passo: f.passo }, dopo: null }], Date.now()))
     return reply.code(204).send()
   })
 

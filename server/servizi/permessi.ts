@@ -4,6 +4,7 @@
 import type { Ingresso, PermessoEvento, Ruolo } from '../../src/contratto/accesso.ts'
 import type { Db } from '../db/connessione.ts'
 import * as repo from '../db/repo/accesso.ts'
+import * as repoCollab from '../db/repo/collaborazione.ts'
 import * as repoMemoria from '../db/repo/memoria.ts'
 import { accessoNegato, nonTrovato } from './errori.ts'
 
@@ -93,6 +94,13 @@ export function richiediPiatto(db: Db, u: UtenteCorrente, id: string, livello: L
 export function richiediFoto(db: Db, u: UtenteCorrente, id: string, livello: LivelloPiatto): string {
   const piatto = repo.piattoDiFoto(db, id)
   if (!piatto) throw nonTrovato('Foto')
+  // Foto proposta (SPEC §41): la vedono solo il proprietario e l'autore; si decide con la proposta.
+  const proposta = repo.propostaDiFoto(db, id)
+  if (proposta) {
+    richiediProposta(db, u, proposta, 'lettura')
+    if (livello === 'proprietario') throw accessoNegato('La foto proposta si decide con la proposta')
+    return piatto
+  }
   // Foto di un ricordo o della storia: le regole della memoria di famiglia (SPEC §40).
   const memoria = repo.memoriaDiFoto(db, id)
   if (memoria) {
@@ -101,6 +109,47 @@ export function richiediFoto(db: Db, u: UtenteCorrente, id: string, livello: Liv
   }
   richiediPiatto(db, u, piatto, livello, 'Foto')
   return piatto
+}
+
+/**
+ * Proporre modifiche a una ricetta (SPEC §41): chi la vede perché condivisa con lui (Famiglia o
+ * condivisione personale). Il proprietario la modifica direttamente; chi la vede solo perché
+ * pubblica o per un evento no.
+ */
+export function richiediProponente(db: Db, u: UtenteCorrente, piattoId: string): void {
+  richiediPiatto(db, u, piattoId, 'lettura')
+  if (repo.proprietarioPiatto(db, piattoId) === u.id) throw accessoNegato('La ricetta è tua: modificala direttamente')
+  if (!repo.piattoCondivisoCon(db, piattoId, u.id)) throw accessoNegato('Propongono modifiche solo i familiari con cui la ricetta è condivisa')
+}
+
+/**
+ * Una proposta: la vedono solo il proprietario attuale della ricetta e l'autore (se vede ancora la
+ * ricetta); decide solo il proprietario; ritira solo l'autore. Altrimenti «non esiste» (404).
+ */
+export function richiediProposta(db: Db, u: UtenteCorrente, id: string, livello: 'lettura' | 'decisione' | 'autore') {
+  const p = repoCollab.leggiProposta(db, id)
+  if (!p) throw nonTrovato('Proposta')
+  const proprietario = repo.proprietarioPiatto(db, p.piatto_id) === u.id
+  const autore = p.autore_id === u.id && (proprietario || repo.piattoLeggibileDaAltri(db, p.piatto_id, u.id))
+  if (!proprietario && !autore) throw nonTrovato('Proposta')
+  if (livello === 'decisione' && !proprietario) throw accessoNegato('Decide il proprietario della ricetta')
+  if (livello === 'autore' && p.autore_id !== u.id) throw accessoNegato('La ritira chi l\'ha proposta')
+  return p
+}
+
+/** Coinvolto in un trasferimento di proprietà (destinatario, proprietario o chi l'ha chiesto). */
+export function richiediTrasferimento(db: Db, u: UtenteCorrente, id: string): void {
+  const t = repoCollab.leggiTrasferimento(db, id)
+  if (!t || (t.a_id !== u.id && t.da_id !== u.id && t.creato_da_id !== u.id)) throw nonTrovato('Trasferimento')
+}
+
+/** Amministratore di una Famiglia con cui la ricetta è condivisa (riassegnazione, SPEC §41). */
+export function richiediAmministratoreRicetta(db: Db, u: UtenteCorrente, piattoId: string): void {
+  // Una ricetta che non vede (privata, di un'altra Famiglia) per l'amministratore «non esiste».
+  richiediPiatto(db, u, piattoId, 'lettura')
+  if (!repoCollab.famiglieCondivise(db, piattoId).some((g) => repo.ruoloNelGruppo(db, g, u.id) === 'amministratore')) {
+    throw accessoNegato('Riassegna solo l\'amministratore della Famiglia con cui la ricetta è condivisa')
+  }
 }
 
 /** Aggiungere ricordi ed esperienze: il proprietario e i membri della Famiglia della ricetta (SPEC §40). */

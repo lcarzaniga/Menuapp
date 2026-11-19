@@ -156,6 +156,27 @@ describe('installazione Cloudflare', () => {
     expect((await anna.chiama('GET', '/foto/f1')).stato).toBe(404)
   })
 
+  it('foto proposte in R2 (SPEC §41): fuori dalla galleria, visibili a proprietario e autore, il rifiuto cancella il file', async () => {
+    expect((await loris.chiama('POST', '/piatti', { id: 'p2', nome: 'Crostata', note: '' })).stato).toBe(201)
+    const p = (await anna.chiama('GET', '/piatti/p2')).corpo
+    const { id: _i, versione, creatoIl: _c, aggiornatoIl: _a, ...resto } = p
+    const contenuto = Object.fromEntries(['nome', 'portataSuggerita', 'porzioniBase', 'tempoPreparazioneMin', 'tempoCotturaMin', 'tempoRiposoMin', 'attrezzature', 'procedimento', 'note', 'fonte', 'ingredienti'].map((k) => [k, (resto as Record<string, unknown>)[k]]))
+    const proposta = await anna.chiama('POST', '/piatti/p2/proposte', { id: 'pr1', versioneBase: versione, contenuto: { ...contenuto, note: 'Con marmellata di albicocche' }, motivazione: '', conFoto: true })
+    expect(proposta.stato, JSON.stringify(proposta.corpo)).toBe(201)
+    expect((await anna.chiama('POST', '/proposte/pr1/foto?id=fp1', JPEG, 'image/jpeg')).stato).toBe(201)
+    expect(new Uint8Array(await (await loris.chiama('GET', '/foto/fp1')).risposta.arrayBuffer())).toEqual(JPEG)
+    expect((await loris.chiama('GET', '/piatti/p2')).corpo.foto).toEqual([])
+    const pr = (await loris.chiama('GET', '/proposte/pr1')).corpo
+    const decisione = await loris.chiama('POST', '/proposte/pr1/decisione', {
+      versione: pr.versione,
+      versionePiatto: (await loris.chiama('GET', '/piatti/p2')).corpo.versione,
+      decisioni: pr.modifiche.map((m: { id: string; campo: string }) => ({ modificaId: m.id, esito: m.campo === 'note' ? 'approvata' : 'rifiutata' })),
+    })
+    expect(decisione.stato, JSON.stringify(decisione.corpo)).toBe(200)
+    expect((await loris.chiama('GET', '/piatti/p2')).corpo.note).toBe('Con marmellata di albicocche')
+    expect((await loris.chiama('GET', '/foto/fp1')).stato).toBe(404)
+  })
+
   it('backup in R2, esportazione con le foto, ripristino dalla console e cestino', async () => {
     const fotoCopiaId = (await anna.chiama('GET', '/piatti/p-anna')).corpo.foto[0].id as string
     const b = await loris.chiama('POST', '/backup', {})

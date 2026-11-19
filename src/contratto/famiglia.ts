@@ -278,6 +278,8 @@ export const TIPI_NOTIFICA = [
   'menu',
   'condivisione',
   'valutazione',
+  'modifica_ricetta',
+  'proprieta_ricetta',
 ] as const
 export type TipoNotifica = (typeof TIPI_NOTIFICA)[number]
 
@@ -292,6 +294,8 @@ export const NOMI_NOTIFICA: Record<TipoNotifica, string> = {
   menu: 'Modifiche importanti ai menù',
   condivisione: 'Eventi e ricette condivisi con me',
   valutazione: 'Valutazioni dei piatti che ho preparato',
+  modifica_ricetta: 'Proposte di modifica alle ricette e loro esito',
+  proprieta_ricetta: 'Trasferimenti di proprietà delle ricette',
 }
 
 export const SchemaNotifica = z.object({

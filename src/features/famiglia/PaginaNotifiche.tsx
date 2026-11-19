@@ -1,7 +1,7 @@
 // Centro notifiche (SPEC §20.6, §29.1): categoria e icona per tipo, da leggere e già lette,
 // aggiornamenti raggruppati apribili, apertura diretta del contenuto, preferenze.
 import { useQueryClient } from '@tanstack/react-query'
-import { BarChart3, Bell, BellOff, CheckCheck, CheckCircle2, ChefHat, ChevronDown, ChevronUp, House, type LucideIcon, MessageCircle, MessageSquare, Package, Share2, Star, UtensilsCrossed } from 'lucide-react'
+import { BarChart3, Bell, BellOff, CheckCheck, CheckCircle2, ChefHat, ChevronDown, ChevronUp, FilePen, House, KeyRound, MessageCircle, MessageSquare, Package, Share2, Star, UtensilsCrossed, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { api } from '@/api/client'
@@ -27,10 +27,13 @@ const CATEGORIA: Record<TipoNotifica, { nome: string; icona: LucideIcon }> = {
   menu: { nome: 'Menù', icona: UtensilsCrossed },
   condivisione: { nome: 'Condivisione', icona: Share2 },
   valutazione: { nome: 'Valutazione', icona: Star },
+  modifica_ricetta: { nome: 'Modifica a una ricetta', icona: FilePen },
+  proprieta_ricetta: { nome: 'Proprietà di una ricetta', icona: KeyRound },
 }
 
-/** «Anna: testo»; negli incarichi il nome è già nel testo. */
-const conAutore = (tipo: TipoNotifica, attore: string | null, testo: string) => (attore && tipo !== 'incarico' ? `${attore}: ${testo}` : testo)
+/** «Anna: testo»; negli incarichi e nelle ricette (proposte, proprietà) il nome è già nel testo. */
+const SENZA_AUTORE: TipoNotifica[] = ['incarico', 'modifica_ricetta', 'proprieta_ricetta']
+const conAutore = (tipo: TipoNotifica, attore: string | null, testo: string) => (attore && !SENZA_AUTORE.includes(tipo) ? `${attore}: ${testo}` : testo)
 
 export function PaginaNotifiche() {
   const n = useNotifiche()

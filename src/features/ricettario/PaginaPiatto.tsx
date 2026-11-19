@@ -1,15 +1,16 @@
 // Piatto: scheda, modifica, eliminazione; nuovo piatto (SPEC §5, F3–F4).
-import { AlertTriangle, CalendarDays, ChefHat, Clock, Download, Pencil, Settings2, Share2, Trash2, Users, Wrench } from 'lucide-react'
+import { AlertTriangle, CalendarDays, ChefHat, Clock, Download, ImagePlus, Pencil, Settings2, Share2, Trash2, Users, Wrench } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { api, ErroreRichiesta, nuovoId } from '@/api/client'
 import { usePiatto } from '@/api/query'
 import { useScrittura } from '@/api/scrittura'
 import { MemoriaRicetta } from './MemoriaRicetta'
+import { BarraCollaborazione, GestioneProprieta, useCollaborazione } from './Collaborazione'
 import { Caricamento, Pagina, Vuoto } from '@/components/Pagina'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Campo, Input, Select, Textarea } from '@/components/ui/campi'
+import { Campo, Casella, Input, Select, Textarea } from '@/components/ui/campi'
 import { Card, CardContent } from '@/components/ui/card'
 import { Conferma } from '@/components/ui/dialog'
 import { SolaLettura, usePuoScrivere } from '@/connessione/stato'
@@ -21,7 +22,9 @@ import { dataBreve } from '@/domain/tempo.ts'
 import type { IngredientePiatto } from '@/domain/tipi.ts'
 import { useImpostazioni } from '@/api/query'
 import { EditorIngredienti, testoQuantita } from './EditorIngredienti'
-import { FotoPasso, GalleriaFoto } from './FotoPiatto'
+import { FotoPasso, GalleriaFoto, urlFoto } from './FotoPiatto'
+import { riduciFoto } from '@/lib/immagini'
+import { cn } from '@/lib/utils'
 import { aTesto, daPiatto } from '@/domain/ricetta/formato.ts'
 import { toast } from 'sonner'
 
@@ -37,6 +40,7 @@ export function PaginaPiatto() {
   const { id = '' } = useParams()
   const [parametri, setParametri] = useSearchParams()
   const q = usePiatto(id)
+  const collab = useCollaborazione(id)
   const inModifica = parametri.get('modifica') === '1'
   if (q.isPending) return <Caricamento />
   if (!q.data) {
@@ -49,8 +53,10 @@ export function PaginaPiatto() {
   }
   // Le ricette di altri si leggono e si copiano, non si modificano.
   const p = q.data
-  return inModifica && p.mio ? (
-    <EditorPiatto piatto={p} onFine={() => setParametri({}, { replace: true })} />
+  // Il proprietario modifica; chi la ha condivisa con sé propone una modifica (SPEC §41).
+  const proponi = !p.mio && collab.data?.puoProporre === true
+  return inModifica && (p.mio || proponi) ? (
+    <EditorPiatto piatto={p} proposta={proponi} onFine={() => setParametri({}, { replace: true })} />
   ) : (
     <SolaLettura motivo={p.mio ? null : `Ricetta di ${p.proprietario.nome}`}>
       <SchedaPiatto piatto={p} onModifica={() => setParametri({ modifica: '1' })} />
@@ -109,6 +115,7 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
       }
     >
       <div className="flex flex-col gap-4">
+        <BarraCollaborazione piatto={p} onProponi={onModifica} />
         <GalleriaFoto piattoId={p.id} foto={p.foto} nome={p.nome} procedimento={p.procedimento} />
         <div className="flex flex-wrap gap-2 text-sm">
           <Badge variante={p.porzioniBase ? 'primario' : 'avviso'}>
@@ -214,6 +221,7 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
         <section id="gestione-ricetta" aria-label="Gestione della ricetta" className="mt-2 flex scroll-mt-4 flex-col gap-3 rounded-2xl border border-bordo/70 bg-tenue/40 p-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-testo-tenue">Gestione della ricetta</h2>
           <FamigliaOrigineRicetta piatto={p} />
+          <GestioneProprieta piatto={p} />
           {p.provenienza ? <ProvenienzaRicetta provenienza={p.provenienza} /> : null}
           {p.mio ? <VisibilitaRicetta piatto={p} /> : null}
           <CopiaInFamiglia piatto={p} />
@@ -295,9 +303,14 @@ const aMinuti = (s: string) => {
   return n === null || Number.isNaN(n) ? n : Math.round(n)
 }
 
-function EditorPiatto({ piatto: p, onFine }: { piatto: DettaglioPiatto; onFine: () => void }) {
+function EditorPiatto({ piatto: p, proposta = false, onFine }: { piatto: DettaglioPiatto; proposta?: boolean; onFine: () => void }) {
   const imp = useImpostazioni()
   const puoScrivere = usePuoScrivere()
+  const naviga = useNavigate()
+  // Proposta (SPEC §41): stesso editor; si salva come proposta con motivazione e foto.
+  const [motivazione, setMotivazione] = useState('')
+  const [nuoveFoto, setNuoveFoto] = useState<{ file: File; passo: string }[]>([])
+  const [togliFoto, setTogliFoto] = useState<string[]>([])
   const iniziale: Bozza = {
     nome: p.nome,
     portataSuggerita: p.portataSuggerita ?? '',
@@ -321,6 +334,31 @@ function EditorPiatto({ piatto: p, onFine }: { piatto: DettaglioPiatto; onFine: 
     return () => window.removeEventListener('beforeunload', avvisa)
   }, [modificato])
 
+  const contenutoBozza = () => ({
+    nome: b.nome.trim(),
+    portataSuggerita: b.portataSuggerita.trim() || null,
+    porzioniBase: aNumero(b.porzioniBase),
+    tempoPreparazioneMin: aMinuti(b.tempoPreparazioneMin),
+    tempoCotturaMin: aMinuti(b.tempoCotturaMin),
+    tempoRiposoMin: aMinuti(b.tempoRiposoMin),
+    attrezzature: b.attrezzature.split('\n').map((s) => s.trim()).filter(Boolean),
+    procedimento: b.procedimento.split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean),
+    note: b.note,
+    fonte: b.fonte,
+    ingredienti: b.ingredienti.map((i, k) => ({ ...i, ordine: k })),
+  })
+  const invia = useScrittura(
+    async () => {
+      const id = nuovoId()
+      await api.crea(`/piatti/${p.id}/proposte`, { id, versioneBase: p.versione, contenuto: contenutoBozza(), motivazione, rimuoviFoto: togliFoto, conFoto: nuoveFoto.length > 0 })
+      for (const f of nuoveFoto) {
+        const q = new URLSearchParams({ id: nuovoId(), ...(f.passo ? { passo: String(Number(f.passo) - 1) } : {}) })
+        await api.file('POST', `/proposte/${id}/foto?${q}`, await riduciFoto(f.file))
+      }
+      return id
+    },
+    { oggetto: `«${p.nome}»`, successo: 'Proposta inviata: il proprietario deciderà', dopo: (id) => naviga(`/ricettario/${p.id}/proposte?proposta=${id}`, { replace: true }) },
+  )
   const salva = useScrittura(
     (versione: number) =>
       api.modifica<DettaglioPiatto>(`/piatti/${p.id}`, {
@@ -344,15 +382,22 @@ function EditorPiatto({ piatto: p, onFine }: { piatto: DettaglioPiatto; onFine: 
   const set = (k: keyof Bozza) => (e: { target: { value: string } }) => setB({ ...b, [k]: e.target.value })
 
   return (
-    <Pagina titolo={b.nome || 'Piatto'} sottotitolo="Modifica" indietro={`/ricettario/${p.id}`}>
+    <Pagina titolo={b.nome || 'Piatto'} sottotitolo={proposta ? `Proponi una modifica a ${p.proprietario.nome}` : 'Modifica'} indietro={`/ricettario/${p.id}`}>
       <form
         data-modifiche-non-salvate={modificato}
         className="flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault()
-          if (b.nome.trim() && numeriValidi) void salva.esegui(p.versione)
+          if (!b.nome.trim() || !numeriValidi) return
+          if (proposta) void invia.esegui(undefined)
+          else void salva.esegui(p.versione)
         }}
       >
+        {proposta ? (
+          <p className="rounded-xl bg-tenue px-3 py-2 text-sm text-testo-tenue">
+            Cambia solo ciò che vuoi proporre. La ricetta non cambia finché {p.proprietario.nome} non approva: può accettare o rifiutare ogni modifica.
+          </p>
+        ) : null}
         <Campo etichetta="Nome" htmlFor="p-nome">
           <Input id="p-nome" value={b.nome} onChange={set('nome')} required />
         </Campo>
@@ -401,16 +446,83 @@ function EditorPiatto({ piatto: p, onFine }: { piatto: DettaglioPiatto; onFine: 
         <Campo etichetta="Fonte" htmlFor="p-fonte">
           <Input id="p-fonte" value={b.fonte} onChange={set('fonte')} placeholder="es. ricetta della nonna" />
         </Campo>
+        {proposta ? (
+          <FotoProposte piatto={p} nuove={nuoveFoto} onNuove={setNuoveFoto} togli={togliFoto} onTogli={setTogliFoto} />
+        ) : null}
+        {proposta ? (
+          <Campo etichetta="Perché (facoltativo)" htmlFor="p-motivo" aiuto="Aiuta chi decide: cosa cambia e perché.">
+            <Textarea id="p-motivo" className="min-h-16" value={motivazione} maxLength={2000} onChange={(e) => setMotivazione(e.target.value)} />
+          </Campo>
+        ) : null}
         <div className="sticky bottom-20 z-10 flex gap-2 rounded-2xl bg-sfondo/95 py-2 backdrop-blur md:bottom-2">
           <Button type="button" variante="contorno" onClick={onFine}>
             Annulla
           </Button>
-          <Button type="submit" className="flex-1" disabled={salva.inCorso || !b.nome.trim() || !numeriValidi || !puoScrivere}>
-            {salva.inCorso ? 'Salvataggio…' : 'Salva piatto'}
-          </Button>
+          {proposta ? (
+            <Button type="submit" className="flex-1" disabled={invia.inCorso || !b.nome.trim() || !numeriValidi || !puoScrivere || (!modificato && !nuoveFoto.length && !togliFoto.length)}>
+              {invia.inCorso ? 'Invio…' : 'Invia la proposta'}
+            </Button>
+          ) : (
+            <Button type="submit" className="flex-1" disabled={salva.inCorso || !b.nome.trim() || !numeriValidi || !puoScrivere}>
+              {salva.inCorso ? 'Salvataggio…' : 'Salva piatto'}
+            </Button>
+          )}
         </div>
       </form>
     </Pagina>
+  )
+}
+
+/** Foto nella proposta: nuove (anche di un passaggio) e quelle attuali da togliere. */
+function FotoProposte({
+  piatto: p,
+  nuove,
+  onNuove,
+  togli,
+  onTogli,
+}: {
+  piatto: DettaglioPiatto
+  nuove: { file: File; passo: string }[]
+  onNuove: (x: { file: File; passo: string }[]) => void
+  togli: string[]
+  onTogli: (x: string[]) => void
+}) {
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="font-serif text-lg font-semibold text-primario">Foto</h2>
+      {p.foto.length ? (
+        <ul className="flex flex-wrap gap-2" aria-label="Foto attuali">
+          {p.foto.map((f) => (
+            <li key={f.id} className="flex flex-col items-center gap-1 text-xs">
+              <img src={urlFoto(f.id)} alt={f.didascalia || 'Foto'} className={cn('size-20 rounded-lg object-cover', togli.includes(f.id) && 'opacity-40')} />
+              <label className="flex items-center gap-1">
+                <Casella checked={togli.includes(f.id)} onChange={(e) => onTogli(e.target.checked ? [...togli, f.id] : togli.filter((x) => x !== f.id))} /> Togli
+              </label>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {nuove.map((f, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="min-w-0 flex-1 truncate">{f.file.name}</span>
+          <Input
+            aria-label={`Passaggio della foto ${f.file.name}`}
+            inputMode="numeric"
+            className="w-36"
+            placeholder="Passaggio (facolt.)"
+            value={f.passo}
+            onChange={(e) => onNuove(nuove.map((x, j) => (j === i ? { ...x, passo: e.target.value.replace(/\D/g, '') } : x)))}
+          />
+          <Button type="button" variante="fantasma" misura="piccolo" onClick={() => onNuove(nuove.filter((_, j) => j !== i))}>
+            Togli
+          </Button>
+        </div>
+      ))}
+      <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-primario">
+        <ImagePlus className="size-4" /> Proponi una foto
+        <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" onChange={(e) => onNuove([...nuove, ...[...(e.target.files ?? [])].map((file) => ({ file, passo: '' }))].slice(0, 10))} />
+      </label>
+    </section>
   )
 }
 

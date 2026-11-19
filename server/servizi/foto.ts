@@ -49,9 +49,17 @@ export function tipoDaContenuto(b: Uint8Array): TipoFoto | null {
 
 export const nomeFile = (f: Pick<Foto, 'id' | 'tipo'>) => `${f.id}.${ESTENSIONI[f.tipo]}`
 
-/** Foto della ricetta (non quelle della memoria di famiglia, SPEC §40). */
+/** Le foto ufficiali della ricetta: non quelle della memoria (§40) né quelle proposte (§41). */
+export const UFFICIALE = 'memoria_id IS NULL AND proposta_id IS NULL'
+
+/** Foto della ricetta (non quelle della memoria di famiglia né quelle proposte). */
 export function elencaFoto(db: Db, piattoId: string): Foto[] {
-  return tutti<Riga>(db, 'SELECT * FROM foto_piatti WHERE piatto_id = ? AND memoria_id IS NULL ORDER BY principale DESC, ordine', piattoId).map(daRiga)
+  return tutti<Riga>(db, `SELECT * FROM foto_piatti WHERE piatto_id = ? AND ${UFFICIALE} ORDER BY principale DESC, ordine`, piattoId).map(daRiga)
+}
+
+/** Foto di una proposta di modifica, nell'ordine di caricamento. */
+export function fotoProposta(db: Db, propostaId: string): Foto[] {
+  return tutti<Riga>(db, 'SELECT * FROM foto_piatti WHERE proposta_id = ? ORDER BY ordine', propostaId).map(daRiga)
 }
 
 /** Foto di un contributo della memoria di famiglia, nell'ordine di caricamento. */
@@ -64,8 +72,8 @@ export function fotoPrincipali(db: Db): Map<string, string> {
     tutti<{ piatto_id: string; id: string }>(
       db,
       `SELECT piatto_id, id FROM foto_piatti f WHERE principale = 1
-       OR (f.memoria_id IS NULL AND NOT EXISTS (SELECT 1 FROM foto_piatti g WHERE g.piatto_id = f.piatto_id AND g.principale = 1)
-           AND ordine = (SELECT min(ordine) FROM foto_piatti h WHERE h.piatto_id = f.piatto_id AND h.memoria_id IS NULL))`,
+       OR (f.memoria_id IS NULL AND f.proposta_id IS NULL AND NOT EXISTS (SELECT 1 FROM foto_piatti g WHERE g.piatto_id = f.piatto_id AND g.principale = 1)
+           AND ordine = (SELECT min(ordine) FROM foto_piatti h WHERE h.piatto_id = f.piatto_id AND h.memoria_id IS NULL AND h.proposta_id IS NULL))`,
     ).map((r) => [r.piatto_id, r.id]),
   )
 }
@@ -80,7 +88,16 @@ export async function caricaFoto(
   db: Db,
   cartella: CartellaFile,
   piattoId: string,
-  d: { id: string; dati: Uint8Array; didascalia: string; principale: boolean; passo?: number | null; memoriaId?: string },
+  d: {
+    id: string
+    dati: Uint8Array
+    didascalia: string
+    principale: boolean
+    passo?: number | null
+    memoriaId?: string
+    /** Foto proposta (SPEC §41): il passaggio si verifica sul procedimento proposto (`passaggi`). */
+    proposta?: { id: string; passaggi: number }
+  },
   adesso = Date.now(),
 ): Promise<Foto> {
   if (d.dati.length === 0 || d.dati.length > LIMITE_BYTE_FOTO) throw richiestaNonValida('Foto vuota o più grande di 8 MB')
@@ -90,8 +107,11 @@ export async function caricaFoto(
   if (!piatto) throw nonTrovato('Piatto')
   // Foto di un ricordo (SPEC §40): mai principale né di un passaggio, limite per contributo.
   const memoria = d.memoriaId ?? null
+  const proposta = d.proposta?.id ?? null
   const passo = memoria ? null : (d.passo ?? null)
-  controllaPasso(passo, JSON.parse(piatto.procedimento) as string[])
+  if (d.proposta) {
+    if (passo !== null && passo >= d.proposta.passaggi) throw regolaViolata('passo_inesistente', `Il procedimento proposto ha ${d.proposta.passaggi} passaggi`)
+  } else controllaPasso(passo, JSON.parse(piatto.procedimento) as string[])
   const esistente = uno<Riga>(db, 'SELECT * FROM foto_piatti WHERE id = ?', d.id)
   const sha256 = createHash('sha256').update(d.dati).digest('hex')
   if (esistente) {
@@ -100,21 +120,23 @@ export async function caricaFoto(
   }
   const n = memoria
     ? (uno<{ n: number }>(db, 'SELECT count(*) AS n FROM foto_piatti WHERE memoria_id = ?', memoria)?.n ?? 0)
-    : (uno<{ n: number }>(db, 'SELECT count(*) AS n FROM foto_piatti WHERE piatto_id = ? AND memoria_id IS NULL', piattoId)?.n ?? 0)
-  if (n >= MASSIMO_FOTO) throw regolaViolata('troppe_foto', `Al massimo ${MASSIMO_FOTO} foto per ${memoria ? 'ricordo' : 'ricetta'}`)
+    : proposta
+      ? (uno<{ n: number }>(db, 'SELECT count(*) AS n FROM foto_piatti WHERE proposta_id = ?', proposta)?.n ?? 0)
+      : (uno<{ n: number }>(db, `SELECT count(*) AS n FROM foto_piatti WHERE piatto_id = ? AND ${UFFICIALE}`, piattoId)?.n ?? 0)
+  if (n >= MASSIMO_FOTO) throw regolaViolata('troppe_foto', `Al massimo ${MASSIMO_FOTO} foto per ${memoria ? 'ricordo' : proposta ? 'proposta' : 'ricetta'}`)
   // Prima il file (scrittura atomica), poi la riga: una riga non punta mai a un file mancante.
   const finale = nomeFile({ id: d.id, tipo })
   await cartella.scrivi(finale, d.dati)
   try {
     return transazione(db, () => {
-      const principale = !memoria && (d.principale || n === 0)
+      const principale = !memoria && !proposta && (d.principale || n === 0)
       if (principale) esegui(db, 'UPDATE foto_piatti SET principale = 0 WHERE piatto_id = ?', piattoId)
       const ordine = (uno<{ m: number | null }>(db, 'SELECT max(ordine) AS m FROM foto_piatti WHERE piatto_id = ?', piattoId)?.m ?? -1) + 1
       esegui(
         db,
-        `INSERT INTO foto_piatti (id, piatto_id, ordine, didascalia, principale, passo, tipo, byte, sha256, memoria_id, versione, creato_il, aggiornato_il)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
-        d.id, piattoId, ordine, pulisci(d.didascalia), principale, passo, tipo, d.dati.length, sha256, memoria, adesso, adesso,
+        `INSERT INTO foto_piatti (id, piatto_id, ordine, didascalia, principale, passo, tipo, byte, sha256, memoria_id, proposta_id, versione, creato_il, aggiornato_il)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+        d.id, piattoId, ordine, pulisci(d.didascalia), principale, passo, tipo, d.dati.length, sha256, memoria, proposta, adesso, adesso,
       )
       incrementaRevisione(db)
       return leggiFoto(db, d.id)
@@ -137,6 +159,7 @@ export function aggiornaFoto(db: Db, id: string, d: { didascalia: string; princi
     if ((d.principale || d.passo !== null) && uno(db, 'SELECT 1 FROM foto_piatti WHERE id = ? AND memoria_id IS NOT NULL', id)) {
       throw regolaViolata('foto_ricordo', 'La foto di un ricordo resta nel ricordo')
     }
+    if (uno(db, 'SELECT 1 FROM foto_piatti WHERE id = ? AND proposta_id IS NOT NULL', id)) throw regolaViolata('foto_proposta', 'La foto proposta si decide con la proposta')
     const piatto = uno<{ procedimento: string }>(db, 'SELECT procedimento FROM piatti WHERE id = ?', f.piattoId)
     controllaPasso(d.passo, JSON.parse(piatto?.procedimento ?? '[]') as string[])
     if (d.principale && !f.principale) esegui(db, 'UPDATE foto_piatti SET principale = 0 WHERE piatto_id = ?', f.piattoId)
@@ -166,8 +189,17 @@ export async function leggiFile(cartella: CartellaFile, f: Pick<Foto, 'id' | 'ti
  * Dopo una modifica del procedimento: ogni foto segue il suo passaggio se il testo è rimasto
  * uguale (anche spostato); se il passaggio è stato riscritto o tolto, la foto resta solo in galleria.
  */
+/**
+ * Una foto proposta e approvata diventa della ricetta (SPEC §41): in fondo alla galleria, principale
+ * se la ricetta non ne ha. Da chiamare in una transazione.
+ */
+export function rendiUfficiale(db: Db, id: string, piattoId: string, adesso: number): void {
+  const haPrincipale = uno(db, `SELECT 1 FROM foto_piatti WHERE piatto_id = ? AND principale = 1 AND ${UFFICIALE}`, piattoId) !== undefined
+  esegui(db, 'UPDATE foto_piatti SET proposta_id = NULL, principale = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ?', haPrincipale ? 0 : 1, adesso, id)
+}
+
 export function ricollegaPassi(db: Db, piattoId: string, prima: string[], dopo: string[]): void {
-  for (const r of tutti<{ id: string; passo: number | null }>(db, 'SELECT id, passo FROM foto_piatti WHERE piatto_id = ? AND passo IS NOT NULL', piattoId)) {
+  for (const r of tutti<{ id: string; passo: number | null }>(db, 'SELECT id, passo FROM foto_piatti WHERE piatto_id = ? AND passo IS NOT NULL AND proposta_id IS NULL', piattoId)) {
     const testo = prima[r.passo!]
     const nuovo = testo === undefined ? -1 : dopo.indexOf(testo)
     const passo = nuovo >= 0 ? nuovo : prima.length === dopo.length && r.passo! < dopo.length && testo !== undefined && simili(testo, dopo[r.passo!]!) ? r.passo : null
@@ -198,7 +230,7 @@ export { ESTENSIONI }
  */
 export function copiaFotoPiatto(db: Db, cartella: CartellaFile, daPiatto: string, aPiatto: string, adesso = Date.now()): void {
   // La memoria di famiglia non passa nelle copie: la copia ne inizia una sua (SPEC §40).
-  for (const f of tutti<Riga>(db, 'SELECT * FROM foto_piatti WHERE piatto_id = ? AND memoria_id IS NULL ORDER BY ordine', daPiatto)) {
+  for (const f of tutti<Riga>(db, `SELECT * FROM foto_piatti WHERE piatto_id = ? AND ${UFFICIALE} ORDER BY ordine`, daPiatto)) {
     const id = randomUUID()
     if (!cartella.copia(nomeFile({ id: String(f.id), tipo: f.tipo as TipoFoto }), nomeFile({ id, tipo: f.tipo as TipoFoto }))) continue
     esegui(

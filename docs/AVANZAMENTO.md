@@ -577,3 +577,22 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   in R2 (avevo detto il contrario). Copertura: giornaliero `giornaliero-20261119-024549-v15.json`;
   migrazioni solo additive, già provate su una copia dei dati di TEST. Corretto nel ramo
   `backup-migrazioni-cloudflare` (backup `pre-migrazione` prima di ogni migrazione nel Worker).
+
+## Collaborazione sulle ricette e proprietà (19/11/2026, ramo `collaborazione-ricette`, schema 21)
+
+Stato: **sviluppato e testato automaticamente**; non ancora su TEST (in attesa dell'autorizzazione
+di Loris, docs/RILASCI.md punto 2); non collaudato; non in PRODUZIONE.
+
+- Situazione di partenza: PRODUZIONE `20261119-1453-d949431` (schema 20); TEST `20261119-1458-9a44716`
+  (in più solo il backup pre-migrazione del Worker, in attesa dell'OK per la produzione).
+- Migrazione 0021: `proposte_piatto`, `modifiche_proposta`, `revisioni_piatto`,
+  `trasferimenti_piatto`, `foto_piatti.proposta_id` (+ trigger); nuove tabelle nei backup.
+- Codice: logica pura `src/domain/ricetta/proposte.ts` (differenze, conflitti, applicazione,
+  dipendenze); `server/servizi/collaborazione.ts` e `revisioni.ts`; permessi in `permessi.ts`
+  (proponente, proposta, trasferimento, amministratore della ricetta; foto proposte); cronologia
+  registrata da `aggiornaPiatto` e dalle foto; interfaccia: barra nella scheda, editor in modalità
+  proposta, pagine Proposte e Cronologia, trasferimento e riassegnazione. SPEC §41.
+- Scelte: conflitti ricalcolati e non memorizzati; riassegnazione amministrativa con accettazione del
+  destinatario (immediata se è l'amministratore stesso); al trasferimento le voci degli eventi di
+  altri passano a una copia del proprietario dell'evento (vincolo del database §19.4); il ripristino
+  non tocca le foto.

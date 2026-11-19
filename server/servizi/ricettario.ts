@@ -13,6 +13,7 @@ import { nonTrovato, regolaViolata, richiestaNonValida } from './errori.ts'
 import { leggiEvento, richiediModificabile } from './eventi.ts'
 import { elencaReparti, leggiReparto } from './impostazioni.ts'
 import { elencaFoto, fotoPrincipali, ricollegaPassi } from './foto.ts'
+import { contenutoAttuale, type MetaRevisione, persona, registraContenuto } from './revisioni.ts'
 import { aggiornaConVersione, controllaVersioni, creaIdempotente, eliminaConVersione, incrementaVersione } from './versioni.ts'
 
 /** Ricette leggibili; con `ricerca` solo quelle trovate, nell'ordine della ricerca (§23). */
@@ -123,14 +124,20 @@ export function creaPiatto(db: Db, d: NuovoPiatto, proprieta: repo.Proprieta, ad
   })
 }
 
-export function aggiornaPiatto(db: Db, id: string, d: AggiornaPiatto, utenteId: string, adesso = Date.now()): DettaglioPiatto {
+/**
+ * Aggiorna il contenuto della ricetta e lo registra nella cronologia (SPEC §41): una modifica del
+ * proprietario, oppure (con `revisione`) una proposta approvata o un ripristino.
+ */
+export function aggiornaPiatto(db: Db, id: string, d: AggiornaPiatto, utenteId: string, adesso = Date.now(), revisione?: MetaRevisione): DettaglioPiatto {
   return transazione(db, () => {
     const ingredienti = controllaIngredienti(db, id, d.ingredienti)
-    const prima = repo.leggiPiatto(db, id)?.procedimento ?? []
+    const contenutoPrima = repo.leggiPiatto(db, id) ? contenutoAttuale(db, id) : undefined
+    const prima = contenutoPrima?.procedimento ?? []
     const dati = datiPiatto(d)
     aggiornaConVersione(db, 'piatti', id, d.versione, repo.colonnePiatto(dati), () => leggiPiatto(db, id, utenteId), adesso)
     ricollegaPassi(db, id, prima, dati.procedimento)
     repo.scriviIngredienti(db, id, ingredienti)
+    if (contenutoPrima) registraContenuto(db, id, contenutoPrima, revisione ?? { tipo: 'modifica', autore: persona(db, utenteId) }, adesso)
     incrementaRevisione(db)
     return leggiPiatto(db, id, utenteId)
   })

@@ -2824,6 +2824,115 @@ Migrazione `0020_memoria_di_famiglia.sql`. Il ricettario conserva la storia dell
   esperienze; foto ridotte come quelle delle ricette).
 - Test: `server/api/memoria.test.ts` (due motori), e2e `memoria.spec.ts`.
 
+## 41. Collaborazione sulle ricette e proprietà (8.0)
+
+Migrazione `0021_collaborazione_ricette.sql`. Il ricettario è un patrimonio della famiglia: i membri
+autorizzati propongono miglioramenti, il proprietario controlla la versione ufficiale.
+
+### 41.1 Chi propone, chi decide
+- **Propongono** (`richiediProponente`): chi vede la ricetta perché condivisa con lui — membri della
+  Famiglia con cui è condivisa (se ne fa parte anche il proprietario) e persone con cui è condivisa
+  personalmente. **Non** propongono: il proprietario (modifica direttamente), chi la vede solo
+  perché pubblica o perché collegata a un evento, chi non la vede (404), membri di altre Famiglie.
+- **Una proposta** la vedono solo il proprietario attuale e l'autore (se vede ancora la ricetta);
+  decide solo il proprietario; ritira solo l'autore. Le foto proposte seguono le stesse regole.
+  L'amministratore non approva mai al posto del proprietario (può riassegnare, §41.6). Nessuna
+  scadenza né approvazione automatica.
+
+### 41.2 Proposte
+- «Proponi una modifica» apre **lo stesso editor** della ricetta in modalità proposta: si cambia solo
+  ciò che si vuole, si possono proporre foto (anche di un passaggio) o la rimozione di foto, e una
+  motivazione facoltativa. `POST /piatti/:id/proposte` con la versione su cui è preparata (deve
+  essere quella attuale, altrimenti 409) e il contenuto proposto: il **server** calcola le singole
+  modifiche (`src/domain/ricetta/proposte.ts`): una per campo (nome, portata, porzioni, tempi,
+  attrezzature, procedimento, consigli e note, fonte), una per ingrediente aggiunto, cambiato o
+  tolto (riconosciuto dal suo id; i nuovi ricevono un id del server), una per foto
+  (`POST /proposte/:id/foto`, file come le altre foto, fuori dalla galleria; `foto_piatti.proposta_id`).
+  Ogni modifica conserva il valore ufficiale di quando è nata (`prima`).
+- La proposta non cambia la ricetta, né menù, quantità, spesa, piano o archivi degli eventi.
+- **Ritiro** (`POST /proposte/:id/ritira`): le modifiche in attesa diventano «ritirate», le foto
+  proposte si eliminano (file compreso); la traccia resta.
+- **Chiarimenti** (`POST /proposte/:id/chiarimenti`): messaggi fra proprietario e autore, con notifica.
+
+### 41.3 Decisione per singola modifica
+- `POST /proposte/:id/decisione` con le versioni della proposta e della ricetta viste e, per ogni
+  modifica, approvata o rifiutata (motivo facoltativo). Tutto in una transazione: le modifiche
+  approvate (non foto) si applicano al contenuto **di adesso** in un solo aggiornamento
+  (`aggiornaPiatto`: stessi controlli, versione, ricollegamento delle foto ai passaggi, cronologia);
+  le foto approvate entrano nella galleria (principali se la ricetta non ne ha), quelle da togliere
+  escono; le foto rifiutate si eliminano (file compreso, dopo il commit).
+- **Conflitti**: non si memorizzano; una modifica in attesa è «da riesaminare» se il valore ufficiale
+  è cambiato rispetto a `prima` (campo, ingrediente cambiato o tolto, foto non più presente). Si
+  approva solo con `confermaConflitto` (nell'interfaccia: «Applica comunque»); le modifiche
+  indipendenti si approvano normalmente.
+- **Dipendenze**: la foto di un passaggio che esiste solo nel procedimento proposto dipende da quella
+  modifica: approvarla senza il procedimento è rifiutato (`dipendenza`).
+- **Concorrenza**: due decisioni sulla stessa versione della ricetta → la seconda riceve 409 e si
+  riesamina (i conflitti si ricalcolano).
+- Stati: in attesa, approvata, rifiutata, ritirata (più «da riesaminare» calcolato); la proposta è
+  conclusa quando non resta nulla in attesa. Una sola notifica riepilogativa all'autore («approvata»,
+  «approvata in parte (2 su 3)», «rifiutata»).
+
+### 41.4 Cronologia e ripristino
+- `revisioni_piatto`: ogni modifica applicata (diretta del proprietario, da proposta con autore e
+  approvatore, ripristino, foto aggiunte o tolte, trasferimento e riassegnazione con motivazione),
+  con i campi cambiati (prima → dopo) e il contenuto dopo la revisione. Alla prima revisione si
+  conserva il contenuto di prima («iniziale»). La vede chi fa parte della ricetta (proprietario,
+  Famiglia, condivisione personale); non chi la vede solo per un evento o perché pubblica.
+- **Ripristino** (`POST /piatti/:id/ripristina`, solo il proprietario, con conferma e versione): il
+  contenuto (nome, ingredienti con id nuovi, procedimento, tempi, note) torna quello della revisione
+  scelta e diventa una revisione nuova; nessuna revisione si cancella. Foto, storia, ricordi,
+  esperienze, proposte ed eventi non cambiano.
+
+### 41.5 Trasferimento volontario
+- Il proprietario sceglie un membro attivo della Famiglia con cui la ricetta è condivisa
+  (`POST /piatti/:id/trasferimento`); il destinatario riceve una notifica e accetta o rifiuta
+  (`POST /trasferimenti/:id/decisione`), chi l'ha chiesto può annullare. Un solo trasferimento in
+  attesa per ricetta. All'accettazione si ricontrolla tutto (proprietario, condivisione,
+  appartenenza): se è cambiato qualcosa il trasferimento decade.
+- Effetti: stesso id, nessuna copia della ricetta; restano ingredienti, foto, storia, ricordi,
+  esperienze, cronologia, Famiglia d'origine e visibilità. Le proposte in attesa le decide il nuovo
+  proprietario. Il precedente resta autore dei suoi contributi e, se è ancora nella Famiglia, vede la
+  ricetta come familiare (e può proporre). Registrato nella cronologia.
+- **Eventi**: una voce di menù si collega solo a una ricetta del proprietario dell'evento (§19.4,
+  trigger del database). Al trasferimento le voci degli eventi di altri utenti (di solito il
+  precedente proprietario) passano alla copia del proprietario dell'evento (riusata se c'è): così
+  quegli eventi non dipendono da una ricetta altrui e i ripristini dei backup restano validi.
+
+### 41.6 Riassegnazione amministrativa
+- L'amministratore di una Famiglia con cui la ricetta è condivisa (anche se il proprietario non ne
+  fa più parte) la riassegna a un membro della Famiglia (`POST /piatti/:id/riassegnazione`) con
+  **motivazione obbligatoria**; il precedente proprietario riceve una notifica. Anche qui il
+  destinatario **accetta** (nessuna responsabilità attribuita a sua insaputa); se l'amministratore
+  la assegna a sé stesso vale come accettata. Registrata con autore, data, motivazione, vecchio e
+  nuovo proprietario. Le ricette private (o di altre Famiglie) per l'amministratore non esistono
+  (404): nessun accesso a contenuti riservati.
+
+### 41.7 Notifiche
+- Tipi `modifica_ricetta` (nuova proposta al proprietario, esito all'autore, chiarimenti) e
+  `proprieta_ricetta` (richieste ed esiti di trasferimenti e riassegnazioni); aprono la proposta
+  (`/ricettario/:id/proposte?proposta=`) o la ricetta. Permessi ricontrollati in lettura (§20.6).
+
+### 41.8 Copie ed eventi
+- Una proposta riguarda solo la ricetta su cui è fatta: le copie restano indipendenti (nessuna
+  sincronizzazione), con la loro provenienza.
+- **Eventi e ricetta ufficiale** (comportamento verificato, invariato): gli eventi non archiviati
+  calcolano porzioni e spesa dalla ricetta collegata al momento, quindi una modifica approvata (o
+  diretta) cambia le quantità della loro spesa, riconciliata con gli stati già segnati (§10.4); il
+  menù e il piano non cambiano. Gli eventi archiviati usano il loro archivio e non cambiano mai.
+  Una proposta in attesa non cambia nulla.
+
+### 41.9 Interfaccia
+- Scheda della ricetta: «Proponi una modifica», «Proposte in attesa (N)» / «Le mie proposte»,
+  «Cronologia modifiche», avviso del trasferimento (Accetta / Rifiuta / Annulla); nella gestione
+  «Trasferisci proprietà» e «Riassegna proprietà». Pagine `/ricettario/:id/proposte` (valore attuale
+  e proposto, Approva / Rifiuta per modifica, motivo, «Applica comunque» per i conflitti, riepilogo
+  e conferma; per l'autore esiti, motivi e ritiro) e `/ricettario/:id/cronologia` (revisioni e
+  «Torna a questa versione» con conferma).
+- Test: `src/domain/ricetta/proposte.test.ts`, `server/api/collaborazione.test.ts` (due motori),
+  `server/api/autorizzazione.test.ts`, `test/cloudflare` (foto proposte in R2), e2e
+  `collaborazione.spec.ts`.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2850,6 +2959,7 @@ Migrazione `0020_memoria_di_famiglia.sql`. Il ricettario conserva la storia dell
 | 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |
 | 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |
 | 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |
+| 19/11/2026 | 8.0 — **Collaborazione sulle ricette** (§41): proposte di modifica con approvazione per singola modifica, conflitti e dipendenze, foto proposte, cronologia con ripristino, trasferimento della proprietà e riassegnazione amministrativa con accettazione |
 | 19/11/2026 | 7.9 — **Memoria di famiglia** (§40): storia della ricetta pubblicabile, ricordi ed esperienze dei familiari con foto, privati anche nelle ricette pubbliche, non copiati; modello pronto per un archivio di famiglia |
 | 19/11/2026 | 7.8 — **Chi porta cosa flessibile** (§39): piatti a scelta «da definire» con quanti contributi, precisabili senza perdere l'incarico; menù e Chi porta stesso record |
 | 19/11/2026 | 7.7 — **Regia della cucina** (§38): vista del piano per il giorno dell'evento, colonne per fase, filtri, attrezzature dal testo delle ricette, testo grande, schermo acceso, «Prepara il piano dai piatti» |
