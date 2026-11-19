@@ -16,6 +16,7 @@ import m0012 from '../server/db/migrazioni/0012_origine_voci.sql'
 import m0013 from '../server/db/migrazioni/0013_ricorrenze.sql'
 import m0014 from '../server/db/migrazioni/0014_dettagli_notifiche.sql'
 import m0015 from '../server/db/migrazioni/0015_ricorrenze_standard.sql'
+import m0016 from '../server/db/migrazioni/0016_famiglia_origine.sql'
 
 const FILE: [string, string][] = [
   ['0001_iniziale.sql', m0001],
@@ -33,6 +34,7 @@ const FILE: [string, string][] = [
   ['0013_ricorrenze.sql', m0013],
   ['0014_dettagli_notifiche.sql', m0014],
   ['0015_ricorrenze_standard.sql', m0015],
+  ['0016_famiglia_origine.sql', m0016],
 ]
 
 export const MIGRAZIONI: Migrazione[] = FILE.map(([nome, sql], i) => {

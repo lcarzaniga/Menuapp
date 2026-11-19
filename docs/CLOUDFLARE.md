@@ -59,7 +59,7 @@ browser che apre il link: non si può collegare un telefono da qui), aspetta la 
 codice e approva solo dopo la conferma che coincide con quello sul dispositivo. Serve per il primo
 amministratore e per recuperare l'accesso; per il resto bastano le pagine dell'app. Gli script
 leggono il segreto da `cloudflare.env`; altri comandi: `node scripts/cloudflare/console.ts stato |
-sessioni | revoca | backup`.
+sessioni | revoca | backup | origini` (`origini`: ricette senza Famiglia d'origine, SPEC §35).
 
 ## Backup e ripristino
 

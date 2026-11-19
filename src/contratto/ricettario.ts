@@ -9,6 +9,8 @@ import { SchemaPersona } from './accesso.ts'
 export const VISIBILITA_PIATTO = ['famiglia', 'privata'] as const
 export type VisibilitaPiatto = (typeof VISIBILITA_PIATTO)[number]
 export const SchemaVisibilita = z.object({ visibilita: z.enum(VISIBILITA_PIATTO) })
+/** Famiglia d'origine di una ricetta che non l'ha ancora (solo il proprietario, una sua Famiglia). */
+export const SchemaFamigliaOrigine = z.object({ gruppoId: Id, versione: Versione })
 /** Famiglia in cui è visibile la ricetta: al massimo una (nessuna = privata), SPEC §28. */
 export const SchemaFamigliePiatto = z.object({ gruppi: z.array(Id).max(1, 'Una ricetta è visibile in una sola Famiglia: per un\'altra Famiglia copiala') })
 
@@ -75,6 +77,11 @@ const CampiProprieta = {
   origineAutore: z.string(),
   /** Ricettario di famiglia (visibile a tutti) o privata (solo proprietario e condivisioni). */
   visibilita: z.enum(VISIBILITA_PIATTO),
+  /**
+   * Famiglia in cui la ricetta è nata (SPEC §35), distinta da quella con cui è condivisa. `id` null:
+   * la Famiglia non esiste più (resta il nome). null: ancora da indicare (ricette nate prima).
+   */
+  famigliaOrigine: z.object({ id: Id.nullable(), nome: z.string() }).nullable(),
 }
 
 export const SchemaDettaglioPiatto = SchemaPiatto.extend({
@@ -117,6 +124,8 @@ export const SchemaNuovoPiatto = z.object({
   visibilita: z.enum(VISIBILITA_PIATTO).optional(),
   /** Famiglie con cui condividerla (di cui l'autore fa parte). Assente: tutte le sue, salvo `privata`. */
   famiglie: z.array(Id).max(20).optional(),
+  /** Famiglia in cui nasce (dell'autore). Assente: quella con cui è condivisa, o l'unica dell'autore. */
+  famigliaOrigine: Id.optional(),
   nome: NomeObbligatorio,
   portataSuggerita: CampiPiatto.portataSuggerita.optional(),
   porzioniBase: CampiPiatto.porzioniBase.optional(),

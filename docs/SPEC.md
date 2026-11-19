@@ -2635,6 +2635,34 @@ comandi della console `proponi`, `piano`, `importa`, `verifica`; procedura guida
   (origine del dominio principale ammessa in via temporanea); i dispositivi si ricollegano su `app.…`;
   poi il dominio principale passa al sito.
 
+## 35. Famiglia d'origine delle ricette (7.2)
+
+Prima fase del piano di evoluzione (docs/PIANO-EVOLUZIONE.md §1, fase 1A). Migrazione
+`0016_famiglia_origine.sql`.
+
+- Ogni ricetta ha una **Famiglia d'origine** (`piatti.famiglia_origine_id`, `famiglia_origine_nome`):
+  dove è nata, distinta dalla Famiglia con cui è condivisa (§21.3, §28). Il nome è fissato alla
+  nascita; si mostra quello attuale finché la Famiglia esiste, poi quello della nascita. Una volta
+  indicata non cambia (trigger `piatti_origine_fissa`); l'eliminazione della Famiglia toglie solo
+  il collegamento.
+- Alla nascita: la Famiglia indicata (`famigliaOrigine` in `POST /piatti`, sempre dell'autore; l'app
+  manda la Famiglia attiva, anche nell'importazione), altrimenti quella con cui è condivisa,
+  altrimenti l'unica Famiglia dell'autore, altrimenti nessuna. Copie: in un'altra Famiglia → la
+  destinazione; nel proprio ricettario → quella dell'originale se l'autore della copia ne fa parte;
+  ricette create per un evento (voce, copia per il proprietario, duplicazione, archivio) → la
+  Famiglia dell'evento se il proprietario ne fa parte.
+- Ricette esistenti (migrazione, senza scelte arbitrarie): condivisa con una Famiglia → quella;
+  altrimenti il proprietario in una sola Famiglia → quella; altrimenti da indicare. Nessuna
+  condivisione o permesso cambia. Sui dati di TEST: 77 su 77 determinate.
+- Da indicare: la scheda chiede al proprietario «In quale Famiglia è nata questa ricetta?» (una sua
+  Famiglia, una volta sola): `PUT /piatti/:id/famiglia-origine { gruppoId, versione }`. Controllo:
+  `origini` nella console (`scripts/amministra.sh origini`, console Cloudflare).
+- Scheda: «Nata in <Famiglia>» nella gestione della ricetta; elenco e scheda espongono
+  `famigliaOrigine: { id | null, nome } | null`.
+- Test: `server/api/famiglia-origine.test.ts` (migrazione, nascita, copie, eventi, origine fissa,
+  rinomina ed eliminazione della Famiglia, ripristino), `test/cloudflare` (console), e2e
+  `ricorrenze.spec.ts`.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2661,6 +2689,7 @@ comandi della console `proponi`, `piano`, `importa`, `verifica`; procedura guida
 | 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |
 | 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |
 | 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |
+| 19/11/2026 | 7.2 — **Famiglia d'origine** delle ricette (§35): migrazione 0016 senza assegnazioni arbitrarie, origine alla nascita, fissa, indicata dal proprietario se manca |
 | 18/11/2026 | 7.1 — **Migrazione da Debian** (§33): importazione dei contenuti con corrispondenza esplicita degli utenti, piano di prova, backup pre-migrazione, verifica e annullamento; **domini** (§34): app su `app.ricettedifamiglia.online`, dominio principale con la sola pagina «Sito in costruzione» in un Worker separato |
 | 18/11/2026 | 7.0 — **Installazione su Cloudflare** (§32): Worker, Durable Object SQLite, R2 privato; motore leggero con le stesse rotte; interfacce `Db` e `CartellaFile` comuni; ingresso `unico`; console con segreto; backup in R2 e ripristino solo dalla console; rilascio manuale |
 | 18/11/2026 | 6.4.2 — Accesso con il dominio `ricettedifamiglia.online` accanto al Funnel: `MENUAPP_ALTRI_URL_PUBBLICI`, ingresso privato solo con nomi locali o del tailnet, `X-Robots-Tag` (§19.5) |

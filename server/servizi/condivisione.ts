@@ -104,7 +104,9 @@ export function trasferisciEvento(db: Db, cartellaFoto: CartellaFile, u: UtenteC
       if (!v.piattoId) continue
       let copia = copie.get(v.piattoId)
       if (!copia) {
-        copia = repoRic.copiaEsistente(db, v.piattoId, nuovoId) ?? copiaPiattoInterna(db, cartellaFoto, v.piattoId, randomUUID(), nuovoId, adesso)
+        copia =
+          repoRic.copiaEsistente(db, v.piattoId, nuovoId) ??
+          copiaPiattoInterna(db, cartellaFoto, v.piattoId, randomUUID(), nuovoId, adesso, { famigliaOrigine: repo.famigliaEventoPer(db, eventoId, nuovoId) })
         copie.set(v.piattoId, copia)
       }
       repoEventi.collegaPiatto(db, v.id, copia, adesso)
@@ -151,6 +153,12 @@ export function famiglieDiPartenza(db: Db, u: UtenteCorrente, famiglie: string[]
   return visibilita === 'privata' || mie.length !== 1 ? [] : mie
 }
 
+/** Famiglia d'origine chiesta alla creazione: solo una Famiglia dell'autore. */
+export function origineRichiesta(db: Db, u: UtenteCorrente, gruppoId: string | undefined): string | undefined {
+  if (gruppoId !== undefined && !repo.ruoloNelGruppo(db, gruppoId, u.id)) throw nonTrovato('Famiglia')
+  return gruppoId
+}
+
 /** «Privata» o «della mia Famiglia» (compatibilità con la versione a Famiglia unica). */
 export function impostaVisibilita(db: Db, u: UtenteCorrente, piattoId: string, visibilita: 'famiglia' | 'privata', adesso = Date.now()): void {
   const mie = repo.gruppiDiUtente(db, u.id).map((g) => g.id)
@@ -189,7 +197,15 @@ export function impostaCondivisioniPiatto(db: Db, u: UtenteCorrente, piattoId: s
 }
 
 /** Copia indipendente (ingredienti e foto) nel ricettario di `proprietarioId`. Restituisce il nuovo id. */
-function copiaPiattoInterna(db: Db, cartellaFoto: CartellaFile, piattoId: string, nuovoId: string, proprietarioId: string, adesso: number, opzioni = { indipendente: false }): string {
+function copiaPiattoInterna(
+  db: Db,
+  cartellaFoto: CartellaFile,
+  piattoId: string,
+  nuovoId: string,
+  proprietarioId: string,
+  adesso: number,
+  opzioni: { indipendente?: boolean; famigliaOrigine?: string } = {},
+): string {
   const p = repoRic.leggiPiatto(db, piattoId)
   const prop = repoRic.proprietaPiatto(db, piattoId)
   if (!p || !prop) throw nonTrovato('Piatto')
@@ -203,6 +219,11 @@ function copiaPiattoInterna(db: Db, cartellaFoto: CartellaFile, piattoId: string
     originePiattoId: opzioni.indipendente ? null : (prop.originePiattoId ?? piattoId),
     // Fra Famiglie l'autore resta come informazione solo se è un altro (la provenienza dice il resto).
     origineAutore: opzioni.indipendente && proprietarioId === prop.proprietarioId && !prop.origineAutore ? '' : prop.origineAutore || prop.proprietarioNome,
+    // La copia nasce nella Famiglia indicata; altrimenti in quella dell'originale se il nuovo
+    // proprietario ne fa parte, altrimenti con le regole di sempre (la sua unica Famiglia).
+    famigliaOrigine:
+      opzioni.famigliaOrigine ??
+      (prop.famigliaOrigine?.id && repo.ruoloNelGruppo(db, prop.famigliaOrigine.id, proprietarioId) ? prop.famigliaOrigine.id : undefined),
   })
   repoRic.scriviIngredienti(db, nuovoId, ingredienti.map((i) => ({ ...i, id: randomUUID() })))
   copiaFotoPiatto(db, cartellaFoto, piattoId, nuovoId, adesso)
@@ -228,7 +249,7 @@ export function copiaInFamiglia(
     const origine = repo.famigliePiatto(db, piattoId).find((g) => repo.ruoloNelGruppo(db, g.id, u.id))
     if (origine?.id === d.gruppoId) throw regolaViolata('stessa_famiglia', 'La ricetta è già visibile in questa Famiglia')
     const titolo = repoRic.leggiPiatto(db, piattoId)!.nome
-    const id = copiaPiattoInterna(db, cartellaFoto, piattoId, d.id, u.id, adesso, { indipendente: true })
+    const id = copiaPiattoInterna(db, cartellaFoto, piattoId, d.id, u.id, adesso, { indipendente: true, famigliaOrigine: d.gruppoId })
     repo.impostaFamigliePiatto(db, id, [d.gruppoId], adesso)
     repoRic.impostaProvenienza(db, id, { titolo, copiataIl: adesso, copiataDa: u.nome, famiglia: d.indicaFamiglia && origine ? origine.nome : null })
     incrementaRevisione(db)
@@ -258,5 +279,8 @@ export function piattoPerEvento(db: Db, cartellaFoto: CartellaFile, u: UtenteCor
   const proprietarioPiatto = repo.proprietarioPiatto(db, piattoId)!
   if (proprietarioPiatto === proprietarioEvento) return piattoId
   if (proprietarioPiatto !== u.id && !repo.piattoLeggibileDaAltri(db, piattoId, u.id)) throw accessoNegato('Ricetta non disponibile')
-  return repoRic.copiaEsistente(db, piattoId, proprietarioEvento) ?? copiaPiattoInterna(db, cartellaFoto, piattoId, randomUUID(), proprietarioEvento, adesso)
+  return (
+    repoRic.copiaEsistente(db, piattoId, proprietarioEvento) ??
+    copiaPiattoInterna(db, cartellaFoto, piattoId, randomUUID(), proprietarioEvento, adesso, { famigliaOrigine: repo.famigliaEventoPer(db, eventoId, proprietarioEvento) })
+  )
 }

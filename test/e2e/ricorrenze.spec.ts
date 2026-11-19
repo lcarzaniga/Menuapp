@@ -46,6 +46,8 @@ test('copia di una ricetta in un\'altra Famiglia, indipendente e con la provenie
   await apiScrivi(request, 'post', '/piatti', { id: 'ric-pesto', nome: 'Pesto genovese', porzioniBase: 4, famiglie: [famiglia.id], procedimento: ['Pestare nel mortaio'], ingredienti: [] })
 
   await page.goto('/#/ricettario/ric-pesto')
+  // La Famiglia d'origine fa parte dell'identità della ricetta (SPEC §35).
+  await expect(page.getByTestId('famiglia-origine')).toHaveText('Nata in Famiglia')
   await page.getByRole('button', { name: 'Copia in un\'altra Famiglia' }).click()
   const dialogo = page.getByRole('dialog')
   await dialogo.getByLabel('Nella Famiglia').selectOption({ label: 'Amici del mare' })
@@ -53,6 +55,7 @@ test('copia di una ricetta in un\'altra Famiglia, indipendente e con la provenie
   await dialogo.getByRole('button', { name: 'Copia' }).click()
   await expect(page.getByTestId('provenienza-ricetta')).toContainText('da «Famiglia» (era «Pesto genovese»)')
   await expect(page.getByTestId('visibilita-ricetta')).toContainText('Amici del mare')
+  await expect(page.getByTestId('famiglia-origine')).toHaveText('Nata in Amici del mare')
   await foto(page, '02-copia-ricetta')
   const copiaId = /ricettario\/([^/?]+)/.exec(page.url())![1]!
   expect(copiaId).not.toBe('ric-pesto')

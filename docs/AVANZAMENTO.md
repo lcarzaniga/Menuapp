@@ -490,3 +490,13 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   cucina sul piano esistente; 12 decisioni aperte con la soluzione consigliata. Nessun codice
   modificato. Dati di TEST letti in sola lettura: 77 ricette tutte con Famiglia d'origine
   determinabile, 0 attività nel piano, attrezzature solo testo libero.
+
+## Fase 1A — Famiglia d'origine delle ricette (19/11/2026, ramo `famiglia-origine`, schema 16)
+
+- Decisioni di Loris sul piano: D1–D12 approvate; D5 rivista (pubbliche cercabili nei suggerimenti
+  del menù, copiate al collegamento e riusate).
+- Migrazione 0016, origine alla nascita in un solo punto (`inserisciPiatto`), regole per copie ed
+  eventi, `PUT /piatti/:id/famiglia-origine`, «Nata in …» nella scheda, comando `origini` nelle due
+  console. SPEC §35.
+- Prova a secco su una copia del database di TEST: 77/77 determinate, condivisioni invariate,
+  integrità e chiavi esterne ok. Test: `npm run check` (699), `test:cloudflare` (8), e2e mirati.

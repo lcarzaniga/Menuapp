@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input, Textarea } from '@/components/ui/campi'
 import { Finestra } from '@/components/ui/dialog'
 import { usePuoScrivere } from '@/connessione/stato'
+import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 import { indicizzaCatalogo } from '@/domain/parser/analizza.ts'
 import { formattaCoperti } from '@/domain/porzioni.ts'
 import { riduciFoto } from '@/lib/immagini'
@@ -30,6 +31,7 @@ export function ImportaRicetta({ aperta, onCambia }: { aperta: boolean; onCambia
   const client = useQueryClient()
   const naviga = useNavigate()
   const puoScrivere = usePuoScrivere()
+  const { attiva } = useFamigliaAttiva()
   const fileRef = useRef<HTMLInputElement>(null)
   const [testo, setTesto] = useState('')
   const [voci, setVoci] = useState<Voce[]>([])
@@ -84,7 +86,8 @@ export function ImportaRicetta({ aperta, onCambia }: { aperta: boolean; onCambia
       for (const v of scelte) {
         setInCorso(`Importo «${v.nome}»…`)
         const id = nuovoId()
-        await api.crea('/piatti', nuovoPiatto(id, v.nome.trim(), v.ricetta, ingredientiDa(v.ricetta, indice)))
+        // Nasce nella Famiglia attiva (SPEC §35); la visibilità resta quella predefinita.
+        await api.crea('/piatti', { ...nuovoPiatto(id, v.nome.trim(), v.ricetta, ingredientiDa(v.ricetta, indice)), ...(attiva ? { famigliaOrigine: attiva.id } : {}) })
         for (const [k, f] of v.foto.entries()) {
           setInCorso(`«${v.nome}»: foto ${k + 1} di ${v.foto.length}…`)
           const ridotta = await riduciFoto(f.dati)

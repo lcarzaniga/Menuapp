@@ -38,12 +38,39 @@ export function leggiPiatto(db: Db, id: string, utenteId: string): DettaglioPiat
       origineAutore: prop.origineAutore,
       originePiattoId: prop.originePiattoId,
       visibilita: prop.visibilita,
+      famigliaOrigine: prop.famigliaOrigine,
       famiglie: mio ? repoAccesso.famigliePiatto(db, id) : [],
       famiglia: repoAccesso.famigliePiatto(db, id).find((g) => repoAccesso.ruoloNelGruppo(db, g.id, utenteId)) ?? null,
       provenienza: repo.provenienza(db, id),
       condivisaCon: mio ? repoAccesso.condivisioniPiatto(db, id).map((c) => ({ id: c.utente_id, nome: c.nome })) : [],
     }
   })
+}
+
+/**
+ * Famiglia d'origine di una ricetta nata prima che esistesse (SPEC §35): la indica il proprietario,
+ * fra le sue Famiglie, una volta sola. Il permesso di proprietario è già verificato.
+ */
+export function indicaFamigliaOrigine(db: Db, id: string, gruppoId: string, versione: number, utenteId: string, adesso = Date.now()): DettaglioPiatto {
+  return transazione(db, () => {
+    if (repo.proprietaPiatto(db, id)?.famigliaOrigine) throw regolaViolata('origine_fissa', 'La Famiglia d\'origine è già indicata e non si cambia')
+    const g = repoAccesso.ruoloNelGruppo(db, gruppoId, utenteId) ? repoAccesso.leggiGruppo(db, gruppoId) : undefined
+    if (!g) throw nonTrovato('Famiglia')
+    aggiornaConVersione(db, 'piatti', id, versione, { famiglia_origine_id: gruppoId, famiglia_origine_nome: g.nome }, () => leggiPiatto(db, id, utenteId), adesso)
+    incrementaRevisione(db)
+    return leggiPiatto(db, id, utenteId)
+  })
+}
+
+/** Controllo dopo la migrazione 0016 (console): le ricette ancora senza Famiglia d'origine. */
+export function riepilogoOrigini(db: Db): string[] {
+  const mancanti = lettura(db, () => repo.statoOrigini(db))
+  const totale = lettura(db, () => uno<{ n: number }>(db, 'SELECT count(*) AS n FROM piatti')!.n)
+  return [
+    `Ricette: ${totale}; con la Famiglia d'origine: ${totale - mancanti.length}; da indicare: ${mancanti.length}.`,
+    ...mancanti.map((m) => `  ${m.proprietario.padEnd(16)} ${m.nome}  (${m.id})`),
+    ...(mancanti.length ? ['Le indica il proprietario nella scheda della ricetta («In quale Famiglia è nata?»).'] : []),
+  ]
 }
 
 function datiPiatto(d: NuovoPiatto | AggiornaPiatto): repo.DatiPiatto {
@@ -129,7 +156,10 @@ export function creaPiattoDaVoce(db: Db, voceId: string, piattoId: string, versi
     if (uno(db, 'SELECT 1 FROM piatti WHERE id = ?', piattoId)) throw richiestaNonValida('Identificativo di piatto già usato')
     // Il piatto nasce nel ricettario del proprietario dell'evento, come richiede il collegamento.
     const proprietario = repoAccesso.proprietarioEvento(db, voce.eventoId)!
-    repo.inserisciPiatto(db, piattoId, datiPiatto({ id: piattoId, nome: voce.nome }), adesso, { proprietarioId: proprietario })
+    repo.inserisciPiatto(db, piattoId, datiPiatto({ id: piattoId, nome: voce.nome }), adesso, {
+      proprietarioId: proprietario,
+      famigliaOrigine: repoAccesso.famigliaEventoPer(db, voce.eventoId, proprietario),
+    })
     aggiornaConVersione(db, 'voci_menu', voceId, versioneVoce, { piatto_id: piattoId }, () => repoEventi.leggiVoce(db, voceId), adesso)
     incrementaRevisione(db)
     return { voce: repoEventi.leggiVoce(db, voceId)!, piatto: repo.leggiPiatto(db, piattoId)! }

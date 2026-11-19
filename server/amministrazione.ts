@@ -7,6 +7,7 @@
 //   node server/amministrazione.ts rifiuta <codice>
 //   node server/amministrazione.ts sessioni
 //   node server/amministrazione.ts revoca <id sessione | nome utente>
+//   node server/amministrazione.ts origini              (ricette senza Famiglia d'origine, SPEC §35)
 //
 // In produzione: scripts/amministra.sh, che usa i dati e il Node del servizio.
 import { leggiConfig } from './config.ts'
@@ -14,6 +15,7 @@ import { versioneSchema } from './db/connessione.ts'
 import { apriDatabase, chiudiDatabase } from './db/sqlite-node.ts'
 import { norm } from '../src/domain/testo.ts'
 import * as identita from './servizi/identita.ts'
+import { riepilogoOrigini } from './servizi/ricettario.ts'
 
 const SCHEMA_MINIMO = 5
 
@@ -87,8 +89,12 @@ try {
       console.log(`Sessioni revocate: ${scelte.length}`)
       break
     }
+    case 'origini': {
+      for (const riga of riepilogoOrigini(db)) console.log(riga)
+      break
+    }
     default:
-      throw new Error(`Comando sconosciuto: ${comando}. Comandi: stato, invito, approva, rifiuta, sessioni, revoca`)
+      throw new Error(`Comando sconosciuto: ${comando}. Comandi: stato, invito, approva, rifiuta, sessioni, revoca, origini`)
   }
 } catch (e) {
   console.error(e instanceof Error ? e.message : e)

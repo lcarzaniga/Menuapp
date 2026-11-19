@@ -12,7 +12,7 @@ import { Campo, Input, Select, Textarea } from '@/components/ui/campi'
 import { Card, CardContent } from '@/components/ui/card'
 import { Conferma } from '@/components/ui/dialog'
 import { SolaLettura, usePuoScrivere } from '@/connessione/stato'
-import { CopiaInFamiglia, CopiaRicetta, ProvenienzaRicetta, VisibilitaRicetta } from '@/features/accesso/CondivisioneRicetta'
+import { CopiaInFamiglia, CopiaRicetta, FamigliaOrigineRicetta, ProvenienzaRicetta, VisibilitaRicetta } from '@/features/accesso/CondivisioneRicetta'
 import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 import type { DettaglioPiatto } from '@/contratto/ricettario.ts'
 import { formattaCoperti } from '@/domain/porzioni.ts'
@@ -203,6 +203,7 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
         {/* Gestione: ciò che si usa di rado, dopo il contenuto (SPEC §31.3). */}
         <section id="gestione-ricetta" aria-label="Gestione della ricetta" className="mt-2 flex scroll-mt-4 flex-col gap-3 rounded-2xl border border-bordo/70 bg-tenue/40 p-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-testo-tenue">Gestione della ricetta</h2>
+          <FamigliaOrigineRicetta piatto={p} />
           {p.provenienza ? <ProvenienzaRicetta provenienza={p.provenienza} /> : null}
           {p.mio ? <VisibilitaRicetta piatto={p} /> : null}
           <CopiaInFamiglia piatto={p} />

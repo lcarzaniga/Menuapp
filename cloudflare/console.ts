@@ -7,6 +7,7 @@ import { norm } from '../src/domain/testo.ts'
 import { Limitatore } from '../server/api/limiti.ts'
 import type { Db } from '../server/db/connessione.ts'
 import * as identita from '../server/servizi/identita.ts'
+import { riepilogoOrigini } from '../server/servizi/ricettario.ts'
 import type { UtenteCorrente } from '../server/servizi/permessi.ts'
 import { elencaBackupR2, ripristinaDaR2 } from './backup.ts'
 import { importa, leggiEsportazione, preparaPiano, proponiCorrispondenza, verificaImportazione } from './importazione.ts'
@@ -164,8 +165,12 @@ export async function gestisciConsole(req: Request, a: Ambito): Promise<Response
         for (const u of dati as { id: string; nome: string; ruolo: string }[]) righe.push(`${u.id}  ${u.nome}  ${u.ruolo}`)
         break
       }
+      case 'origini': {
+        righe.push(...riepilogoOrigini(db))
+        break
+      }
       default:
-        throw new Error(`Comando sconosciuto: ${comando}. Comandi: stato, invito, approva, rifiuta, sessioni, revoca, backup, ripristina, utenti, proponi, piano, importa, verifica`)
+        throw new Error(`Comando sconosciuto: ${comando}. Comandi: stato, invito, approva, rifiuta, sessioni, revoca, backup, ripristina, utenti, proponi, piano, importa, verifica, origini`)
     }
     return json(200, { testo: righe.join('\n'), dati })
   } catch (e) {

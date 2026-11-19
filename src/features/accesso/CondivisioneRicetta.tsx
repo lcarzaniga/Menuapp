@@ -1,6 +1,6 @@
-// Ricette: dove è visibile (privata o in una Famiglia), condivisione con persone, copie
-// indipendenti nel proprio ricettario o in un'altra Famiglia (SPEC §19.4, §28).
-import { Copy, History, Lock, Share2, UsersRound } from 'lucide-react'
+// Ricette: Famiglia d'origine, dove è visibile (privata o in una Famiglia), condivisione con
+// persone, copie indipendenti nel proprio ricettario o in un'altra Famiglia (SPEC §19.4, §28, §35).
+import { Copy, History, House, Lock, Share2, UsersRound } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { api, nuovoId } from '@/api/client'
@@ -12,6 +12,50 @@ import type { DettaglioPiatto, Provenienza } from '@/contratto/ricettario.ts'
 import { useStatoConnessione } from '@/connessione/stato'
 import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 import { usePersone } from './sessione'
+
+/**
+ * Famiglia in cui la ricetta è nata (SPEC §35): la vedono tutti quelli che vedono la ricetta. Per le
+ * ricette nate prima, senza origine certa, il proprietario la indica una volta sola.
+ */
+export function FamigliaOrigineRicetta({ piatto }: { piatto: DettaglioPiatto }) {
+  const connesso = useStatoConnessione() === 'connesso'
+  const { famiglie, attiva } = useFamigliaAttiva()
+  const [scelta, setScelta] = useState('')
+  const indica = useScrittura(
+    (gruppoId: string) => api.modifica<DettaglioPiatto>(`/piatti/${piatto.id}/famiglia-origine`, { gruppoId, versione: piatto.versione }),
+    { oggetto: 'La ricetta', successo: (p) => `Nata in ${p.famigliaOrigine?.nome ?? ''}` },
+  )
+  if (piatto.famigliaOrigine) {
+    return (
+      <p className="flex items-center gap-1.5 text-sm" data-testid="famiglia-origine">
+        <House className="size-4 text-testo-tenue" /> Nata in {piatto.famigliaOrigine.nome}
+      </p>
+    )
+  }
+  if (!piatto.mio || !famiglie.length) return null
+  const valore = scelta || attiva?.id || ''
+  return (
+    <div className="flex flex-col gap-2 rounded-2xl border border-bordo/70 bg-carta px-3 py-2 text-sm" data-testid="famiglia-origine">
+      <p className="flex items-center gap-1.5">
+        <House className="size-4 text-testo-tenue" /> In quale Famiglia è nata questa ricetta? Si indica una volta sola.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        {famiglie.length > 1 ? (
+          <Select aria-label="Famiglia d'origine" value={valore} onChange={(e) => setScelta(e.target.value)} className="flex-1">
+            {famiglie.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.nome}
+              </option>
+            ))}
+          </Select>
+        ) : null}
+        <Button variante="contorno" misura="piccolo" disabled={!connesso || indica.inCorso || !valore} onClick={() => void indica.esegui(valore)}>
+          {famiglie.length > 1 ? 'Indica' : `Nata in ${famiglie[0]!.nome}`}
+        </Button>
+      </div>
+    </div>
+  )
+}
 
 /**
  * Dove è visibile la ricetta (per il proprietario): in una delle sue Famiglie oppure privata.

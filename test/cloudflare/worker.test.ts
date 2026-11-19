@@ -102,6 +102,8 @@ describe('installazione Cloudflare', () => {
     // Le chiamate col codice giusto non consumano i tentativi (gli script ne fanno molte).
     for (let i = 0; i < 15; i++) expect((await console_('stato')).stato).toBe(200)
     expect((await fetch(`${P}/console`)).status).toBe(404)
+    // Controllo della Famiglia d'origine dopo la migrazione 0016 (sola lettura).
+    expect((await console_('origini')).testo).toMatch(/^Ricette: \d+; con la Famiglia d'origine: \d+; da indicare: 0\./)
     const invito = await console_('invito')
     expect(invito.testo).toContain('Invito per Loris')
     const link = /https?:\/\/\S+\/#\/attiva\/\S+/.exec(invito.testo)![0]

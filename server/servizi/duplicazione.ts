@@ -105,7 +105,7 @@ export function duplica(db: Db, cartellaFoto: CartellaFile, u: UtenteCorrente, o
           avvisi.push(`«${nome}»: la ricetta non è disponibile per te, la voce resta senza ricetta`)
         }
       } else if (snap?.contenuto.piatti.some((p) => p.id === piattoId)) {
-        id = copiaPiattoDaSnapshot(db, snap.id, piattoId, randomUUID(), u.id).id
+        id = copiaPiattoDaSnapshot(db, snap.id, piattoId, randomUUID(), u.id, gruppoId).id
         avvisi.push(`«${nome}»: la ricetta non c'è più, ricreata dall'archivio come tua ricetta privata`)
       } else {
         avvisi.push(`«${nome}»: la ricetta non c'è più, la voce resta senza ricetta`)

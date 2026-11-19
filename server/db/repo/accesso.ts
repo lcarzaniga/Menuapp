@@ -314,6 +314,10 @@ export const impostaGruppoEvento = (db: Db, eventoId: string, gruppoId: string |
 
 // ── Gruppi ──────────────────────────────────────────────────
 
+/** Famiglia dell'evento, se `utenteId` ne fa parte: lì nascono le ricette create per quell'evento. */
+export const famigliaEventoPer = (db: Db, eventoId: string, utenteId: string) =>
+  uno<{ gruppo_id: string }>(db, 'SELECT e.gruppo_id FROM eventi e JOIN membri_gruppo m ON m.gruppo_id = e.gruppo_id AND m.utente_id = ? WHERE e.id = ?', utenteId, eventoId)?.gruppo_id
+
 export const ruoloNelGruppo = (db: Db, gruppoId: string, utenteId: string) =>
   uno<{ ruolo: 'amministratore' | 'membro' }>(db, 'SELECT ruolo FROM membri_gruppo WHERE gruppo_id = ? AND utente_id = ?', gruppoId, utenteId)?.ruolo
 

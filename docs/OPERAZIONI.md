@@ -78,6 +78,7 @@ scripts/amministra.sh approva K7P-M2Q       # approva la richiesta con quel codi
 scripts/amministra.sh rifiuta K7P-M2Q
 scripts/amministra.sh sessioni              # dispositivi autorizzati
 scripts/amministra.sh revoca <id | nome>    # scollega un dispositivo o tutti quelli di un utente
+scripts/amministra.sh origini               # ricette senza Famiglia d'origine (SPEC §35)
 ```
 
 - **Primo accesso dopo il rilascio multiutente**: nessun dispositivo è autorizzato. Sul server

@@ -101,6 +101,16 @@ function senzaDoppioni(nomi: string[]): string[] {
   })
 }
 
+export interface FamigliaOrigine {
+  /** null: la Famiglia non esiste più (resta il nome). */
+  id: string | null
+  nome: string
+}
+
+/** Famiglia d'origine con il nome attuale, o quello fissato alla nascita se la Famiglia non c'è più. */
+const ORIGINE = 'p.famiglia_origine_id AS origine_id, coalesce((SELECT g.nome FROM gruppi g WHERE g.id = p.famiglia_origine_id), p.famiglia_origine_nome) AS origine_nome'
+const famigliaOrigine = (r: { origine_id: string | null; origine_nome: string | null }): FamigliaOrigine | null => (r.origine_nome ? { id: r.origine_id, nome: r.origine_nome } : null)
+
 /** Ricette leggibili dall'utente, con i nomi degli ingredienti per la ricerca (§23). */
 export function elencaPiatti(db: Db, utenteId: string) {
   return tutti<{
@@ -118,12 +128,14 @@ export function elencaPiatti(db: Db, utenteId: string) {
     origine_autore: string
     condiviso: number
     visibilita: 'famiglia' | 'privata'
+    origine_id: string | null
+    origine_nome: string | null
     ingredienti: string | null
   }>(
     db,
     `SELECT p.id, p.nome, p.portata_suggerita, p.porzioni_base, p.versione, p.aggiornato_il, p.proprietario_id, p.origine_autore,
        CASE WHEN EXISTS (SELECT 1 FROM condivisioni_piatto_gruppo cg WHERE cg.piatto_id = p.id) THEN 'famiglia' ELSE 'privata' END AS visibilita,
-       u.nome AS proprietario_nome,
+       u.nome AS proprietario_nome, ${ORIGINE},
        (SELECT count(*) FROM ingredienti_piatto i WHERE i.piatto_id = p.id) AS numero_ingredienti,
        (SELECT count(*) FROM ingredienti_piatto i WHERE i.piatto_id = p.id AND i.stato_parsing = 'da_verificare') AS da_verificare,
        (SELECT count(*) FROM voci_menu v WHERE v.piatto_id = p.id) AS usi,
@@ -153,6 +165,7 @@ export function elencaPiatti(db: Db, utenteId: string) {
     condiviso: r.proprietario_id === utenteId && r.condiviso === 1,
     origineAutore: r.origine_autore,
     visibilita: r.visibilita,
+    famigliaOrigine: famigliaOrigine(r),
     ingredienti: senzaDoppioni(r.ingredienti ? r.ingredienti.split('\u001f') : []),
   }))
 }
@@ -163,18 +176,26 @@ export interface InfoProprieta {
   originePiattoId: string | null
   origineAutore: string
   visibilita: 'famiglia' | 'privata'
+  famigliaOrigine: FamigliaOrigine | null
 }
 
 export function proprietaPiatto(db: Db, id: string): InfoProprieta | undefined {
-  const r = uno<{ proprietario_id: string; nome: string; origine_piatto_id: string | null; origine_autore: string; visibilita: 'famiglia' | 'privata' }>(
+  const r = uno<{ proprietario_id: string; nome: string; origine_piatto_id: string | null; origine_autore: string; visibilita: 'famiglia' | 'privata'; origine_id: string | null; origine_nome: string | null }>(
     db,
-    `SELECT p.proprietario_id, u.nome, p.origine_piatto_id, p.origine_autore,
+    `SELECT p.proprietario_id, u.nome, p.origine_piatto_id, p.origine_autore, ${ORIGINE},
        CASE WHEN EXISTS (SELECT 1 FROM condivisioni_piatto_gruppo cg WHERE cg.piatto_id = p.id) THEN 'famiglia' ELSE 'privata' END AS visibilita
      FROM piatti p JOIN utenti u ON u.id = p.proprietario_id WHERE p.id = ?`,
     id,
   )
   return (
-    r && { proprietarioId: r.proprietario_id, proprietarioNome: r.nome, originePiattoId: r.origine_piatto_id, origineAutore: r.origine_autore, visibilita: r.visibilita }
+    r && {
+      proprietarioId: r.proprietario_id,
+      proprietarioNome: r.nome,
+      originePiattoId: r.origine_piatto_id,
+      origineAutore: r.origine_autore,
+      visibilita: r.visibilita,
+      famigliaOrigine: famigliaOrigine(r),
+    }
   )
 }
 
@@ -221,9 +242,27 @@ export interface Proprieta {
   origineAutore?: string
   /** Famiglie con cui condividerlo subito (verificate dal servizio). Assente = nessuna. */
   famiglie?: string[]
+  /**
+   * Famiglia in cui nasce (verificata dal servizio). Assente: quella con cui è condiviso, altrimenti
+   * l'unica Famiglia del proprietario, altrimenti nessuna (da indicare poi nella scheda).
+   */
+  famigliaOrigine?: string | null
+}
+
+/** Famiglia d'origine di un nuovo piatto secondo le regole di `Proprieta.famigliaOrigine`. */
+function origineDiPartenza(db: Db, p: Proprieta): { id: string; nome: string } | null {
+  let id = p.famigliaOrigine !== undefined ? p.famigliaOrigine : (p.famiglie?.[0] ?? null)
+  if (p.famigliaOrigine === undefined && !id) {
+    const mie = tutti<{ gruppo_id: string }>(db, 'SELECT gruppo_id FROM membri_gruppo WHERE utente_id = ? LIMIT 2', p.proprietarioId)
+    if (mie.length === 1) id = mie[0]!.gruppo_id
+  }
+  if (!id) return null
+  const g = uno<{ nome: string }>(db, 'SELECT nome FROM gruppi WHERE id = ?', id)
+  return g ? { id, nome: g.nome } : null
 }
 
 export function inserisciPiatto(db: Db, id: string, d: DatiPiatto, adesso: number, p: Proprieta): void {
+  const origine = origineDiPartenza(db, p)
   const c = {
     ...colonnePiatto(d),
     proprietario_id: p.proprietarioId,
@@ -231,6 +270,8 @@ export function inserisciPiatto(db: Db, id: string, d: DatiPiatto, adesso: numbe
     origine_autore: p.origineAutore ?? '',
     // Colonna storica: la condivisione con le Famiglie è in condivisioni_piatto_gruppo.
     visibilita: p.famiglie?.length ? 'famiglia' : 'privata',
+    famiglia_origine_id: origine?.id ?? null,
+    famiglia_origine_nome: origine?.nome ?? null,
   }
   const nomi = Object.keys(c)
   esegui(
@@ -352,6 +393,13 @@ export function provenienza(db: Db, piattoId: string): Provenienza | null {
   const r = uno<{ provenienza: string | null }>(db, 'SELECT provenienza FROM piatti WHERE id = ?', piattoId)
   return r?.provenienza ? (JSON.parse(r.provenienza) as Provenienza) : null
 }
+
+/** Ricette per stato della Famiglia d'origine (controllo dopo la migrazione 0016). */
+export const statoOrigini = (db: Db) =>
+  tutti<{ id: string; nome: string; proprietario: string }>(
+    db,
+    'SELECT p.id, p.nome, u.nome AS proprietario FROM piatti p JOIN utenti u ON u.id = p.proprietario_id WHERE p.famiglia_origine_nome IS NULL ORDER BY u.nome, p.nome_norm',
+  )
 
 export function impostaProvenienza(db: Db, piattoId: string, p: Provenienza): void {
   esegui(db, 'UPDATE piatti SET provenienza = ? WHERE id = ?', JSON.stringify(p), piattoId)

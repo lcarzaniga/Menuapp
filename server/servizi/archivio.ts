@@ -7,6 +7,7 @@ import { contributiDaVerificare } from '../../src/domain/spesa/calcolo.ts'
 import { riconciliaSpesa } from '../../src/domain/spesa/riconciliazione.ts'
 import type { Attivita, Evento } from '../../src/domain/tipi.ts'
 import { type Db, esegui, transazione, tutti, uno } from '../db/connessione.ts'
+import * as repoAccesso from '../db/repo/accesso.ts'
 import { incrementaRevisione } from '../db/repo/meta.ts'
 import * as repoRic from '../db/repo/ricettario.ts'
 import * as repoSpesa from '../db/repo/spesa.ts'
@@ -137,8 +138,11 @@ export function riapriArchiviato(db: Db, eventoId: string, versione: number, ade
   })
 }
 
-/** «Copia nel ricettario»: nuovo piatto dai dati dello snapshot; non tocca i piatti esistenti. */
-export function copiaPiattoDaSnapshot(db: Db, snapshotId: string, piattoId: string, nuovoId: string, proprietarioId: string) {
+/**
+ * «Copia nel ricettario»: nuovo piatto dai dati dello snapshot; non tocca i piatti esistenti. Nasce
+ * nella Famiglia indicata o, se ne fa parte, in quella dell'evento archiviato.
+ */
+export function copiaPiattoDaSnapshot(db: Db, snapshotId: string, piattoId: string, nuovoId: string, proprietarioId: string, famigliaOrigine?: string | null) {
   return transazione(db, () => {
     const s = leggiSnapshot(db, snapshotId)
     const p = s.contenuto.piatti.find((x) => x.id === piattoId)
@@ -161,7 +165,7 @@ export function copiaPiattoDaSnapshot(db: Db, snapshotId: string, piattoId: stri
         id: randomUUID(),
         ingredienteId: i.ingredienteId && catalogoVivo.has(i.ingredienteId) ? i.ingredienteId : null,
       })),
-    }, { proprietarioId }).valore
+    }, { proprietarioId, famigliaOrigine: famigliaOrigine ?? repoAccesso.famigliaEventoPer(db, s.eventoId, proprietarioId) }).valore
   })
 }
 
