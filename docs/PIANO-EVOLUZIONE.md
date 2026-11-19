@@ -1,6 +1,6 @@
 # Piano di evoluzione: ricettario, riuso degli eventi, riepilogo, regia della cucina
 
-Stato: **proposta del 19/11/2026, da approvare**. Nessun codice modificato. Rilasci secondo
+Stato: **approvato da Loris il 19/11/2026** (D1–D12; D5 rivista). Nessun codice modificato. Rilasci secondo
 docs/RILASCI.md (TEST Debian → prova di Loris → PRODUZIONE Cloudflare); dati mai trasferiti fra
 ambienti. Principio: il cuore è il **ricettario**; ogni ricetta nasce in una Famiglia e ne conserva
 l'identità.
@@ -56,8 +56,8 @@ della Famiglia), **1B** introduce le pubbliche.
 - Lettura di una ricetta altrui: Famiglia condivisa **oppure** `pubblica = 1` (qualunque utente con
   sessione) oppure le regole esistenti (persone, eventi visibili). Una sola condizione SQL usata da
   elenco, scheda, foto, esportazione e ricerca (oggi `CONDIVISA_CON_LE_MIE_FAMIGLIE`).
-- Pubblica = sola lettura per tutti: niente modifica, voti, commenti, uso diretto nei menù altrui
-  (vedi D5); la copia sì.
+- Pubblica = sola lettura per tutti: niente modifica, voti, commenti; nei menù si usa tramite copia
+  automatica e riusata al momento del collegamento (D5).
 - Rendere pubblica/privata: solo il proprietario, solo con Famiglia d'origine nota. Nessun
   automatismo: nessuna ricetta esistente diventa pubblica.
 - Togliere la pubblicazione o eliminare l'originale non tocca le copie (già garantito dalla copia
@@ -89,6 +89,7 @@ della Famiglia), **1B** introduce le pubbliche.
 - Scheda propria: la scelta «Privata / Di famiglia / Pubblica nell'app» con una frase che spiega chi
   la vede; la pubblicazione chiede conferma una volta.
 - Ricerca: le pubbliche entrano nei risultati quando la preferenza è attiva.
+- Menù: suggerimenti con «Cerca anche nelle pubbliche»; collegare una pubblica la copia (D5).
 
 ### 1.5 Isolamento
 
@@ -253,8 +254,13 @@ breve fra le due parti del ricettario.
 - **D4 — Le copie fra Famiglie nascono private anche quando non vengono da una pubblica?** Oggi la
   «Copia in un'altra Famiglia» nasce visibile nella destinazione. Consiglio: **sempre private** (una
   regola sola), con «Condividi con la Famiglia» subito dopo la copia.
-- **D5 — Le pubbliche nei suggerimenti del menù?** Collegarle creerebbe copie senza chiederlo.
-  Consiglio: **no**; dal menù si cerca nelle proprie, la pubblica si copia dal ricettario.
+- **D5 — Le pubbliche nei suggerimenti del menù** (rivista con Loris): nei suggerimenti del menù una
+  scelta «Cerca anche nelle pubbliche» (iniziale dalla preferenza del ricettario); le pubbliche sono
+  riconoscibili (globo, Famiglia d'origine). Scegliendone una, la finestra dice «Verrà copiata nel
+  ricettario di <proprietario dell'evento>, privata, nella Famiglia dell'evento» e la copia si fa al
+  collegamento, **riusata** se esiste già (provenienza con lo stesso id sorgente), con le regole di
+  `piattoPerEvento`. Il collegamento diretto senza copia resta escluso: menù, spesa e archivi non
+  devono dipendere da ricette altrui che possono cambiare, diventare private o sparire.
 - **D6 — Origine non determinata** (nessun caso oggi): consiglio la richiesta al proprietario nella
   scheda; nessuna assegnazione automatica.
 - **D7 — Incarichi copiati**: consiglio «da assegnare» con «l'anno scorso: …» e riaffidamento a un
