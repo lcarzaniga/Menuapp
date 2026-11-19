@@ -3,6 +3,7 @@ import {
   aggiungiNomi,
   cartonciniDa,
   chiaveNome,
+  copertura,
   dueRighe,
   fogliDi,
   griglia,
@@ -58,21 +59,25 @@ describe('nomi dei segnaposto', () => {
 })
 
 describe('impaginazione su A4', () => {
-  it('piatto 90 × 50: 2 colonne per 5 righe, centrati e dentro i margini', () => {
+  it('piatto 90 × 50: girati, 4 colonne per 3 righe (12 per foglio), centrati e dentro i margini', () => {
     const g = griglia('piatto')
-    expect(g).toMatchObject({ larghezza: 90, altezza: 50, colonne: 2, righe: 5, perFoglio: 10 })
-    expect(g.margineX).toBe(15)
-    expect(g.margineY).toBe(23.5)
+    expect(g).toMatchObject({ larghezza: 90, altezza: 50, ruotato: true, passoX: 50, passoY: 90, colonne: 4, righe: 3, perFoglio: 12 })
+    expect(g.margineX).toBe(5)
+    expect(g.margineY).toBe(13.5)
   })
-  it('cavalletto 90 × 100 (due facce): 2 per 2, piega a metà', () => {
+  it('cavalletto 90 × 100 (due facce): girati, 2 per 3 (6 per foglio)', () => {
     const g = griglia('cavalletto')
-    expect(g).toMatchObject({ larghezza: 90, altezza: 100, colonne: 2, righe: 2, perFoglio: 4 })
+    expect(g).toMatchObject({ larghezza: 90, altezza: 100, ruotato: true, colonne: 2, righe: 3, perFoglio: 6 })
     expect(Math.min(g.margineX, g.margineY)).toBeGreaterThanOrEqual(MARGINE_MINIMO)
+  })
+  it('copertura del foglio: almeno l\'85% in entrambi i formati', () => {
+    expect(copertura('piatto')).toBeGreaterThan(0.85)
+    expect(copertura('cavalletto')).toBeGreaterThan(0.85)
   })
   it('più fogli: segnaposto interi, nell\'ordine', () => {
     const c = Array.from({ length: 23 }, (_, i) => i)
-    expect(fogliDi(c, 'piatto').map((f) => f.length)).toEqual([10, 10, 3])
-    expect(fogliDi(c, 'cavalletto').map((f) => f.length)).toEqual([4, 4, 4, 4, 4, 3])
+    expect(fogliDi(c, 'piatto').map((f) => f.length)).toEqual([12, 11])
+    expect(fogliDi(c, 'cavalletto').map((f) => f.length)).toEqual([6, 6, 6, 5])
     expect(fogliDi(c, 'cavalletto').flat()).toEqual(c)
     expect(fogliDi([], 'piatto')).toEqual([])
   })

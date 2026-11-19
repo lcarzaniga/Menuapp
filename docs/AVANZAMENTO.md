@@ -668,3 +668,13 @@ non collaudato; non in PRODUZIONE.
   per i cinque modelli nei due formati con controllo che nessun nome esca dalla sua zona.
   Verifica visiva dei PDF (`test-results/segnaposto/*.pdf`). `npm run check` 826 test, e2e 57,
   Worker 9: verdi.
+
+## Segnaposto: più biglietti per foglio (19/11/2026, ramo `segnaposto-a4`)
+
+Stato: **sviluppato e testato automaticamente**; non su TEST; non collaudato; non in PRODUZIONE.
+(I segnaposto `6c90eeb` sono su TEST dal 19/11, `20261119-1813-6c90eeb`.)
+
+- Richiesta di Loris dopo la prova su TEST: troppa carta da buttare. Margine minimo da 10 a 5 mm e
+  orientamento scelto per avere più cartoncini: cavalletto da 4 a 6 per foglio (copertura dal 58%
+  all'87%), piatto da 10 a 12 (dal 72% all'87%). Cartoncini girati di 90° sul foglio; misure e
+  composizione delle facce invariate. SPEC §42.1.

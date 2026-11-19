@@ -136,7 +136,7 @@ export function Cartoncino({ testo, imp }: { testo: string; imp: ImpostazioniFog
   )
 }
 
-/** I fogli A4: cartoncini accostati e centrati, mai a cavallo fra due pagine. */
+/** I fogli A4: cartoncini accostati e centrati (girati se così ce ne stanno di più), mai a cavallo fra due pagine. */
 export function FogliSegnaposto({ cartoncini, imp, solo }: { cartoncini: CartoncinoStampa[]; imp: ImpostazioniFogli; solo?: number }) {
   const g = griglia(imp.formato)
   const fogli = fogliDi(cartoncini, imp.formato)
@@ -149,7 +149,15 @@ export function FogliSegnaposto({ cartoncini, imp, solo }: { cartoncini: Cartonc
               <div
                 key={c.chiave}
                 className="sp-posto"
-                style={{ left: `${g.margineX + (k % g.colonne) * g.larghezza}mm`, top: `${g.margineY + Math.floor(k / g.colonne) * g.altezza}mm` }}
+                data-ruotato={g.ruotato ? '' : undefined}
+                style={{
+                  left: `${g.margineX + (k % g.colonne) * g.passoX}mm`,
+                  top: `${g.margineY + Math.floor(k / g.colonne) * g.passoY}mm`,
+                  width: `${g.passoX}mm`,
+                  height: `${g.passoY}mm`,
+                  // Girato di 90° in senso orario attorno all'angolo in alto a sinistra, poi riportato nel suo posto.
+                  ...(g.ruotato ? { '--spostamento': `${g.passoX}mm` } : {}),
+                } as CSSProperties}
               >
                 <Cartoncino testo={c.testo} imp={imp} />
               </div>

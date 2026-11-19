@@ -40,7 +40,8 @@ async function controllaNomi(page: Page, dove: string) {
       const nome = f.querySelector('.sp-nome')
       if (!nome) return []
       const n = nome.getBoundingClientRect()
-      const righe = [...nome.children].map((r) => (r as HTMLElement).getBoundingClientRect().height)
+      // Altezze di impaginazione (non ruotate): sul foglio i cartoncini possono essere girati.
+      const righe = [...nome.children].map((r) => (r as HTMLElement).offsetHeight)
       const out: string[] = []
       if (n.top < zona.top - 0.5 || n.bottom > zona.bottom + 0.5 || n.left < faccia.left || n.right > faccia.right) out.push(`${i}: «${nome.textContent}» fuori dalla zona`)
       // Ogni riga prevista resta su una riga: nessun a capo imprevisto.
@@ -79,9 +80,9 @@ test('senza partecipanti: nomi a mano, copie, ordine, nome dell\'evento, formati
   await expect(anteprima(page).getByTestId('retro-segnaposto').first()).toHaveText('')
 
   // Copie, deselezione, riordino, modifica, rimozione.
-  await page.getByRole('button', { name: 'Una copia in più di Élise' }).click()
-  await page.getByRole('button', { name: 'Una copia in più di Élise' }).click()
-  await expect(page.getByTestId('conteggio-segnaposto')).toContainText('5 segnaposto · 2 fogli A4')
+  for (let i = 0; i < 4; i++) await page.getByRole('button', { name: 'Una copia in più di Élise' }).click()
+  await expect(page.getByTestId('conteggio-segnaposto')).toContainText('7 segnaposto · 2 fogli A4')
+  for (let i = 0; i < 2; i++) await page.getByRole('button', { name: 'Una copia in meno di Élise' }).click()
   await page.getByLabel("Stampa Nonno D'Angelo").uncheck()
   await expect(page.getByTestId('conteggio-segnaposto')).toContainText('4 segnaposto · 1 foglio A4')
   await page.getByRole('button', { name: 'Sposta su Élise' }).click()
@@ -183,11 +184,11 @@ test('stampa su A4: nomi lunghi e accentati dentro la loro zona in ogni modello,
       await salva({ formato, mostraEvento: true, testoEvento: null, stile: { modello, palette, caratteri, decorazioni: true } })
       await page.goto('about:blank')
       await page.goto(`/#/eventi/${id}/segnaposto`)
-      await expect(page.getByTestId('conteggio-segnaposto')).toContainText(formato === 'cavalletto' ? '12 segnaposto · 3 fogli A4' : '12 segnaposto · 2 fogli A4')
+      await expect(page.getByTestId('conteggio-segnaposto')).toContainText(formato === 'cavalletto' ? '12 segnaposto · 2 fogli A4' : '12 segnaposto · 1 foglio A4')
       await controllaNomi(page, '[data-testid="anteprima-segnaposto"]')
       await page.emulateMedia({ media: 'print' })
       await controllaNomi(page, '.menu-stampa')
-      expect(await paginePdf(page, `${modello}-${formato}`)).toBe(formato === 'cavalletto' ? 3 : 2)
+      expect(await paginePdf(page, `${modello}-${formato}`)).toBe(formato === 'cavalletto' ? 2 : 1)
       await page.emulateMedia({ media: 'screen' })
     }
   }

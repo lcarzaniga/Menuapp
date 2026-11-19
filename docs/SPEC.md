@@ -2948,14 +2948,17 @@ migrazione: stanno nella riga dello stile di stampa dell'evento (`stili_stampa.o
 ### 42.1 Accesso e formati
 - «Stampa segnaposto» nella panoramica dell'evento (`#/eventi/:id/segnaposto`); dalla stampa del
   menù si passa ai segnaposto e ritorno con un collegamento nell'intestazione.
-- **A cavalletto**: cartoncino 90 × 100 mm, due facce da 90 × 50 con la piega a metà, 4 per foglio.
+- **A cavalletto**: cartoncino 90 × 100 mm, due facce da 90 × 50 con la piega a metà, 6 per foglio.
   La faccia posteriore è capovolta (ruotata di 180°), così dopo la piega si legge dritta dall'altro
   lato; «Nome anche sul retro» (predefinito sì), altrimenti il retro resta bianco. Piega discreta:
   due tacche sui bordi.
-- **Piatto**: 90 × 50 mm, una faccia, 10 per foglio.
+- **Piatto**: 90 × 50 mm, una faccia, 12 per foglio.
 - Foglio A4 verticale, `@page { size: A4 portrait; margin: 0 }`: cartoncini accostati (bordo comune
-  per il taglio) e centrati, almeno 10 mm dal bordo (15 mm nei casi attuali). Fogli in base al numero
-  di cartoncini: mai uno a cavallo di due pagine. Linee di taglio facoltative (tratteggio grigio).
+  per il taglio) e centrati, almeno 5 mm dal bordo (le stampanti di casa arrivano a 3–5 mm; dentro il
+  cartoncino testi e ornamenti stanno ad almeno 2,6 mm dal suo bordo). Si sceglie l'orientamento con
+  più cartoncini per foglio: oggi entrambi i formati sono girati di 90° (2 × 3 cavalletti, 4 × 3
+  piatti, 87% del foglio; richiesta di Loris del 19/11 per sprecare meno carta). Fogli in base al
+  numero di cartoncini: mai uno a cavallo di due pagine. Linee di taglio facoltative (tratteggio).
 
 ### 42.2 Nomi
 - Il modello dei partecipanti è nominativo (§24): finché i segnaposto non sono salvati si propongono

@@ -10,6 +10,13 @@
 .sp-posto {
   position: absolute;
 }
+.sp-posto[data-ruotato] > .sp-cartoncino {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  transform: translateX(var(--spostamento)) rotate(90deg);
+}
 .sp-cartoncino {
   position: relative;
   display: flex;

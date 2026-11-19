@@ -102,13 +102,21 @@ export function cartonciniDa(nomi: NomeSegnaposto[]): { chiave: string; testo: s
 /** Misure in mm. La faccia è quella che si legge sul tavolo. */
 export const FACCIA = { larghezza: 90, altezza: 50 } as const
 export const A4 = { larghezza: 210, altezza: 297 } as const
-/** Margine minimo dal bordo del foglio: le stampanti di casa non stampano fino al bordo. */
-export const MARGINE_MINIMO = 10
+/**
+ * Margine minimo dal bordo del foglio: le stampanti di casa stampano fino a 3–5 mm dal bordo. Dentro
+ * il cartoncino testi e ornamenti stanno ad almeno 2,6 mm dal suo bordo.
+ */
+export const MARGINE_MINIMO = 5
 
 export interface Griglia {
   /** Misure del cartoncino intero (il cavalletto ha due facce una sopra l'altra). */
   larghezza: number
   altezza: number
+  /** Cartoncini girati di 90° sul foglio, se così ce ne stanno di più. */
+  ruotato: boolean
+  /** Ingombro di un cartoncino sul foglio (scambiato se ruotato). */
+  passoX: number
+  passoY: number
   colonne: number
   righe: number
   perFoglio: number
@@ -117,20 +125,38 @@ export interface Griglia {
   margineY: number
 }
 
-export function griglia(formato: FormatoSegnaposto): Griglia {
-  const larghezza = FACCIA.larghezza
-  const altezza = formato === 'cavalletto' ? FACCIA.altezza * 2 : FACCIA.altezza
-  const colonne = Math.floor((A4.larghezza - 2 * MARGINE_MINIMO) / larghezza)
-  const righe = Math.floor((A4.altezza - 2 * MARGINE_MINIMO) / altezza)
+function disponi(larghezza: number, altezza: number, ruotato: boolean): Griglia {
+  const passoX = ruotato ? altezza : larghezza
+  const passoY = ruotato ? larghezza : altezza
+  const colonne = Math.floor((A4.larghezza - 2 * MARGINE_MINIMO) / passoX)
+  const righe = Math.floor((A4.altezza - 2 * MARGINE_MINIMO) / passoY)
   return {
     larghezza,
     altezza,
+    ruotato,
+    passoX,
+    passoY,
     colonne,
     righe,
     perFoglio: colonne * righe,
-    margineX: (A4.larghezza - colonne * larghezza) / 2,
-    margineY: (A4.altezza - righe * altezza) / 2,
+    margineX: (A4.larghezza - colonne * passoX) / 2,
+    margineY: (A4.altezza - righe * passoY) / 2,
   }
+}
+
+/** La disposizione con più cartoncini per foglio; a parità, senza girarli. */
+export function griglia(formato: FormatoSegnaposto): Griglia {
+  const larghezza = FACCIA.larghezza
+  const altezza = formato === 'cavalletto' ? FACCIA.altezza * 2 : FACCIA.altezza
+  const dritta = disponi(larghezza, altezza, false)
+  const girata = disponi(larghezza, altezza, true)
+  return girata.perFoglio > dritta.perFoglio ? girata : dritta
+}
+
+/** Quota del foglio A4 coperta dai cartoncini (0–1). */
+export function copertura(formato: FormatoSegnaposto): number {
+  const g = griglia(formato)
+  return (g.perFoglio * g.larghezza * g.altezza) / (A4.larghezza * A4.altezza)
 }
 
 /** Divide i cartoncini in fogli: interi, mai a cavallo fra due pagine. */

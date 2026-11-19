@@ -30,11 +30,11 @@ describe('segnaposto stampati', () => {
     expect(container.querySelector('.sp-taglio')).toBeNull()
   })
 
-  it('più fogli A4 con i segnaposto interi: 23 piatti → 10 + 10 + 3; 9 cavalletti → 4 + 4 + 1', () => {
+  it('più fogli A4 con i segnaposto interi: 23 piatti → 12 + 11; 13 cavalletti → 6 + 6 + 1', () => {
     const piatti = render(<FogliSegnaposto cartoncini={cartoncini(23)} imp={imp({ formato: 'piatto' })} />).container
-    expect([...piatti.querySelectorAll('[data-testid="foglio-segnaposto"]')].map((f) => f.querySelectorAll('[data-testid="segnaposto"]').length)).toEqual([10, 10, 3])
-    const cavalletti = render(<FogliSegnaposto cartoncini={cartoncini(9)} imp={imp()} />).container
-    expect([...cavalletti.querySelectorAll('[data-testid="foglio-segnaposto"]')].map((f) => f.querySelectorAll('[data-testid="segnaposto"]').length)).toEqual([4, 4, 1])
+    expect([...piatti.querySelectorAll('[data-testid="foglio-segnaposto"]')].map((f) => f.querySelectorAll('[data-testid="segnaposto"]').length)).toEqual([12, 11])
+    const cavalletti = render(<FogliSegnaposto cartoncini={cartoncini(13)} imp={imp()} />).container
+    expect([...cavalletti.querySelectorAll('[data-testid="foglio-segnaposto"]')].map((f) => f.querySelectorAll('[data-testid="segnaposto"]').length)).toEqual([6, 6, 1])
   })
 
   it('nome dell\'evento più piccolo sotto il nome; accenti e apostrofi intatti; nomi lunghi su due righe', () => {
