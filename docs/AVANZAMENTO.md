@@ -4,16 +4,20 @@ Documento operativo per riprendere il lavoro fra sessioni.
 
 ## Stato (aggiornato al 19/11/2026)
 
-| Ambiente | Dove | Rilascio | Schema |
+| Ambiente | Dove | Codice | Schema |
 |---|---|---|---|
-| **PRODUZIONE** | Cloudflare, `https://app.ricettedifamiglia.online` (Worker `menuapp`, versione `94d01118`) | `20261119-1630-60c2d67` | 21 |
-| **TEST** | Debian, `https://loris-srv01.dala-tortoise.ts.net:9870/` (solo Tailscale) | `20261119-1615-60c2d67` | 21 |
+| **PRODUZIONE** | Cloudflare, `https://app.ricettedifamiglia.online` (Worker `menuapp`, versione `94d01118`, rilascio `20261119-1630-60c2d67`) | `60c2d67` | 21 |
+| **TEST** | Debian, `https://loris-srv01.dala-tortoise.ts.net:9870/` (solo Tailscale) | `60c2d67` + commit di sola documentazione | 21 |
+
+Dopo `60c2d67` su `main` ci sono solo commit di documentazione: il codice di TEST e di PRODUZIONE è
+lo stesso. Il rilascio attivo su TEST si legge con `readlink rilasci/attuale` (un documento non può
+riportare il commit che lo pubblica).
 
 - Dominio principale `ricettedifamiglia.online`: solo «Sito in costruzione» (Worker
   `ricettedifamiglia-sito`, SPEC §34). Tailscale Funnel spento.
 - Procedura di rilascio: docs/RILASCI.md (TEST, prova di Loris, PRODUZIONE solo con il suo OK).
 - Utenti in produzione: Loris, Lucia, Palli, Raffa (tutti collegati su `app.…`).
-- **Branch**: `main` = `60c2d67` (pubblicato su GitHub); lavoro sempre su un ramo dedicato.
+- **Branch**: `main`, pubblicato su GitHub e uguale al rilascio di TEST; lavoro sempre su un ramo dedicato.
 - **Sviluppo**: tmux `menuapp` (finestre `server` → 9871 con `dati-sviluppo/`, `dev` → Vite 5173,
   telefono via `…ts.net:8443`).
 
