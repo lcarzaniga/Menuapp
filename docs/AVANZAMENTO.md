@@ -596,3 +596,18 @@ di Loris, docs/RILASCI.md punto 2); non collaudato; non in PRODUZIONE.
   destinatario (immediata se è l'amministratore stesso); al trasferimento le voci degli eventi di
   altri passano a una copia del proprietario dell'evento (vincolo del database §19.4); il ripristino
   non tocca le foto.
+
+## Incidente nel rilascio in produzione della collaborazione (19/11/2026)
+
+- Rilascio Cloudflare di `1806441` (versione `992eef87`) autorizzato da Loris: il Worker non partiva
+  (errore 1101). Causa: il backup pre-migrazione (aggiunto in `9a44716`) esportava con l'elenco delle
+  tabelle del codice nuovo, comprese quelle della 0021 non ancora create → «Backup pre-migrazione
+  fallito, nessuna migrazione applicata». La protezione ha funzionato: schema 20 e dati intatti.
+- Ritorno con `wrangler rollback` alla versione `45d4ee02` (`d949431`, schema 20): app di nuovo attiva
+  dopo circa 6 minuti (15:52–15:58). Su Debian il backup è una copia del file: per questo TEST non
+  aveva mostrato il problema.
+- Correzione nel ramo `backup-schema-precedente`: l'esportazione legge solo le tabelle esistenti;
+  test di regressione dagli schemi 15, 19 e 20; prova locale del percorso reale (Worker `d949431`
+  allo schema 20, poi Worker nuovo sugli stessi dati: backup `pre-migrazione-…-v20.json` in R2,
+  migrazione, risposte corrette).
+- PRODUZIONE resta su `d949431` (schema 20) finché la correzione non passa da TEST.

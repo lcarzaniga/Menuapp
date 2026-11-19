@@ -70,10 +70,16 @@ function ordinePk(db: Db, tabella: string, schema = 'main'): string {
   return pk.length ? pk.join(', ') : 'rowid'
 }
 
-/** Legge tutte le tabelle di contenuto, righe ordinate per chiave primaria. */
+/**
+ * Legge tutte le tabelle di contenuto, righe ordinate per chiave primaria. Solo quelle che il
+ * database ha già: il backup pre-migrazione si fa con il codice nuovo sullo schema vecchio, che
+ * non ha ancora le tabelle delle migrazioni da applicare (incidente del 19/11/2026, SPEC §32.6).
+ */
 export function leggiContenuto(db: Db, schema = 'main'): Record<string, RigaGenerica[]> {
   const dati: Record<string, RigaGenerica[]> = {}
+  const esistenti = new Set(tutti<{ name: string }>(db, `SELECT name FROM ${schema}.sqlite_master WHERE type = 'table'`).map((r) => r.name))
   for (const t of TABELLE_CONTENUTO) {
+    if (!esistenti.has(t)) continue
     // Partecipanti: i titolari prima dei loro accompagnatori (vincolo di invito al ripristino).
     const ordine = t === 'partecipanti' ? `invito_id IS NOT NULL, ${ordinePk(db, t, schema)}` : ordinePk(db, t, schema)
     let righe = tutti<RigaGenerica>(db, `SELECT * FROM ${schema}."${t}" ORDER BY ${ordine}`)

@@ -2588,7 +2588,10 @@ del contenuto in una transazione, file delle foto rimessi dal cestino; le sessio
 Esportazione JSON e ZIP con le foto per l'amministratore come su Debian.
 - Migrazioni di schema: all'avvio del Durable Object, dopo un backup `pre-migrazione` in R2 (dalla
   7.9.1; il rilascio del 19/11/2026, schema 15 → 20, è avvenuto senza: copriva il giornaliero delle
-  02:45). Se il backup non riesce, nessuna migrazione viene applicata.
+  02:45). Se il backup non riesce, nessuna migrazione viene applicata. Il backup si fa con il codice
+  nuovo sullo schema vecchio: esporta solo le tabelle che il database ha già (incidente del
+  19/11/2026: cercava le tabelle della 0021 e il Worker non partiva; ritorno alla versione
+  precedente in circa 6 minuti, nessun dato toccato). Test `server/backup/backup-pre-migrazione.test.ts`.
 
 ### 32.7 Rilascio
 
