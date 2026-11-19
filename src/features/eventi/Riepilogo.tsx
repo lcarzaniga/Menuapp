@@ -1,10 +1,12 @@
-// «A che punto siamo?» (SPEC §26, §29.3): ciò che manca diviso in Da organizzare, Da acquistare e
-// Da preparare, poi i suggerimenti, ciò che è a posto e le parti non usate; ogni indicatore porta
-// alla sezione che lo risolve. Niente in sospeso: «Tutto pronto»; dopo l'evento: «Evento passato».
+// «A che punto siamo?» (SPEC §26, §29.3): tre gruppi sempre visibili (Da organizzare, Da acquistare,
+// Da preparare); in ciascuno prima ciò che è da risolvere, poi ciò che è aperto, i suggerimenti, ciò
+// che è a posto e le parti non usate, con il livello detto a parole. Ogni indicatore porta alla
+// sezione che lo risolve. Niente in sospeso: «Tutto pronto»; dopo l'evento: «Evento passato».
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, CalendarCheck, CheckCircle2, ChevronRight, CircleDashed, CircleDot, Lightbulb, PartyPopper } from 'lucide-react'
 import { Link } from 'react-router'
 import { api } from '@/api/client'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { RiepilogoOrganizzativo } from '@/contratto/edizioni.ts'
 import { plurale } from '@/lib/formato'
@@ -18,8 +20,9 @@ interface Indicatore {
   testo: string
   dettaglio?: string
   /**
-   * attenzione: da risolvere (impedisce davvero di essere pronti); da_fare: ancora aperto, normale
-   * mentre si organizza; nota: un suggerimento (mai conteggiato); facoltativo: una parte non usata;
+   * attenzione: da risolvere, solo quando qualcosa è andato storto (responsabile che non viene,
+   * attività in ritardo, quantità da verificare); da_fare: ancora aperto, normale mentre si
+   * organizza (anche menù vuoto e coperti mancanti); nota: un suggerimento (mai conteggiato); facoltativo: una parte non usata;
    * ok: a posto (SPEC §26, D9). I primi due sono «in sospeso».
    */
   livello: 'attenzione' | 'da_fare' | 'facoltativo' | 'nota' | 'ok'
@@ -48,7 +51,7 @@ export function indicatori(r: RiepilogoOrganizzativo): Indicatore[] {
   // quando ogni portata ha almeno un piatto. Nessun minimo: le portate che non servono si tolgono.
   if (!r.archiviato) {
     const m = r.menu
-    if (m.voci === 0) lista.push({ testo: 'Menù ancora vuoto', dettaglio: 'aggiungi i piatti per avere porzioni e spesa', livello: 'attenzione', gruppo: o, a: 'menu' })
+    if (m.voci === 0) lista.push({ testo: 'Menù ancora vuoto', dettaglio: 'aggiungi i piatti per avere porzioni e spesa', livello: 'da_fare', gruppo: o, a: 'menu' })
     else if (m.portateVuote.length) {
       lista.push({ testo: 'Menù in preparazione', dettaglio: `ancora senza piatti: ${m.portateVuote.join(', ')} · se non servono, toglile dalle portate`, livello: 'da_fare', gruppo: o, a: 'menu' })
     } else lista.push({ testo: 'Menù completato', dettaglio: plurale(m.voci, 'piatto', 'piatti'), livello: 'ok', gruppo: o, a: 'menu' })
@@ -64,17 +67,18 @@ export function indicatori(r: RiepilogoOrganizzativo): Indicatore[] {
   }
   // I coperti si leggono nelle informazioni dell'evento: qui solo se mancano (senza, niente porzioni).
   if (r.coperti.equivalenti <= 0) {
-    lista.push({ testo: 'Coperti non indicati', dettaglio: r.coperti.automatici ? 'nessun partecipante confermato' : 'indica quanti siete', livello: 'attenzione', gruppo: o, a: 'partecipanti' })
+    lista.push({ testo: 'Coperti non indicati', dettaglio: r.coperti.automatici ? 'nessun partecipante confermato' : 'indica quanti siete', livello: 'da_fare', gruppo: o, a: 'partecipanti' })
   }
   if (!r.archiviato) {
-    if (!r.partecipanti) lista.push({ testo: 'Elenco dei partecipanti', dettaglio: 'facoltativo: per segnare chi viene', livello: 'facoltativo', gruppo: o, a: 'partecipanti' })
-    if (!r.incarichi && r.menu.voci > 0) lista.push({ testo: 'Chi porta cosa', dettaglio: 'facoltativo: per affidare piatti e cose da portare', livello: 'facoltativo', gruppo: o, a: 'chi-porta' })
-    if (!r.attivita) lista.push({ testo: 'Piano delle attività', dettaglio: 'facoltativo: cosa preparare e quando', livello: 'facoltativo', gruppo: 'preparare', a: 'piano' })
+    if (!r.partecipanti) lista.push({ testo: 'Elenco dei partecipanti', dettaglio: 'per segnare chi viene', livello: 'facoltativo', gruppo: o, a: 'partecipanti' })
+    if (!r.incarichi && r.menu.voci > 0) lista.push({ testo: 'Chi porta cosa', dettaglio: 'per affidare piatti e cose da portare', livello: 'facoltativo', gruppo: o, a: 'chi-porta' })
+    if (!r.attivita) lista.push({ testo: 'Piano delle attività', dettaglio: 'cosa preparare e quando', livello: 'facoltativo', gruppo: 'preparare', a: 'piano' })
+    if (!r.spesa) lista.push({ testo: 'Lista della spesa', dettaglio: 'si compone dai piatti del menù con una ricetta', livello: 'facoltativo', gruppo: 'acquistare', a: 'spesa' })
   }
   if (r.incarichi) {
     const i = r.incarichi
     if (i.responsabiliAssenti) lista.push({ testo: `${plurale(i.responsabiliAssenti, 'incarico', 'incarichi')} di chi non partecipa`, livello: 'attenzione', gruppo: o, a: 'chi-porta' })
-    if (i.coseSenzaResponsabile) lista.push({ testo: `${plurale(i.coseSenzaResponsabile, 'cosa', 'cose')} da portare senza nessuno`, livello: 'attenzione', gruppo: o, a: 'chi-porta' })
+    if (i.coseSenzaResponsabile) lista.push({ testo: `${plurale(i.coseSenzaResponsabile, 'cosa', 'cose')} da portare senza nessuno`, livello: 'da_fare', gruppo: o, a: 'chi-porta' })
     if (i.daCompletare) lista.push({ testo: `${plurale(i.daCompletare, 'incarico', 'incarichi')} da completare`, dettaglio: 'affidati e non ancora segnati come fatti', livello: 'da_fare', gruppo: o, a: 'chi-porta' })
     if (i.piattiNonAffidati) lista.push({ testo: `${i.piattiNonAffidati} ${i.piattiNonAffidati === 1 ? 'piatto non affidato' : 'piatti non affidati'}`, dettaglio: 'se li preparate voi va bene così', livello: 'nota', gruppo: o, a: 'chi-porta' })
     if (!i.responsabiliAssenti && !i.coseSenzaResponsabile && !i.daCompletare) lista.push({ testo: 'Incarichi completati', livello: 'ok', gruppo: o, a: 'chi-porta' })
@@ -115,6 +119,9 @@ const ICONA = {
   ok: <CheckCircle2 className="size-4 text-successo" />,
 }
 
+/** Il livello detto a parole (D9): le cose aperte e quelle a posto bastano l'icona e il testo. */
+const ETICHETTA: Record<Indicatore['livello'], string | null> = { attenzione: 'da risolvere', da_fare: null, nota: 'suggerimento', facoltativo: 'non usato', ok: null }
+
 function Elenco({ eventoId, voci, nome }: { eventoId: string; voci: Indicatore[]; nome: string }) {
   return (
     <ul className="-mx-2 flex flex-col" aria-label={nome}>
@@ -127,6 +134,11 @@ function Elenco({ eventoId, voci, nome }: { eventoId: string; voci: Indicatore[]
             {ICONA[x.livello]}
             <span className="min-w-0 flex-1 break-words">
               {x.testo}
+              {ETICHETTA[x.livello] ? (
+                <Badge variante={x.livello === 'attenzione' ? 'avviso' : 'neutro'} className="ml-2 align-middle">
+                  {ETICHETTA[x.livello]}
+                </Badge>
+              ) : null}
               {x.dettaglio ? <span className="block text-xs font-normal text-testo-tenue">{x.dettaglio}</span> : null}
             </span>
             <ChevronRight className="size-4 shrink-0 text-testo-tenue" />
@@ -140,60 +152,40 @@ function Elenco({ eventoId, voci, nome }: { eventoId: string; voci: Indicatore[]
 export function RiepilogoEvento({ eventoId }: { eventoId: string }) {
   const q = useRiepilogo(eventoId)
   if (!q.data || q.data.archiviato) return null
-  const lista = indicatori(q.data)
+  const passato = q.data.passato
+  // Dopo l'evento restano solo le cose a posto: niente da fare, niente suggerimenti.
+  const lista = indicatori(q.data).filter((x) => !passato || x.livello === 'ok')
   const sospese = lista.filter(inSospeso)
-  const suggerimenti = lista.filter((x) => x.livello === 'nota')
-  const facoltativi = lista.filter((x) => x.livello === 'facoltativo')
-  const aPosto = lista.filter((x) => x.livello === 'ok')
   return (
     <Card>
       <CardHeader>
         <CardTitle>A che punto siamo?</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        {q.data.passato ? (
-          // Dopo l'evento non ci sono più cose da fare: l'invito a concluderlo è nella Panoramica.
+        {passato ? (
+          // L'invito a concludere l'evento è nella Panoramica.
           <p className="flex items-center gap-2 rounded-xl bg-tenue px-3 py-2 font-medium" data-testid="stato-preparazione">
             <CalendarCheck className="size-5 text-testo-tenue" /> Evento passato
           </p>
         ) : sospese.length ? (
-          <>
-            <p className="text-sm text-testo-tenue" data-testid="stato-preparazione">
-              {sospese.length === 1 ? 'Manca ancora una cosa' : `Mancano ancora ${sospese.length} cose`}
-            </p>
-            {GRUPPI.map((g) => {
-              const voci = sospese.filter((x) => x.gruppo === g.id)
-              return voci.length ? (
-                <div key={g.id}>
-                  <Titoletto>{g.titolo}</Titoletto>
-                  <Elenco eventoId={eventoId} voci={voci} nome={g.titolo} />
-                </div>
-              ) : null
-            })}
-          </>
+          <p className="text-sm text-testo-tenue" data-testid="stato-preparazione">
+            {sospese.length === 1 ? 'Manca ancora una cosa' : `Mancano ancora ${sospese.length} cose`}
+          </p>
         ) : (
           <p className="flex items-center gap-2 rounded-xl bg-successo-tenue px-3 py-2 font-medium text-successo" data-testid="stato-preparazione">
             <PartyPopper className="size-5" /> Tutto pronto
           </p>
         )}
-        {!q.data.passato && suggerimenti.length ? (
-          <div>
-            <Titoletto>Da sapere</Titoletto>
-            <Elenco eventoId={eventoId} voci={suggerimenti} nome="Da sapere" />
-          </div>
-        ) : null}
-        {aPosto.length ? (
-          <div>
-            <Titoletto>Già a posto</Titoletto>
-            <Elenco eventoId={eventoId} voci={aPosto} nome="Già a posto" />
-          </div>
-        ) : null}
-        {!q.data.passato && facoltativi.length ? (
-          <div>
-            <Titoletto>Non ancora usati</Titoletto>
-            <Elenco eventoId={eventoId} voci={facoltativi} nome="Non ancora usati" />
-          </div>
-        ) : null}
+        {/* I tre gruppi sempre, nello stesso ordine; dentro, prima ciò che manca (SPEC §26). */}
+        {GRUPPI.map((g) => {
+          const voci = lista.filter((x) => x.gruppo === g.id)
+          return voci.length ? (
+            <div key={g.id}>
+              <Titoletto>{g.titolo}</Titoletto>
+              <Elenco eventoId={eventoId} voci={voci} nome={g.titolo} />
+            </div>
+          ) : null
+        })}
       </CardContent>
     </Card>
   )

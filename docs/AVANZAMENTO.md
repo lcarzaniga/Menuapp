@@ -521,7 +521,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Test: `npm run check` (723), e2e completi (48).
 - Provata da Loris su TEST («ok a posto»).
 
-## Fase 3 — «A che punto siamo?» a gruppi (19/11/2026, ramo `riepilogo-gruppi`)
+## Fase 3 — «A che punto siamo?» a gruppi (19/11/2026, su TEST `20261119-1144-6736209`)
 
 - Gruppi Da organizzare / Da acquistare / Da preparare, livelli da risolvere / aperto /
   suggerimento, «Da sapere»; ritardo con l'ora italiana (`adessoInItalia`, anche sul Worker),
@@ -529,3 +529,9 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   passato». Nessuna migrazione. SPEC §26.
 - E2e multi-famiglia: il controllo del ricettario usava un elenco in cache creato dalla pagina
   dell'evento (ricette create dall'API esterna): ricaricamento nel test.
+- Osservazione di Loris su TEST: i gruppi comparivano solo con cose aperte (niente «Da preparare»
+  senza piano) e i livelli si capivano solo dalle icone. Corretto: tre gruppi sempre visibili con
+  tutte le loro voci (anche «non usato»), livello scritto accanto («da risolvere», «suggerimento»).
+- Seconda osservazione di Loris: menù vuoto e in preparazione allo stesso livello. Criterio unico:
+  «da risolvere» solo se qualcosa è andato storto (responsabile assente, attività in ritardo,
+  quantità da verificare); menù vuoto, coperti mancanti e cose senza nessuno diventano «aperti».

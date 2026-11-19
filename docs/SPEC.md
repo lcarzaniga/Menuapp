@@ -2172,15 +2172,17 @@ M3, rivisto nella 7.5 (piano di evoluzione fase 3, D9). In cima alla Panoramica;
 `GET /eventi/:id/riepilogo` aggrega dati esistenti in una sola richiesta. Ogni indicatore apre la
 sua sezione; quelli delle funzioni non usate non compaiono.
 
-- **Gruppi** delle cose in sospeso: **Da organizzare** (menù, coperti, conferme, chi porta,
-  proposte, sondaggi), **Da acquistare** (spesa), **Da preparare** (piano). Poi «Da sapere»
-  (suggerimenti), «Già a posto», «Non ancora usati». «Mancano ancora N cose» conta solo le cose in
-  sospeso; senza: «Tutto pronto».
-- **Livelli**: *da risolvere* (impedisce davvero di essere pronti: menù vuoto, coperti a zero,
-  cose da portare senza nessuno, incarichi di chi non partecipa, articoli da verificare, attività
-  in ritardo); *aperto* (normale mentre si organizza: menù in preparazione, conferme in attesa,
-  incarichi da completare, proposte, sondaggi, articoli da comprare, attività da fare con la
-  prossima); *suggerimento* (mai conteggiato: piatti non affidati, piatti in spesa senza ricetta o
+- **Gruppi**, sempre visibili e nello stesso ordine: **Da organizzare** (menù, coperti, conferme,
+  chi porta, proposte, sondaggi), **Da acquistare** (spesa), **Da preparare** (piano). In ognuno
+  tutte le sue voci: prima da risolvere, poi aperte, suggerimenti, a posto, parti non usate (con
+  l'etichetta «non usato», così spesa e piano compaiono anche prima di usarli). Il livello è detto a
+  parole («da risolvere», «suggerimento»). «Mancano ancora N cose» conta solo le cose da risolvere e
+  aperte; senza: «Tutto pronto».
+- **Livelli**: *da risolvere* solo quando qualcosa è andato storto (incarichi di chi non partecipa,
+  articoli da verificare, attività in ritardo); *aperto* ciò che non è ancora fatto, normale mentre
+  si organizza (menù vuoto o in preparazione — stesso livello, richiesta di Loris —, coperti non
+  indicati, conferme in attesa, cose da portare senza nessuno, incarichi da completare, proposte,
+  sondaggi, articoli da comprare, attività da fare con la prossima); *suggerimento* (mai conteggiato: piatti non affidati, piatti in spesa senza ricetta o
   con una ricetta senza ingredienti — la spesa non li conta; chi li toglie dalla spesa o li affida
   non riceve più l'avviso).
 - Menù: «Menù ancora vuoto» senza piatti; «Menù in preparazione» con portate ancora senza piatti
@@ -2191,8 +2193,8 @@ sua sezione; quelli delle funzioni non usate non compaiono.
   italiana** anche sul Worker (orologio UTC); `attivita.prossima` è la prossima da fare.
 - Spesa: `articoli`, da comprare, da verificare, `senzaRicetta`, `senzaIngredienti`; presente anche
   senza lista se ci sono suggerimenti; «Spesa fatta» solo se c'era una lista.
-- **Evento passato** (giorno passato o evento concluso, `passato`): niente cose da fare né
-  suggerimenti, solo «Evento passato» e ciò che è a posto. Evento archiviato: il riepilogo non c'è.
+- **Evento passato** (giorno passato o evento concluso, `passato`): niente cose da fare, suggerimenti
+  o parti non usate, solo «Evento passato» e ciò che è a posto. Evento archiviato: il riepilogo non c'è.
 - Test: `server/api/riepilogo.test.ts`, `src/features/eventi/Riepilogo.test.tsx`, e2e `edizioni.spec.ts`.
 
 ## 27. Confronto fra edizioni

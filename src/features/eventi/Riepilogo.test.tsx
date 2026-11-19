@@ -24,14 +24,19 @@ describe('a che punto siamo: indicatori', () => {
     const l = indicatori(base)
     expect(l.filter(inSospeso)).toEqual([])
     expect(l.filter((x) => x.livello === 'ok').map((x) => [x.testo, x.dettaglio, x.a])).toEqual([['Menù completato', '5 piatti', 'menu']])
-    expect(l.filter((x) => x.livello === 'facoltativo').map((x) => x.a)).toEqual(['partecipanti', 'chi-porta', 'piano'])
+    expect(l.filter((x) => x.livello === 'facoltativo').map((x) => [x.a, x.gruppo])).toEqual([
+      ['partecipanti', 'organizzare'],
+      ['chi-porta', 'organizzare'],
+      ['piano', 'preparare'],
+      ['spesa', 'acquistare'],
+    ])
   })
 
-  it('menù vuoto e coperti a zero sono da risolvere; un archiviato non ha cose da fare', () => {
+  it('menù vuoto e coperti a zero sono aperti, come il menù in preparazione; un archiviato non ha cose da fare', () => {
     const vuoto = indicatori({ ...base, menu: { voci: 0, portateVuote: ['Primi', 'Dolci'] }, coperti: { equivalenti: 0, adulti: 0, bambini: 0, automatici: false } })
     expect(voci(vuoto.filter(inSospeso))).toEqual([
-      ['Menù ancora vuoto', 'attenzione', 'organizzare', 'menu'],
-      ['Coperti non indicati', 'attenzione', 'organizzare', 'partecipanti'],
+      ['Menù ancora vuoto', 'da_fare', 'organizzare', 'menu'],
+      ['Coperti non indicati', 'da_fare', 'organizzare', 'partecipanti'],
     ])
     // Senza menù «Chi porta» non si propone.
     expect(vuoto.some((x) => x.a === 'chi-porta')).toBe(false)
@@ -47,11 +52,11 @@ describe('a che punto siamo: indicatori', () => {
     expect(indicatori({ ...base, menu: { voci: 2, portateVuote: ['Dolci'] }, archiviato: true }).some((x) => x.a === 'menu')).toBe(false)
   })
 
-  it('chi porta: cose senza nessuno e responsabili assenti da risolvere; piatti non affidati solo da sapere', () => {
+  it('chi porta: responsabili assenti da risolvere, cose senza nessuno aperte; piatti non affidati solo suggerimenti', () => {
     const l = indicatori({ ...base, incarichi: { coseSenzaResponsabile: 1, daCompletare: 0, piattiNonAffidati: 3, responsabiliAssenti: 1 } })
     expect(l.filter(inSospeso).map((x) => [x.testo, x.livello])).toEqual([
       ['1 incarico di chi non partecipa', 'attenzione'],
-      ['1 cosa da portare senza nessuno', 'attenzione'],
+      ['1 cosa da portare senza nessuno', 'da_fare'],
     ])
     expect(l.find((x) => x.testo === '3 piatti non affidati')).toMatchObject({ livello: 'nota', a: 'chi-porta' })
     expect(indicatori({ ...base, incarichi: { coseSenzaResponsabile: 0, daCompletare: 0, piattiNonAffidati: 1, responsabiliAssenti: 0 } }).find((x) => x.livello === 'nota')?.testo).toBe('1 piatto non affidato')
