@@ -2,16 +2,22 @@
 
 Documento operativo per riprendere il lavoro fra sessioni.
 
-## Stato
+## Stato (aggiornato al 19/11/2026)
 
-- **v0.1.0 in produzione dal 12/11/2026**: https://loris-srv01.dala-tortoise.ts.net:9870/
-  (rilascio `20261112-1321-0d8d6fc`, `menuapp.service` e `menuapp-backup.timer` attivi e
-  abilitati, `tailscale serve :9870`, porta non raggiungibile dalla LAN, altri servizi invariati).
-- **Branch**: `main` (pubblicato su GitHub); sviluppo successivo su nuovi branch.
+| Ambiente | Dove | Rilascio | Schema |
+|---|---|---|---|
+| **PRODUZIONE** | Cloudflare, `https://app.ricettedifamiglia.online` (Worker `menuapp`, versione `94d01118`) | `20261119-1630-60c2d67` | 21 |
+| **TEST** | Debian, `https://loris-srv01.dala-tortoise.ts.net:9870/` (solo Tailscale) | `20261119-1615-60c2d67` | 21 |
+
+- Dominio principale `ricettedifamiglia.online`: solo «Sito in costruzione» (Worker
+  `ricettedifamiglia-sito`, SPEC §34). Tailscale Funnel spento.
+- Procedura di rilascio: docs/RILASCI.md (TEST, prova di Loris, PRODUZIONE solo con il suo OK).
+- Utenti in produzione: Loris, Lucia, Palli, Raffa (tutti collegati su `app.…`).
+- **Branch**: `main` = `60c2d67` (pubblicato su GitHub); lavoro sempre su un ramo dedicato.
 - **Sviluppo**: tmux `menuapp` (finestre `server` → 9871 con `dati-sviluppo/`, `dev` → Vite 5173,
-  telefono via `…ts.net:8443`). Nessun servizio di produzione installato.
+  telefono via `…ts.net:8443`).
 
-## Completato
+## Completato nella v1 (12/11/2026)
 
 - M0: schema SQLite completo con vincoli e migrazioni (backup pre-migrazione, codice 78),
   backend Fastify con contratto zod, Origin/Content-Type, versioni e revisione globale,
@@ -29,16 +35,13 @@ Documento operativo per riprendere il lavoro fra sessioni.
   A4/A5, archiviazione con snapshot autonomo, consultazione e vista cucina da snapshot,
   copia nel ricettario, riapertura.
 
-## Test (ultima esecuzione)
+## Test (ultima esecuzione, 19/11/2026)
 
 | Comando | Esito |
 |---|---|
-| `npm run check` (lint, tipi, 178 test: dominio, server su SQLite reale, architettura, build) | verde |
-| `npm run test:e2e` (13 scenari telefono + desktop, incluso collaudo di Natale da due dispositivi) | verde |
-| Rilascio di prova costruito con `scripts/rilascia.sh` e avviato su 9872 | ok (poi rimosso) |
-
-Produzione verificata il 12/11: salute via HTTPS, backup manuale verificato, `sw.js` no-cache,
-LAN 9870 chiusa. Da fare: collaudo manuale sui dispositivi (`docs/collaudo/collaudo-v1.md`).
+| `npm run check` (lint, tipi, 798 test: dominio, server su Fastify e sul motore leggero, architettura, build) | verde |
+| `npm run test:e2e` (52 scenari telefono + desktop) | verde |
+| `npm run test:cloudflare` (9 prove sul Worker in locale, R2 compreso) | verde |
 
 ## Decisioni tecniche
 
@@ -49,16 +52,25 @@ LAN 9870 chiusa. Da fare: collaudo manuale sui dispositivi (`docs/collaudo/colla
 
 ## Problemi aperti
 
-- ~~Nessun test per l'avviso di aggiornamento PWA con due build reali~~: coperto dal 17/11
-  (`test/e2e/aggiornamento.pwa.ts`, SPEC §29.8).
-- Copia dei backup su un secondo supporto: decisione aperta (SPEC §11.6).
+- Copia dei backup su un secondo supporto: decisione aperta (SPEC §11.6). In produzione i backup
+  sono in R2 (giornalieri e pre-migrazione).
 - Trascinamento per il riordino non implementato (taglio previsto): Su/Giù/Sposta in.
+- Senza console accesa Claude non ha una sessione di produzione: le verifiche dopo un rilascio con
+  accesso (ricette, foto, famiglie, notifiche) le fa Loris nell'app.
+- Rami vecchi non uniti, non toccati: `avanzamento-organizzazione`, `avanzamento-ricerca`.
 
 ## Prossima attività
 
-Collaudo manuale di Loris sui dispositivi e disattivazione di GitHub Pages; poi rifiniture
-concordate. Nota: l'installazione di servizi systemd da Claude è bloccata dal controllo dei
-permessi: Loris la esegue con `! comando`.
+Nessuna in corso. Il piano di evoluzione (docs/PIANO-EVOLUZIONE.md) è completato; le richieste
+successive (ricette della Famiglia attiva, «Chi porta cosa» flessibile, memoria di famiglia,
+collaborazione sulle ricette) sono in produzione.
+
+---
+
+# Storia del lavoro (dal più vecchio)
+
+Ogni sezione è com'era al momento; lo stato attuale è in cima al documento. Fino al 18/11/2026
+«in produzione» indica il server Debian, dal 18/11 (migrazione) Cloudflare.
 
 ## In produzione dal 12/11/2026 (rilascio `20261112-1520-fd1a901`, schema v2)
 
@@ -70,10 +82,6 @@ permessi: Loris la esegue con `! comando`.
 - Foto collegate ai passaggi (SPEC 2.4), migrazione 0003 applicata con backup
   `pre-migrazione-20261112-154031-v2.db`; rilascio `20261112-1540-d284829`, schema v3.
 - Porta 9880 raggiungibile anche via Tailscale (`…ts.net:9880`, `100.114.50.37:9880`).
-
-## Prossima attività
-
-Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collaudo/collaudo-v1.md`).
 
 ## Designer del menù stampato (12/11/2026, in produzione)
 
@@ -483,7 +491,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   401 senza sessione, file dell'app uguali alla build, dominio principale ancora sul sito. Nessun
   dato trasferito fra gli ambienti; schema invariato (15).
 
-## Piano di evoluzione (19/11/2026, documento; ramo `piano-evoluzione`)
+## Piano di evoluzione (19/11/2026, documento approvato; fasi tutte in produzione)
 
 - `docs/PIANO-EVOLUZIONE.md`: ricette pubbliche fra Famiglie (1A Famiglia d'origine, 1B pubbliche e
   copia), riuso degli eventi (estensione di «Duplica»), riepilogo a gruppi e livelli, Regia della
@@ -491,7 +499,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   modificato. Dati di TEST letti in sola lettura: 77 ricette tutte con Famiglia d'origine
   determinabile, 0 attività nel piano, attrezzature solo testo libero.
 
-## Fase 1A — Famiglia d'origine delle ricette (19/11/2026, su TEST `20261119-1027-48ed40d`, schema 16)
+## Fase 1A — Famiglia d'origine delle ricette (19/11/2026, in produzione dal 19/11, schema 16)
 
 - Decisioni di Loris sul piano: D1–D12 approvate; D5 rivista (pubbliche cercabili nei suggerimenti
   del menù, copiate al collegamento e riusate).
@@ -503,7 +511,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Rilasciata su TEST da Loris (19/11), verificata: schema 16, `origini` → 77/77. Provata da Loris.
   Produzione: un unico rilascio alla fine delle fasi (decisione di Loris).
 
-## Fase 1B — Ricette pubbliche fra Famiglie (19/11/2026, su TEST `20261119-1050-6dc25ef`, schema 17)
+## Fase 1B — Ricette pubbliche fra Famiglie (19/11/2026, in produzione dal 19/11, schema 17)
 
 - Migrazione 0017 (`piatti.pubblica`, trigger «serve l'origine», `preferenze_utente`); lettura delle
   pubbliche per chi ha una sessione in `piattoLeggibileDaAltri` (scheda, foto, esportazione, bacheca,
@@ -512,7 +520,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   personale. Interfaccia: filtri ed etichette del ricettario, «Pubblica nell'app…» con conferma,
   «Copia in una mia Famiglia», «Hai già una copia», suggerimenti del menù. SPEC §36.
 
-## Ricette della Famiglia attiva (19/11/2026, su TEST `20261119-1111-6411855`)
+## Ricette della Famiglia attiva (19/11/2026, in produzione dal 19/11)
 
 - Richiesta di Loris provando la 1B su TEST con una seconda Famiglia: le ricette di una Famiglia
   solo in quella Famiglia; le personali sempre; per usarle altrove si copiano. SPEC §37.
@@ -521,7 +529,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Test: `npm run check` (723), e2e completi (48).
 - Provata da Loris su TEST («ok a posto»).
 
-## Fase 3 — «A che punto siamo?» a gruppi (19/11/2026, su TEST `20261119-1144-6736209`)
+## Fase 3 — «A che punto siamo?» a gruppi (19/11/2026, in produzione dal 19/11)
 
 - Gruppi Da organizzare / Da acquistare / Da preparare, livelli da risolvere / aperto /
   suggerimento, «Da sapere»; ritardo con l'ora italiana (`adessoInItalia`, anche sul Worker),
@@ -536,7 +544,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   «da risolvere» solo se qualcosa è andato storto (responsabile assente, attività in ritardo,
   quantità da verificare); menù vuoto, coperti mancanti e cose senza nessuno diventano «aperti».
 
-## Fase 2 del piano — Riuso degli eventi (19/11/2026, su TEST `20261119-1336-1e2d0cc`, schema 18)
+## Fase 2 del piano — Riuso degli eventi (19/11/2026, in produzione dal 19/11, schema 18)
 
 - Estesa «Duplica evento»: scelte (menù, partecipanti, chi porta cosa, piano, stampa), anteprima
   senza scritture (`anteprima: true`), incarichi da riassegnare con promemoria (`incarico_precedente`,
@@ -547,20 +555,20 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   la barra di scorrimento usciva dal bordo arrotondato → in tutte le finestre scorre solo il
   contenuto, titolo e pulsanti restano fermi (`src/components/ui/dialog.tsx`).
 
-## Fase 4 del piano — Regia della cucina (19/11/2026, su TEST `20261119-1357-25757e9`)
+## Fase 4 del piano — Regia della cucina (19/11/2026, in produzione dal 19/11)
 
 - `/eventi/:id/regia` sul piano esistente: In ritardo / Adesso / Più tardi / Fatto, filtri per
   attrezzatura e giorno, attrezzature dal testo delle ricette, «Ricetta in cucina», spunta, testo
   grande, Wake Lock condiviso; «Prepara il piano dai piatti» con l'ora suggerita. SPEC §38.
 
-## «Chi porta cosa» flessibile (19/11/2026, su TEST `20261119-1413-105f122`, schema 19)
+## «Chi porta cosa» flessibile (19/11/2026, in produzione dal 19/11, schema 19)
 
 - Richiesta di Loris (19/11). Analisi: le voci del menù sono già gli incarichi dei piatti (stesso
   record) e le cose da portare coprono i contributi generici: bastava «da definire» e «contributi»
   sulla voce (migrazione 0019, trigger senza ricetta), «Piatto a scelta» e «Precisa» in Chi porta,
   «da definire» nel menù e nell'editor, spesa e riepilogo coerenti, duplicazione. SPEC §39.
 
-## Memoria di famiglia (19/11/2026, su TEST `20261119-1434-d949431`, schema 20)
+## Memoria di famiglia (19/11/2026, in produzione dal 19/11, schema 20)
 
 - Richiesta di Loris (19/11). Tabella `memorie` (storia / ricordo / esperienza, con Famiglia: pronta
   per un archivio senza ricetta), foto in `foto_piatti` con `memoria_id` (stessi file e backup),
@@ -578,7 +586,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   migrazioni solo additive, già provate su una copia dei dati di TEST. Corretto nel ramo
   `backup-migrazioni-cloudflare` (backup `pre-migrazione` prima di ogni migrazione nel Worker).
 
-## Collaborazione sulle ricette e proprietà (19/11/2026, ramo `collaborazione-ricette`, schema 21)
+## Collaborazione sulle ricette e proprietà (19/11/2026, in produzione dal 19/11, schema 21)
 
 Stato: **sviluppato, testato, su TEST** (`20261119-1546-1806441`, poi con la correzione del backup
 `20261119-1615-60c2d67`), **collaudato da Loris**, **in PRODUZIONE** dal 19/11/2026 (vedi sotto).
@@ -596,6 +604,9 @@ Stato: **sviluppato, testato, su TEST** (`20261119-1546-1806441`, poi con la cor
   destinatario (immediata se è l'amministratore stesso); al trasferimento le voci degli eventi di
   altri passano a una copia del proprietario dell'evento (vincolo del database §19.4); il ripristino
   non tocca le foto.
+- Verifica su TEST dopo il rilascio (autorizzato da Loris): schema 21, integrità e chiavi esterne ok,
+  ricette 77, foto 48, condivisioni 76, eventi 6, voci 23 (come prima), 77/77 con Famiglia
+  d'origine, 401 senza sessione. Backup `manuale-20261119-154652-v20.db`.
 
 ## Incidente nel rilascio in produzione della collaborazione (19/11/2026)
 

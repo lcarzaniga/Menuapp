@@ -2595,9 +2595,11 @@ Esportazione JSON e ZIP con le foto per l'amministratore come su Debian.
 
 ### 32.7 Rilascio
 
-Solo manuale, mai dal collegamento Git: `scripts/cloudflare/rilascia.sh` da `main` già pubblicato
-(controlli, prove sul Worker in locale, build, creazione del bucket se manca, `wrangler deploy`,
-verifica di salute e 401). Credenziali in `~/.config/menuapp/cloudflare.env` (600).
+Solo manuale, mai dal collegamento Git: `scripts/cloudflare/rilascia.sh` da `main` già pubblicato e
+attivo su TEST (controlli, prove sul Worker in locale, build, creazione del bucket se manca,
+`wrangler deploy`, verifica di salute e 401). Con una migrazione: controllo del backup
+`pre-migrazione` in R2; se il Worker non parte, `wrangler rollback` alla versione precedente (§32.6,
+docs/CLOUDFLARE.md). Credenziali in `~/.config/menuapp/cloudflare.env` (600).
 
 ### 32.8 Test
 

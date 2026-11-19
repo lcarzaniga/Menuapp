@@ -5,16 +5,17 @@
 Web app installabile (PWA) per le ricette, i pranzi e le ricorrenze della famiglia: ricettario
 di famiglia, eventi con menù per portate, lista della spesa aggregata, piano delle
 preparazioni, vista cucina, stampa del menù e uno spazio collaborativo (bacheche, sondaggi,
-proposte di piatti, chi porta cosa, notifiche, piatti più apprezzati). Un unico database
-SQLite sul server di casa; ogni familiare ha il suo account, con accesso su invito.
+proposte di piatti, chi porta cosa, notifiche, piatti più apprezzati, memoria di famiglia,
+proposte di modifica alle ricette). Ogni familiare ha il suo account, con accesso su invito.
 
-- Accesso esterno (familiari): https://loris-srv01.dala-tortoise.ts.net/ (Tailscale Funnel)
-- Accesso privato e amministrazione: https://loris-srv01.dala-tortoise.ts.net:9870/ (tailnet)
-- Specifica: `docs/SPEC.md` · operazioni: `docs/OPERAZIONI.md` · avanzamento: `docs/AVANZAMENTO.md`
+- **Produzione**: https://app.ricettedifamiglia.online (Cloudflare: Worker, Durable Object SQLite, R2)
+- **Test**: https://loris-srv01.dala-tortoise.ts.net:9870/ (server Debian, solo Tailscale)
+- Specifica: `docs/SPEC.md` · rilasci: `docs/RILASCI.md` · Cloudflare: `docs/CLOUDFLARE.md` ·
+  operazioni sul server di test: `docs/OPERAZIONI.md` · avanzamento: `docs/AVANZAMENTO.md`
 
 ## Uso
 
-1. Da Chrome (Android o PC), con Tailscale attivo, apri l'indirizzo di produzione.
+1. Da Chrome (Android o PC) apri https://app.ricettedifamiglia.online con il link d'invito ricevuto.
 2. Menu di Chrome → *Installa app*.
 3. *Eventi → Nuovo*: occasione, data, persone. Poi scrivi i piatti nelle portate (Invio,
    oppure incolla un elenco). Dalla voce di un piatto: *Crea nel ricettario*, incolla gli
@@ -44,7 +45,10 @@ Da telefono in sviluppo: https://loris-srv01.dala-tortoise.ts.net:8443/ (tailsca
 
 ## Rilascio
 
+Procedura completa in `docs/RILASCI.md`: prima TEST, poi la prova di Loris, poi PRODUZIONE.
+
 ```sh
-scripts/rilascia.sh            # da main, albero pulito: prova su copia dei dati, backup, cambio atomico, controlli
+scripts/rilascia.sh <ramo>         # TEST (Debian): unisce in main, controlli, push, migrazioni con backup, rilascio
+scripts/cloudflare/rilascia.sh     # PRODUZIONE (Cloudflare): solo il commit già attivo su TEST
 scripts/ripristina-rilascio.sh <id>
 ```

@@ -41,10 +41,18 @@ GitHub):
 scripts/cloudflare/rilascia.sh
 ```
 
-Controlli, prove sul Worker in locale, build, creazione del bucket se manca, `npx wrangler deploy`,
-verifica di `https://app.ricettedifamiglia.online/api/v1/salute` (`{"ok":true,"versioneApi":1}`) e
-del 401 senza sessione. Il primo rilascio crea il Durable Object (schema 15 e catalogo al primo
-accesso) e il dominio personalizzato (certificato in pochi minuti).
+Lo script accetta solo il commit attivo su TEST (docs/RILASCI.md); poi controlli, prove sul Worker in
+locale, build, creazione del bucket se manca, `npx wrangler deploy`, verifica di
+`https://app.ricettedifamiglia.online/api/v1/salute` (`{"ok":true,"versioneApi":1}`) e del 401
+senza sessione.
+
+**Migrazioni di schema**: le applica il Durable Object al suo avvio, dopo un backup
+`backup/pre-migrazione-<data>-v<schema>.json` in R2. Dopo un rilascio con una migrazione si controlla
+che quel backup ci sia (elenco degli oggetti del bucket con prefisso `backup/`). Se il backup non
+riesce, nessuna migrazione viene applicata e il Worker non parte (errore 1101, «Backup pre-migrazione
+fallito» nei log di `npx wrangler tail`): si torna subito alla versione precedente con
+`npx wrangler rollback <id della versione precedente>` (lo schema non è cambiato) e si corregge.
+Incidente del 19/11/2026: SPEC §32.6, AVANZAMENTO.
 
 ## Console e collegamento dei dispositivi
 
