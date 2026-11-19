@@ -2168,21 +2168,31 @@ M2. Migrazioni `0011_edizioni.sql` (`eventi.serie_id`) e `0012_origine_voci.sql`
 
 ## 26. Riepilogo «A che punto siamo?»
 
-M3. In cima alla Panoramica; `GET /eventi/:id/riepilogo` aggrega dati esistenti in una sola
-richiesta. Ogni indicatore apre la sua sezione; quelli delle funzioni non usate non compaiono.
+M3, rivisto nella 7.5 (piano di evoluzione fase 3, D9). In cima alla Panoramica;
+`GET /eventi/:id/riepilogo` aggrega dati esistenti in una sola richiesta. Ogni indicatore apre la
+sua sezione; quelli delle funzioni non usate non compaiono.
 
-- Sempre: coperti e modalità. Con l'elenco: confermati e in attesa. Ordine e «Tutto pronto»:
-  §29.3.
-- Menù: «Menù ancora vuoto» senza piatti e «Menù in preparazione» con portate ancora senza piatti
-  (elencate, con il suggerimento di togliere quelle che non servono) sono cose da completare;
-  «Menù completato» (con il numero di piatti) fra le cose a posto quando ogni portata dell'evento ha
-  almeno un piatto. Nessun numero minimo di portate e nessun segno manuale: le portate dell'evento
-  dicono cosa si vuole servire (§7.8).
-- «Chi porta», solo se usato (un piatto affidato o una cosa da portare): cose da portare senza
-  nessuno e incarichi di chi non partecipa (attenzione), incarichi da completare, piatti non
-  affidati (solo informazione: li può preparare chi organizza).
-- Piano (da fare, in ritardo), proposte da decidere, sondaggi aperti, spesa (da comprare, da
-  verificare). Nessuna nuova scadenza o obbligo. Evento archiviato: niente cose da fare.
+- **Gruppi** delle cose in sospeso: **Da organizzare** (menù, coperti, conferme, chi porta,
+  proposte, sondaggi), **Da acquistare** (spesa), **Da preparare** (piano). Poi «Da sapere»
+  (suggerimenti), «Già a posto», «Non ancora usati». «Mancano ancora N cose» conta solo le cose in
+  sospeso; senza: «Tutto pronto».
+- **Livelli**: *da risolvere* (impedisce davvero di essere pronti: menù vuoto, coperti a zero,
+  cose da portare senza nessuno, incarichi di chi non partecipa, articoli da verificare, attività
+  in ritardo); *aperto* (normale mentre si organizza: menù in preparazione, conferme in attesa,
+  incarichi da completare, proposte, sondaggi, articoli da comprare, attività da fare con la
+  prossima); *suggerimento* (mai conteggiato: piatti non affidati, piatti in spesa senza ricetta o
+  con una ricetta senza ingredienti — la spesa non li conta; chi li toglie dalla spesa o li affida
+  non riceve più l'avviso).
+- Menù: «Menù ancora vuoto» senza piatti; «Menù in preparazione» con portate ancora senza piatti
+  (elencate, con il suggerimento di togliere quelle che non servono); «Menù completato» (con il
+  numero di piatti) quando ogni portata ha almeno un piatto. Nessun numero minimo di portate o
+  piatti, nessun segno manuale (§7.8). Nessuna ricetta deve avere ingredienti o procedimento.
+- Piano: in ritardo un'attività da fare del giorno passato o di oggi con l'ora passata, in **ora
+  italiana** anche sul Worker (orologio UTC); `attivita.prossima` è la prossima da fare.
+- Spesa: `articoli`, da comprare, da verificare, `senzaRicetta`, `senzaIngredienti`; presente anche
+  senza lista se ci sono suggerimenti; «Spesa fatta» solo se c'era una lista.
+- **Evento passato** (giorno passato o evento concluso, `passato`): niente cose da fare né
+  suggerimenti, solo «Evento passato» e ciò che è a posto. Evento archiviato: il riepilogo non c'è.
 - Test: `server/api/riepilogo.test.ts`, `src/features/eventi/Riepilogo.test.tsx`, e2e `edizioni.spec.ts`.
 
 ## 27. Confronto fra edizioni
@@ -2746,6 +2756,7 @@ altrove lo si copia in un'altra Famiglia o come ricetta personale. Nessuna migra
 | 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |
 | 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |
 | 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |
+| 19/11/2026 | 7.5 — **Riepilogo a gruppi** (§26): Da organizzare, Da acquistare, Da preparare; livelli da risolvere / aperto / suggerimento; ritardo con l'ora italiana, prossima attività, piatti senza ricetta o ingredienti come suggerimento, evento passato |
 | 19/11/2026 | 7.4 — **Ricette della Famiglia attiva** (§37): personali sempre visibili, quelle di una Famiglia solo con quella attiva; nei menù una ricetta di un'altra Famiglia entra come copia |
 | 19/11/2026 | 7.3 — **Ricette pubbliche** fra Famiglie (§36): visibilità pubblica per gli utenti con sessione, preferenza «Includi ricette pubbliche», copia privata in una propria Famiglia, uso nei menù tramite copia; le copie fra Famiglie nascono private |
 | 19/11/2026 | 7.2 — **Famiglia d'origine** delle ricette (§35): migrazione 0016 senza assegnazioni arbitrarie, origine alla nascita, fissa, indicata dal proprietario se manca |

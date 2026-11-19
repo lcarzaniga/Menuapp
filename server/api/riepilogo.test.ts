@@ -2,7 +2,8 @@
 // aggiornamento dopo partecipanti e incarichi, eventi senza funzioni collaborative.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { SchemaRiepilogoEvento } from '../../src/contratto/edizioni.ts'
-import { appDiProva, type AppDiProva, type ClientDiProva } from '../prova.ts'
+import { riepilogo as servizioRiepilogo } from '../servizi/riepilogo.ts'
+import { appDiProva, type AppDiProva, type ClientDiProva, ID_AMMINISTRATORE } from '../prova.ts'
 
 let t: AppDiProva
 let anna: ClientDiProva & { id: string }
@@ -39,6 +40,7 @@ describe('a che punto siamo', () => {
       sondaggi: null,
       spesa: null,
       archiviato: false,
+      passato: false,
     })
     await ok(t.scrivi('POST', `${P}/eventi/ev/voci`, { voci: [{ id: 'v1', portataId: portate[1]!.id, nome: 'Risotto' }, { id: 'v2', portataId: portate[2]!.id, nome: 'Arrosto' }] }))
     // Il menù non è più vuoto ma è in preparazione: restano portate senza piatti (SPEC §26).
@@ -77,7 +79,8 @@ describe('a che punto siamo', () => {
     r = await riepilogo()
     expect(r.incarichi).toEqual({ coseSenzaResponsabile: 1, daCompletare: 1, piattiNonAffidati: 1, responsabiliAssenti: 0 })
     // La torta è fuori dalla spesa e nessun altro piatto ha ricetta: niente da comprare.
-    expect(r.spesa).toBeNull()
+    // …solo il suggerimento del risotto, che non ha una ricetta.
+    expect(r.spesa).toMatchObject({ articoli: 0, daComprare: 0, senzaRicetta: ['Risotto'] })
     await ok(t.scrivi('PUT', `${P}/partecipanti/pm`, { nome: 'Zio Marco', categoria: 'adulto', stato: 'assente', note: '', versione: 2 }))
     expect((await riepilogo()).incarichi).toMatchObject({ responsabiliAssenti: 1 })
     await ok(t.scrivi('POST', `${P}/voci/v2/completa`, { versione: torta.versione + 1, completato: true }))
@@ -85,7 +88,7 @@ describe('a che punto siamo', () => {
     // Piano: una attività in ritardo e una futura.
     await ok(t.scrivi('POST', `${P}/eventi/ev/attivita`, { id: 'a1', titolo: 'Ordinare il pesce', data: '2020-01-01', ora: null, voceMenuId: null, note: '' }))
     await ok(t.scrivi('POST', `${P}/eventi/ev/attivita`, { id: 'a2', titolo: 'Apparecchiare', data: '2030-06-01', ora: null, voceMenuId: null, note: '' }))
-    expect((await riepilogo()).attivita).toEqual({ daFare: 2, inRitardo: 1 })
+    expect((await riepilogo()).attivita).toEqual({ daFare: 2, inRitardo: 1, prossima: { titolo: 'Apparecchiare', data: '2030-06-01', ora: null } })
     // Bacheca: una proposta da decidere e un sondaggio aperto.
     await ok(t.scrivi('POST', `${P}/eventi/ev/messaggi`, { id: 'm1', testo: 'Che ne dite?', proposta: { nome: 'Tiramisù', portataNome: 'Dolci' } }))
     await ok(t.scrivi('POST', `${P}/eventi/ev/messaggi`, { id: 'm2', testo: 'Che ora?', sondaggio: { opzioni: ['12', '13'] } }))
@@ -93,7 +96,26 @@ describe('a che punto siamo', () => {
     expect(r).toMatchObject({ proposte: { inAttesa: 1 }, sondaggi: { aperti: 1 } })
     // La spesa compare quando c'è qualcosa da comprare.
     await ok(t.scrivi('POST', `${P}/voci/v2/rinuncia`, { versione: torta.versione + 2 }))
-    expect((await riepilogo()).spesa).toEqual({ daComprare: 2, daVerificare: 0, avvisi: expect.any(Number) })
+    expect((await riepilogo()).spesa).toMatchObject({ daComprare: 2, daVerificare: 0, senzaRicetta: ['Risotto'], senzaIngredienti: [] })
+  })
+
+  it('piatti in spesa senza ricetta: suggeriti anche senza lista; fuori dalla spesa per scelta non contano', async () => {
+    await ok(t.scrivi('POST', `${P}/eventi/ev/voci`, { voci: [{ id: 'v1', portataId: portate[1]!.id, nome: 'Pane' }] }))
+    expect((await riepilogo()).spesa).toEqual({ articoli: 0, daComprare: 0, daVerificare: 0, avvisi: 1, senzaRicetta: ['Pane'], senzaIngredienti: [] })
+    await ok(t.scrivi('PUT', `${P}/voci/v1`, { nome: 'Pane', piattoId: null, porzioni: null, incaricato: '', inSpesa: false, note: '', versione: 1 }))
+    expect((await riepilogo()).spesa).toBeNull()
+  })
+
+  it('in ritardo con l\'ora italiana; prossima attività; evento passato', async () => {
+    const u = { id: ID_AMMINISTRATORE, nome: 'Loris', ruolo: 'amministratore' as const, sessioneId: '', ingresso: 'privato' as const }
+    await ok(t.scrivi('POST', `${P}/eventi/ev/attivita`, { id: 'a1', titolo: 'Ragù', data: '2030-05-31', ora: '10:00', voceMenuId: null, note: '' }))
+    await ok(t.scrivi('POST', `${P}/eventi/ev/attivita`, { id: 'a2', titolo: 'Tavola', data: '2030-05-31', ora: '18:00', voceMenuId: null, note: '' }))
+    // 31/5/2030 alle 11:30 in Italia sono le 9:30 UTC: il ragù è in ritardo, la tavola è la prossima.
+    const r = servizioRiepilogo(t.db, u, 'ev', Date.parse('2030-05-31T09:30:00Z'))
+    expect(r.attivita).toEqual({ daFare: 2, inRitardo: 1, prossima: { titolo: 'Tavola', data: '2030-05-31', ora: '18:00' } })
+    expect(r.passato).toBe(false)
+    // Mezzanotte e mezza del 2/6 in Italia (22:30 UTC dell'1/6): l'evento è passato.
+    expect(servizioRiepilogo(t.db, u, 'ev', Date.parse('2030-06-01T22:30:00Z')).passato).toBe(true)
   })
 
   it('evento archiviato: coperti e partecipanti, nessuna cosa da fare', async () => {

@@ -25,6 +25,16 @@ export function dataLocale(d: Date): DataISO {
   return `${a}-${m}-${g}`
 }
 
+/**
+ * Data e ora correnti in Italia, anche dove l'orologio del sistema è in UTC (Worker di Cloudflare):
+ * servono per dire se un'attività è in ritardo.
+ */
+export function adessoInItalia(d = new Date()): { data: DataISO; ora: Ora } {
+  const parti = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d)
+  const p = Object.fromEntries(parti.map((x) => [x.type, x.value]))
+  return { data: `${p.year}-${p.month}-${p.day}`, ora: `${p.hour}:${p.minute}` }
+}
+
 export function oggiISO(): DataISO {
   return dataLocale(new Date())
 }

@@ -512,10 +512,20 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   personale. Interfaccia: filtri ed etichette del ricettario, «Pubblica nell'app…» con conferma,
   «Copia in una mia Famiglia», «Hai già una copia», suggerimenti del menù. SPEC §36.
 
-## Ricette della Famiglia attiva (19/11/2026, ramo `ricette-della-famiglia`)
+## Ricette della Famiglia attiva (19/11/2026, su TEST `20261119-1111-6411855`)
 
 - Richiesta di Loris provando la 1B su TEST con una seconda Famiglia: le ricette di una Famiglia
   solo in quella Famiglia; le personali sempre; per usarle altrove si copiano. SPEC §37.
 - `GET /piatti?famiglia=`, ricettario e suggerimenti del menù per Famiglia (attiva / dell'evento);
   `piattoPerEvento` copia nella Famiglia dell'evento le ricette di altre Famiglie. Nessuna migrazione.
 - Test: `npm run check` (723), e2e completi (48).
+- Provata da Loris su TEST («ok a posto»).
+
+## Fase 3 — «A che punto siamo?» a gruppi (19/11/2026, ramo `riepilogo-gruppi`)
+
+- Gruppi Da organizzare / Da acquistare / Da preparare, livelli da risolvere / aperto /
+  suggerimento, «Da sapere»; ritardo con l'ora italiana (`adessoInItalia`, anche sul Worker),
+  prossima attività, piatti in spesa senza ricetta o ingredienti come suggerimento, «Evento
+  passato». Nessuna migrazione. SPEC §26.
+- E2e multi-famiglia: il controllo del ricettario usava un elenco in cache creato dalla pagina
+  dell'evento (ricette create dall'API esterna): ricaricamento nel test.

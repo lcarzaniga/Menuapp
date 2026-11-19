@@ -59,9 +59,16 @@ test('una Famiglia senza selettore, poi due Famiglie con selettore e contenuti s
 
   // Ricettario (SPEC §37): una ricetta dei Bianchi si vede solo con loro attivi, una personale sempre.
   const bianchi = (await apiLeggi<{ id: string; nome: string }[]>(request, '/gruppi')).find((g) => g.nome === 'Famiglia Bianchi')!
-  await apiScrivi(request, 'post', '/piatti', { id: 'mf-salsiccia', nome: 'Salsiccia dei Bianchi', famiglie: [bianchi.id] })
-  await apiScrivi(request, 'post', '/piatti', { id: 'mf-personale', nome: 'Mia insalata personale', visibilita: 'privata', famigliaOrigine: bianchi.id })
+  for (const r of [
+    { id: 'mf-salsiccia', nome: 'Salsiccia dei Bianchi', famiglie: [bianchi.id] },
+    { id: 'mf-personale', nome: 'Mia insalata personale', visibilita: 'privata', famigliaOrigine: bianchi.id },
+  ]) {
+    const esito = await apiScrivi(request, 'post', '/piatti', r)
+    expect(esito.stato, JSON.stringify(esito.corpo)).toBeLessThan(300)
+  }
   await page.goto('/#/ricettario')
+  // Create dall'API, fuori dalla pagina: il ricaricamento evita di aspettare la revisione.
+  await page.reload()
   await expect(page.getByText('Salsiccia dei Bianchi')).toBeVisible()
   await expect(page.getByText('Mia insalata personale')).toBeVisible()
   await selettore(page).selectOption({ label: 'Famiglia' })

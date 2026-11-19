@@ -79,7 +79,7 @@ test('a che punto siamo: indicatori aggiornati e collegamenti alle sezioni', asy
   await page.goto('/#/eventi/ed-riep')
   // Evento appena creato: il menù vuoto non è «tutto pronto»; le parti facoltative a parte.
   await expect(page.getByTestId('stato-preparazione')).toHaveText('Manca ancora una cosa')
-  await expect(page.getByRole('list', { name: 'In sospeso' })).toHaveText(/Menù ancora vuoto/)
+  await expect(page.getByRole('list', { name: 'Da organizzare' })).toHaveText(/Menù ancora vuoto/)
   await expect(page.getByRole('list', { name: 'Non ancora usati' })).toContainText('Elenco dei partecipanti')
   await expect(page.getByLabel('Informazioni dell\'evento')).toContainText('11')
 
@@ -87,11 +87,11 @@ test('a che punto siamo: indicatori aggiornati e collegamenti alle sezioni', asy
   await apiScrivi(request, 'post', '/eventi/ed-riep/partecipanti', { id: 'ed-r1', nome: 'Nonna Lina', stato: 'confermato' })
   await apiScrivi(request, 'post', '/eventi/ed-riep/partecipanti', { id: 'ed-r2', nome: 'Zio Pino' })
   await page.reload()
-  // Prima ciò che manca: la cosa senza nessuno (un problema), poi la conferma che manca.
-  const sospese = page.getByRole('list', { name: 'In sospeso' })
+  // Da organizzare: prima ciò che è da risolvere (menù vuoto, cosa senza nessuno), poi la conferma che manca.
+  const sospese = page.getByRole('list', { name: 'Da organizzare' })
   await expect(page.getByTestId('stato-preparazione')).toHaveText('Mancano ancora 3 cose')
-  await expect(sospese.getByRole('listitem').nth(0)).toContainText('1 cosa da portare senza nessuno')
-  await expect(sospese.getByRole('listitem').nth(1)).toContainText('Menù ancora vuoto')
+  await expect(sospese.getByRole('listitem').nth(0)).toContainText('Menù ancora vuoto')
+  await expect(sospese.getByRole('listitem').nth(1)).toContainText('1 cosa da portare senza nessuno')
   await expect(sospese.getByRole('listitem').nth(2)).toContainText('1 in attesa di conferma')
   await expect(sospese.getByRole('listitem').nth(2)).toContainText('1 confermato')
   await foto(page, '03-a-che-punto')
@@ -107,6 +107,8 @@ test('a che punto siamo: indicatori aggiornati e collegamenti alle sezioni', asy
   await page.goto('/#/eventi/ed-riep')
   await page.reload()
   await expect(sospese.getByRole('link', { name: /Menù in preparazione/ })).toContainText('ancora senza piatti')
+  // Le tartine non hanno una ricetta: solo un suggerimento, non una cosa che manca.
+  await expect(page.getByRole('list', { name: 'Da sapere' })).toContainText('Un piatto senza ricetta: Tartine')
   // Tolte le portate che non servono, il menù è completato e passa fra le cose a posto.
   expect((await apiScrivi(request, 'put', '/eventi/ed-riep', { ...ev, portate: [ev.portate[0]], versione: ev.versione })).stato).toBe(200)
   await page.reload()

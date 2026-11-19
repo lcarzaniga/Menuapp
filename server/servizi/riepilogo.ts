@@ -3,7 +3,7 @@
 import type { PerTe, RiepilogoOrganizzativo } from '../../src/contratto/edizioni.ts'
 import { contaPresenze } from '../../src/domain/partecipanti.ts'
 import { copertiEquivalenti } from '../../src/domain/porzioni.ts'
-import { oggiISO } from '../../src/domain/tempo.ts'
+import { adessoInItalia } from '../../src/domain/tempo.ts'
 import { type Db, lettura } from '../db/connessione.ts'
 import * as repoPart from '../db/repo/partecipanti.ts'
 import * as repo from '../db/repo/riepilogo.ts'
@@ -12,7 +12,8 @@ import { leggiEvento } from './eventi.ts'
 import { permessoEvento, puoPartecipare, richiediEvento, type UtenteCorrente } from './permessi.ts'
 import { listaSpesa } from './spesa.ts'
 
-export function riepilogo(db: Db, u: UtenteCorrente, eventoId: string, adesso = Date.now(), oggi = oggiISO()): RiepilogoOrganizzativo {
+export function riepilogo(db: Db, u: UtenteCorrente, eventoId: string, adesso = Date.now()): RiepilogoOrganizzativo {
+  const { data: oggi, ora } = adessoInItalia(new Date(adesso))
   return lettura(db, () => {
     richiediEvento(db, u, eventoId, 'lettura')
     const e = leggiEvento(db, eventoId)
@@ -26,6 +27,8 @@ export function riepilogo(db: Db, u: UtenteCorrente, eventoId: string, adesso = 
         ? { confermati: c.adulti.confermati + c.bambini.confermati, inAttesa: c.adulti.inAttesa + c.bambini.inAttesa, assenti: c.adulti.assenti + c.bambini.assenti }
         : null,
       archiviato,
+      // Passato il giorno dell'evento (o concluso) non restano cose da fare (SPEC §26).
+      passato: e.data < oggi || e.stato === 'concluso',
     }
     if (archiviato) return { ...base, incarichi: null, attivita: null, proposte: null, sondaggi: null, spesa: null }
 
@@ -34,7 +37,7 @@ export function riepilogo(db: Db, u: UtenteCorrente, eventoId: string, adesso = 
     const voci = inc.filter((i) => i.tipo === 'voce')
     const cose = inc.filter((i) => i.tipo === 'cosa')
     const usato = cose.length > 0 || voci.some((v) => v.incaricato)
-    const a = repo.attivita(db, eventoId, oggi)
+    const a = repo.attivita(db, eventoId, oggi, ora)
     const s = listaSpesa(db, eventoId)
     const articoli = s.voci.length + s.manuali.length
     const proposte = repo.proposteInAttesa(db, eventoId)
@@ -49,10 +52,21 @@ export function riepilogo(db: Db, u: UtenteCorrente, eventoId: string, adesso = 
             responsabiliAssenti: inc.filter((x) => x.responsabileAssente).length,
           }
         : null,
-      attivita: a.totale ? { daFare: a.da_fare, inRitardo: a.in_ritardo } : null,
+      attivita: a.totale ? { daFare: a.da_fare, inRitardo: a.in_ritardo, prossima: repo.prossimaAttivita(db, eventoId, oggi, ora) } : null,
       proposte: proposte ? { inAttesa: proposte } : null,
       sondaggi: sondaggi ? { aperti: sondaggi } : null,
-      spesa: articoli ? { daComprare: s.contatori.da_comprare, daVerificare: s.contatori.da_verificare, avvisi: s.avvisi.length } : null,
+      // Piatti in spesa senza ricetta o senza ingredienti: la spesa non li conta (solo un suggerimento).
+      spesa:
+        articoli || s.avvisi.length
+          ? {
+              articoli,
+              daComprare: s.contatori.da_comprare,
+              daVerificare: s.contatori.da_verificare,
+              avvisi: s.avvisi.length,
+              senzaRicetta: s.avvisi.filter((x) => x.tipo === 'voce_senza_ricetta').map((x) => x.nomeVoce),
+              senzaIngredienti: s.avvisi.filter((x) => x.tipo === 'piatto_senza_ingredienti').map((x) => x.nomeVoce),
+            }
+          : null,
     }
   })
 }

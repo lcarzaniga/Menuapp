@@ -85,12 +85,33 @@ export const SchemaRiepilogoEvento = z.object({
       responsabiliAssenti: z.number().int(),
     })
     .nullable(),
-  attivita: z.object({ daFare: z.number().int(), inRitardo: z.number().int() }).nullable(),
+  attivita: z
+    .object({
+      daFare: z.number().int(),
+      /** Da fare con il giorno passato, o di oggi con l'ora passata (ora italiana). */
+      inRitardo: z.number().int(),
+      /** La prossima da fare non in ritardo. */
+      prossima: z.object({ titolo: z.string(), data: DataISO, ora: z.string().nullable() }).nullable(),
+    })
+    .nullable(),
   proposte: z.object({ inAttesa: z.number().int() }).nullable(),
   sondaggi: z.object({ aperti: z.number().int() }).nullable(),
-  spesa: z.object({ daComprare: z.number().int(), daVerificare: z.number().int(), avvisi: z.number().int() }).nullable(),
+  spesa: z
+    .object({
+      /** Articoli della lista (calcolati e aggiunti a mano). */
+      articoli: z.number().int(),
+      daComprare: z.number().int(),
+      daVerificare: z.number().int(),
+      avvisi: z.number().int(),
+      /** Piatti in spesa senza ricetta o con una ricetta senza ingredienti: la spesa non li conta. */
+      senzaRicetta: z.array(z.string()),
+      senzaIngredienti: z.array(z.string()),
+    })
+    .nullable(),
   /** Evento archiviato: solo coperti e partecipanti. */
   archiviato: z.boolean(),
+  /** Il giorno dell'evento è passato, o l'evento è concluso: niente più cose da fare. */
+  passato: z.boolean(),
 })
 export type RiepilogoOrganizzativo = z.infer<typeof SchemaRiepilogoEvento>
 

@@ -14,13 +14,31 @@ export const sondaggiAperti = (db: Db, eventoId: string, adesso: number) =>
     adesso,
   )
 
-export const attivita = (db: Db, eventoId: string, oggi: string) =>
+/** Attività del piano: da fare e in ritardo (giorno passato, oppure oggi con l'ora passata). */
+export const attivita = (db: Db, eventoId: string, oggi: string, ora: string) =>
   uno<{ da_fare: number; in_ritardo: number; totale: number }>(
     db,
-    "SELECT count(*) AS totale, coalesce(sum(stato = 'da_fare'), 0) AS da_fare, coalesce(sum(stato = 'da_fare' AND data < ?), 0) AS in_ritardo FROM attivita WHERE evento_id = ?",
+    `SELECT count(*) AS totale, coalesce(sum(stato = 'da_fare'), 0) AS da_fare,
+       coalesce(sum(stato = 'da_fare' AND (data < ? OR (data = ? AND ora IS NOT NULL AND ora < ?))), 0) AS in_ritardo
+     FROM attivita WHERE evento_id = ?`,
     oggi,
+    oggi,
+    ora,
     eventoId,
   )!
+
+/** La prossima attività da fare non in ritardo (data, poi ora; quelle senza ora per prime). */
+export const prossimaAttivita = (db: Db, eventoId: string, oggi: string, ora: string) =>
+  uno<{ titolo: string; data: string; ora: string | null }>(
+    db,
+    `SELECT titolo, data, ora FROM attivita
+     WHERE evento_id = ? AND stato = 'da_fare' AND (data > ? OR (data = ? AND (ora IS NULL OR ora >= ?)))
+     ORDER BY data, ora IS NOT NULL, ora, ordine LIMIT 1`,
+    eventoId,
+    oggi,
+    oggi,
+    ora,
+  ) ?? null
 
 export const vociMenu = (db: Db, eventoId: string) => conta(db, 'SELECT count(*) AS n FROM voci_menu WHERE evento_id = ?', eventoId)
 
