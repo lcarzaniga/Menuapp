@@ -482,3 +482,11 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   rilascio Cloudflare (versione `8325776a`) solo dopo, con lo stesso commit. Verificato: salute ok,
   401 senza sessione, file dell'app uguali alla build, dominio principale ancora sul sito. Nessun
   dato trasferito fra gli ambienti; schema invariato (15).
+
+## Piano di evoluzione (19/11/2026, documento; ramo `piano-evoluzione`)
+
+- `docs/PIANO-EVOLUZIONE.md`: ricette pubbliche fra Famiglie (1A Famiglia d'origine, 1B pubbliche e
+  copia), riuso degli eventi (estensione di «Duplica»), riepilogo a gruppi e livelli, Regia della
+  cucina sul piano esistente; 12 decisioni aperte con la soluzione consigliata. Nessun codice
+  modificato. Dati di TEST letti in sola lettura: 77 ricette tutte con Famiglia d'origine
+  determinabile, 0 attività nel piano, attrezzature solo testo libero.
