@@ -2012,7 +2012,8 @@ Il modello è pronto per un'apertura al pubblico (Famiglie isolate tra loro). Mi
 
 ### 21.3 Ricette
 
-- Il ricettario personale non dipende dalla Famiglia attiva. Una ricetta è privata oppure
+- Dalla 7.4 (§37) il ricettario segue la Famiglia attiva: le ricette personali (private) si vedono
+  sempre, quelle di una Famiglia solo con quella Famiglia attiva. Una ricetta è privata oppure
   visibile in **una** Famiglia dell'autore (`condivisioni_piatto_gruppo`, al massimo una riga
   dalla 6.1, §28); la vedono i membri di quella Famiglia **finché l'autore ne fa parte**. Le
   ricette nuove dall'app sono visibili nella Famiglia attiva (si possono rendere private); la
@@ -2701,6 +2702,24 @@ Migrazione `0017_ricette_pubbliche.sql`.
   doppioni, copie, menù, preferenze, migrazione), `ricorrenze.test.ts` (copie private), e2e
   `ricette-pubbliche.spec.ts`, `ricorrenze.spec.ts`.
 
+## 37. Ricette della Famiglia attiva (7.4)
+
+Richiesta di Loris (19/11): ciò che appartiene a una Famiglia è solo di quella Famiglia; per usarlo
+altrove lo si copia in un'altra Famiglia o come ricetta personale. Nessuna migrazione.
+
+- **Ricettario**: con la Famiglia attiva si vedono le ricette **personali** (dell'utente, non
+  condivise con alcuna sua Famiglia: si vedono qualunque sia la Famiglia attiva), quelle **di quella
+  Famiglia** (proprie e degli altri membri) e quelle condivise con l'utente personalmente (§19.4).
+  Le ricette delle altre sue Famiglie non compaiono. Le pubbliche seguono solo la preferenza (§36).
+  `GET /piatti?famiglia=<id>`; senza il parametro l'elenco resta quello completo (compatibilità).
+- **Menù**: i suggerimenti e «Collega un piatto» mostrano le personali e quelle della Famiglia
+  dell'evento. Collegare a un evento una ricetta di un'altra Famiglia (anche propria) ne crea una
+  copia privata, indipendente e con provenienza, nella Famiglia dell'evento, riusata ai collegamenti
+  successivi (`piattoPerEvento`); così i membri dell'evento non leggono ricette di altre Famiglie.
+  Vale anche per la duplicazione di un evento in un'altra Famiglia. I collegamenti già esistenti
+  non cambiano.
+- Test: `server/api/ricette-famiglia.test.ts`, e2e `multi-famiglia.spec.ts`.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2727,6 +2746,7 @@ Migrazione `0017_ricette_pubbliche.sql`.
 | 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |
 | 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |
 | 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |
+| 19/11/2026 | 7.4 — **Ricette della Famiglia attiva** (§37): personali sempre visibili, quelle di una Famiglia solo con quella attiva; nei menù una ricetta di un'altra Famiglia entra come copia |
 | 19/11/2026 | 7.3 — **Ricette pubbliche** fra Famiglie (§36): visibilità pubblica per gli utenti con sessione, preferenza «Includi ricette pubbliche», copia privata in una propria Famiglia, uso nei menù tramite copia; le copie fra Famiglie nascono private |
 | 19/11/2026 | 7.2 — **Famiglia d'origine** delle ricette (§35): migrazione 0016 senza assegnazioni arbitrarie, origine alla nascita, fissa, indicata dal proprietario se manca |
 | 18/11/2026 | 7.1 — **Migrazione da Debian** (§33): importazione dei contenuti con corrispondenza esplicita degli utenti, piano di prova, backup pre-migrazione, verifica e annullamento; **domini** (§34): app su `app.ricettedifamiglia.online`, dominio principale con la sola pagina «Sito in costruzione» in un Worker separato |

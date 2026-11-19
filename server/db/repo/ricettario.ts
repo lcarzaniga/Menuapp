@@ -118,9 +118,30 @@ const famigliaOrigine = (r: { origine_id: string | null; origine_nome: string | 
 /** Ricette pubbliche nell'elenco: escluse, aggiunte a quelle dell'utente, o solo quelle (SPEC §36). */
 export type PubblicheInElenco = 'no' | 'si' | 'solo'
 
-export function elencaPiatti(db: Db, utenteId: string, pubbliche: PubblicheInElenco = 'no') {
-  // Le ricette che l'utente vede comunque (sue, delle sue Famiglie, condivise con lui).
-  const cerchia = `(p.proprietario_id = ? OR ${CONDIVISA_CON_LE_MIE_FAMIGLIE} OR EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id AND c.utente_id = ?))`
+/**
+ * Ricette personali di `?` (proprietario): le sue non condivise con alcuna Famiglia di cui fa parte.
+ * Si vedono qualunque sia la Famiglia attiva.
+ */
+const PERSONALE = `(p.proprietario_id = ? AND NOT EXISTS (SELECT 1 FROM condivisioni_piatto_gruppo cg
+  JOIN membri_gruppo mo ON mo.gruppo_id = cg.gruppo_id AND mo.utente_id = p.proprietario_id WHERE cg.piatto_id = p.id))`
+
+/** Ricette della Famiglia `?` (secondo parametro) viste dall'utente `?` (primo): membri entrambi. */
+const DELLA_FAMIGLIA = `EXISTS (SELECT 1 FROM condivisioni_piatto_gruppo cg
+  JOIN membri_gruppo mv ON mv.gruppo_id = cg.gruppo_id AND mv.utente_id = ?
+  JOIN membri_gruppo mo ON mo.gruppo_id = cg.gruppo_id AND mo.utente_id = p.proprietario_id
+  WHERE cg.piatto_id = p.id AND cg.gruppo_id = ?)`
+
+/**
+ * Elenco del ricettario. Senza `famiglia`: tutte le ricette che l'utente vede (sue, delle sue
+ * Famiglie, condivise con lui). Con `famiglia` (la Famiglia attiva, SPEC §37): le personali, quelle
+ * di quella Famiglia e quelle condivise con lui personalmente; le altre Famiglie restano fuori.
+ */
+export function elencaPiatti(db: Db, utenteId: string, pubbliche: PubblicheInElenco = 'no', famiglia?: string) {
+  const conMe = 'EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id AND c.utente_id = ?)'
+  const [cerchia, parametri] =
+    famiglia === undefined
+      ? [`(p.proprietario_id = ? OR ${CONDIVISA_CON_LE_MIE_FAMIGLIE} OR ${conMe})`, [utenteId, utenteId, utenteId]]
+      : [`(${PERSONALE} OR ${DELLA_FAMIGLIA} OR ${conMe})`, [utenteId, utenteId, famiglia, utenteId]]
   const dove = pubbliche === 'no' ? cerchia : pubbliche === 'si' ? `(${cerchia} OR p.pubblica = 1)` : 'p.pubblica = 1'
   return tutti<{
     id: string
@@ -157,10 +178,8 @@ export function elencaPiatti(db: Db, utenteId: string, pubbliche: PubblicheInEle
      FROM piatti p JOIN utenti u ON u.id = p.proprietario_id
      WHERE ${dove}
      ORDER BY p.nome_norm`,
-    utenteId,
-    utenteId,
-    utenteId,
-    ...(pubbliche === 'solo' ? [] : [utenteId, utenteId, utenteId]),
+    ...parametri,
+    ...(pubbliche === 'solo' ? [] : parametri),
   ).map((r) => ({
     id: r.id,
     nome: r.nome,

@@ -8,6 +8,7 @@ import { useScrittura } from '@/api/scrittura'
 import { Button } from '@/components/ui/button'
 import { Casella, Input } from '@/components/ui/campi'
 import { usePuoScrivere } from '@/connessione/stato'
+import { useAccessoEvento } from '@/features/accesso/sessione'
 import type { VoceMenu } from '@/domain/tipi.ts'
 import { cercaPiatti, NotaIngredienti, NotaPubblica } from './SuggerimentiPiatti'
 
@@ -17,7 +18,8 @@ export function CollegaPiatto({ voce, onCollega, onCreato }: { voce: VoceMenu; o
   const preferenza = useIncludiPubbliche()
   const [anchePubbliche, setAnchePubbliche] = useState<boolean | null>(null)
   const pubbliche = anchePubbliche ?? preferenza
-  const piatti = usePiatti(pubbliche ? 'si' : 'no')
+  // Personali e della Famiglia dell'evento (SPEC §37).
+  const piatti = usePiatti(pubbliche ? 'si' : 'no', useAccessoEvento(voce.eventoId).data?.gruppo?.id)
   const naviga = useNavigate()
   const puoScrivere = usePuoScrivere()
   const crea = useScrittura((piattoId: string) => api.crea<{ piatto: { id: string } }>(`/voci/${voce.id}/crea-piatto`, { piattoId, versione: voce.versione }), {

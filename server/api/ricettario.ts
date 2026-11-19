@@ -38,7 +38,7 @@ export function rotteRicettario(app: FastifyInstance, ctx: Contesto): void {
   app.put(`${P}/account/preferenze`, async (req) => preferenze.impostaPreferenze(db, chi(req).id, valida(SchemaPreferenze, req.body)))
   app.get(`${P}/piatti`, async (req) => {
     const q = valida(SchemaElencoPiatti, req.query)
-    return r.elencaPiatti(db, chi(req).id, q.q, q.pubbliche)
+    return r.elencaPiatti(db, chi(req).id, q.q, q.pubbliche, q.famiglia)
   })
   app.post(`${P}/piatti`, async (req, reply) => {
     const u = chi(req)

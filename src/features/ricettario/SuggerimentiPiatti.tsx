@@ -32,9 +32,12 @@ export function NotaPubblica({ piatto }: { piatto: RiepilogoPiatto }) {
 /** Le proprie prima delle pubbliche di altre Famiglie, a parità di pertinenza. */
 const propriePrima = (r: Risultato<RiepilogoPiatto>[]) => [...r.filter((x) => !x.ricetta.soloPubblica), ...r.filter((x) => x.ricetta.soloPubblica)]
 
-/** Ricette proposte per il testo scritto (le stesse che mostra SuggerimentiPiatti). */
-export function usePiattiProposti(testo: string, attivi: boolean): Risultato<RiepilogoPiatto>[] {
-  const piatti = usePiatti(useIncludiPubbliche() ? 'si' : 'no')
+/**
+ * Ricette proposte per il testo scritto (le stesse che mostra SuggerimentiPiatti): le personali e
+ * quelle della Famiglia dell'evento (SPEC §37), più le pubbliche se l'utente le include.
+ */
+export function usePiattiProposti(testo: string, attivi: boolean, famigliaEvento: string | null | undefined): Risultato<RiepilogoPiatto>[] {
+  const piatti = usePiatti(useIncludiPubbliche() ? 'si' : 'no', famigliaEvento)
   return attivi ? propriePrima(cercaPiatti(piatti.data ?? [], testo, 10)).slice(0, 5) : []
 }
 

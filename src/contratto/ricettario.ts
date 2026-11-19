@@ -11,7 +11,12 @@ export const VISIBILITA_PIATTO = ['famiglia', 'privata', 'pubblica'] as const
 export type VisibilitaPiatto = (typeof VISIBILITA_PIATTO)[number]
 export const SchemaVisibilita = z.object({ visibilita: z.enum(VISIBILITA_PIATTO) })
 /** Ricette pubbliche nell'elenco: no (predefinito), si (anche le pubbliche), solo. */
-export const SchemaElencoPiatti = z.object({ q: z.string().max(200).optional(), pubbliche: z.enum(['no', 'si', 'solo']).default('no') })
+export const SchemaElencoPiatti = z.object({
+  q: z.string().max(200).optional(),
+  pubbliche: z.enum(['no', 'si', 'solo']).default('no'),
+  /** Famiglia attiva (SPEC §37): le personali più quelle di questa Famiglia. Assente: tutte. */
+  famiglia: Id.optional(),
+})
 
 /** Preferenze personali, uguali su tutti i dispositivi (SPEC §36). */
 export const SchemaPreferenze = z.object({ includiPubbliche: z.boolean(), versione: Versione })

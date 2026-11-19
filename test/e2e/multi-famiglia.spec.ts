@@ -57,6 +57,18 @@ test('una Famiglia senza selettore, poi due Famiglie con selettore e contenuti s
   await expect(page.getByText('Grigliata dai Bianchi')).toHaveCount(0)
   await selettore(page).selectOption({ label: 'Famiglia Bianchi' })
 
+  // Ricettario (SPEC §37): una ricetta dei Bianchi si vede solo con loro attivi, una personale sempre.
+  const bianchi = (await apiLeggi<{ id: string; nome: string }[]>(request, '/gruppi')).find((g) => g.nome === 'Famiglia Bianchi')!
+  await apiScrivi(request, 'post', '/piatti', { id: 'mf-salsiccia', nome: 'Salsiccia dei Bianchi', famiglie: [bianchi.id] })
+  await apiScrivi(request, 'post', '/piatti', { id: 'mf-personale', nome: 'Mia insalata personale', visibilita: 'privata', famigliaOrigine: bianchi.id })
+  await page.goto('/#/ricettario')
+  await expect(page.getByText('Salsiccia dei Bianchi')).toBeVisible()
+  await expect(page.getByText('Mia insalata personale')).toBeVisible()
+  await selettore(page).selectOption({ label: 'Famiglia' })
+  await expect(page.getByText('Salsiccia dei Bianchi')).toHaveCount(0)
+  await expect(page.getByText('Mia insalata personale')).toBeVisible()
+  await selettore(page).selectOption({ label: 'Famiglia Bianchi' })
+
   // ── Invito ad aderire per una persona con un account ma senza Famiglie
   await page.goto('/#/famiglia?scheda=persone')
   await page.getByRole('button', { name: 'Invita nella Famiglia' }).click()

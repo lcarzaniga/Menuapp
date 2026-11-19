@@ -20,6 +20,7 @@ import { CorpoScheda, useEventoCorrente } from '@/features/eventi/LayoutEvento'
 import { SuggerimentiPiatti, usePiattiProposti } from '@/features/ricettario/SuggerimentiPiatti'
 import { cn } from '@/lib/utils'
 import { EditorVoce } from './EditorVoce'
+import { useAccessoEvento } from '@/features/accesso/sessione'
 import { GestionePortate } from './GestionePortate'
 
 type Portata = Menu['portate'][number]
@@ -115,7 +116,8 @@ function InserimentoRapido({ evento, portata, autoFocus }: { evento: Evento; por
   const [attivo, setAttivo] = useState(-1)
   const rif = useRef<HTMLInputElement>(null)
   const idElenco = useId()
-  const trovati = usePiattiProposti(testo, focus && !chiusi && testo.trim().length >= 2)
+  const famigliaEvento = useAccessoEvento(evento.id).data?.gruppo?.id
+  const trovati = usePiattiProposti(testo, focus && !chiusi && testo.trim().length >= 2, famigliaEvento)
   const puoScrivere = usePuoScrivere()
   const crea = useScrittura(
     (voci: { nome: string; piattoId?: string | null }[]) =>

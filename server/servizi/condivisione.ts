@@ -314,14 +314,20 @@ export function piattoPerEvento(db: Db, cartellaFoto: CartellaFile, u: UtenteCor
   const proprietarioEvento = repo.proprietarioEvento(db, eventoId)
   if (!proprietarioEvento) throw nonTrovato('Evento')
   const proprietarioPiatto = repo.proprietarioPiatto(db, piattoId)!
-  if (proprietarioPiatto === proprietarioEvento) return piattoId
+  // Una ricetta di un'altra Famiglia resta di quella Famiglia (SPEC §37): nell'evento entra una copia.
+  const gruppoEvento = repo.gruppoEvento(db, eventoId) ?? null
+  const famigliaRicetta = repo.famigliePiatto(db, piattoId)[0] ?? null
+  const altraFamiglia = famigliaRicetta !== null && famigliaRicetta.id !== gruppoEvento
+  if (proprietarioPiatto === proprietarioEvento && !altraFamiglia) return piattoId
   if (proprietarioPiatto !== u.id && !repo.piattoLeggibileDaAltri(db, piattoId, u.id)) throw accessoNegato('Ricetta non disponibile')
+  // Copia già fatta, purché non sia a sua volta di un'altra Famiglia.
   const esistente = repoRic.copiaEsistente(db, piattoId, proprietarioEvento)
-  if (esistente) return esistente
+  if (esistente && (repo.famigliePiatto(db, esistente)[0]?.id ?? gruppoEvento) === gruppoEvento) return esistente
   const famigliaOrigine = repo.famigliaEventoPer(db, eventoId, proprietarioEvento)
-  // Pubblica di un'altra Famiglia (SPEC §36, D5): copia indipendente con la provenienza, come dal
+  // Pubblica o di un'altra Famiglia (SPEC §36, §37): copia indipendente con la provenienza, come dal
   // ricettario; nessun legame con voti e classifiche della Famiglia d'origine.
-  if (!repo.piattoLeggibileDaAltri(db, piattoId, proprietarioEvento, false) && repoRic.ePubblica(db, piattoId)) {
+  const soloPubblica = !repo.piattoLeggibileDaAltri(db, piattoId, proprietarioEvento, false) && repoRic.ePubblica(db, piattoId)
+  if (altraFamiglia || soloPubblica) {
     const id = copiaPiattoInterna(db, cartellaFoto, piattoId, randomUUID(), proprietarioEvento, adesso, { indipendente: true, famigliaOrigine })
     repoRic.impostaProvenienza(db, id, provenienzaDi(db, piattoId, u, repoRic.proprietaPiatto(db, piattoId)!.famigliaOrigine?.nome ?? null, adesso))
     return id

@@ -49,11 +49,17 @@ export const chiaviRicettario = {
   piatto: (id: string) => ['piatto', id] as const,
   ingredienti: ['ingredienti'] as const,
 }
-/** Ricette dell'utente; con `pubbliche` anche quelle pubbliche nell'app, o solo quelle (SPEC §36). */
-export const usePiatti = (pubbliche: 'no' | 'si' | 'solo' = 'no') =>
+/**
+ * Ricette dell'utente; con `pubbliche` anche quelle pubbliche nell'app, o solo quelle (SPEC §36); con
+ * `famiglia` solo le personali e quelle di quella Famiglia (SPEC §37).
+ */
+export const usePiatti = (pubbliche: 'no' | 'si' | 'solo' = 'no', famiglia?: string | null) =>
   useQuery({
-    queryKey: [...chiaviRicettario.piatti, pubbliche],
-    queryFn: () => api.leggi<RiepilogoPiatto[]>(pubbliche === 'no' ? '/piatti' : `/piatti?pubbliche=${pubbliche}`),
+    queryKey: [...chiaviRicettario.piatti, pubbliche, famiglia ?? null],
+    queryFn: () => {
+      const q = new URLSearchParams({ ...(pubbliche === 'no' ? {} : { pubbliche }), ...(famiglia ? { famiglia } : {}) }).toString()
+      return api.leggi<RiepilogoPiatto[]>(q ? `/piatti?${q}` : '/piatti')
+    },
   })
 export const usePreferenze = () => useQuery({ queryKey: ['preferenze'], queryFn: () => api.leggi<Preferenze>('/account/preferenze') })
 /** «Includi ricette pubbliche»: spenta finché le preferenze non sono arrivate. */

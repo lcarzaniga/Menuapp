@@ -6,6 +6,7 @@ import { api } from '@/api/client'
 import { useImpostazioni, usePiatti, usePreferenze } from '@/api/query'
 import { useScrittura } from '@/api/scrittura'
 import type { Preferenze } from '@/contratto/ricettario.ts'
+import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 import { Caricamento, Pagina, Vuoto } from '@/components/Pagina'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -37,7 +38,9 @@ export function PaginaRicettario() {
     (p: Preferenze) => api.modifica<Preferenze>('/account/preferenze', { includiPubbliche: !p.includiPubbliche, versione: p.versione }),
     { oggetto: 'Le preferenze' },
   )
-  const piatti = usePiatti(includiPubbliche ? 'si' : 'no')
+  // Le ricette di una Famiglia si vedono solo con quella Famiglia attiva; le personali sempre (SPEC §37).
+  const { attiva } = useFamigliaAttiva()
+  const piatti = usePiatti(includiPubbliche ? 'si' : 'no', attiva?.id)
   const imp = useImpostazioni()
   const [parametri, setParametri] = useSearchParams()
   const [soloVuoti, setSoloVuoti] = useState(false)
