@@ -12,6 +12,18 @@ export const SchemaDuplica = z.object({
   gruppoId: Id.nullable().optional(),
   copiaPartecipanti: z.boolean().default(false),
   /**
+   * Cosa copiare (SPEC §25): menù (portate e piatti; senza, solo le portate), partecipanti (in
+   * attesa), chi porta cosa (da assegnare, con chi se ne occupava), piano (spostato, da fare),
+   * stampa. Ciò che manca vale come prima: menù, piano e stampa sì; partecipanti da
+   * `copiaPartecipanti`; incarichi no.
+   */
+  copia: z
+    .object({ menu: z.boolean(), partecipanti: z.boolean(), incarichi: z.boolean(), piano: z.boolean(), stampa: z.boolean() })
+    .partial()
+    .optional(),
+  /** Solo l'anteprima di ciò che verrà creato: non si scrive nulla. */
+  anteprima: z.boolean().default(false),
+  /**
    * Ricorrenza della copia (della sua Famiglia o standard), `null` nessuna; assente: quella
    * dell'originale (una standard sempre, una della Famiglia se la Famiglia è la stessa).
    */
@@ -27,6 +39,23 @@ export const SchemaEsitoDuplica = z.object({
   avvisi: z.array(z.string()),
 })
 export type EsitoDuplica = z.infer<typeof SchemaEsitoDuplica>
+
+/** Come diventa la ricetta di un piatto nel nuovo evento (anteprima della duplicazione). */
+export const ESITI_RICETTA = ['collegata', 'copia', 'copia_esistente', 'dall_archivio', 'nessuna', 'non_disponibile'] as const
+
+export const SchemaAnteprimaDuplica = z.object({
+  portate: z.array(z.object({ nome: z.string(), voci: z.array(z.object({ nome: z.string(), ricetta: z.enum(ESITI_RICETTA) })) })),
+  /** Attività con le date spostate sulla nuova data, tutte da fare. */
+  attivita: z.array(z.object({ titolo: z.string(), data: DataISO, ora: z.string().nullable() })),
+  partecipanti: z.number().int(),
+  /** Piatti e cose da portare da riaffidare, con chi se ne occupava. */
+  incarichi: z.array(z.object({ nome: z.string(), precedente: z.string().nullable() })),
+  stampa: z.boolean(),
+  /** Si possono copiare gli incarichi (non da un evento archiviato, che non li conserva). */
+  incarichiDisponibili: z.boolean(),
+  avvisi: z.array(z.string()),
+})
+export type AnteprimaDuplica = z.infer<typeof SchemaAnteprimaDuplica>
 
 export const SchemaEdizione = z.object({ id: Id, nome: z.string(), data: DataISO, stato: z.string() })
 export type Edizione = z.infer<typeof SchemaEdizione>

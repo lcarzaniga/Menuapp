@@ -1,9 +1,10 @@
-// Duplicazione degli eventi e ricorrenze degli eventi (SPEC §25, §28). Si copia la struttura
-// (portate, menù, porzioni personalizzate, stile di stampa, piano da rifare e, a richiesta, i
-// partecipanti da riconfermare); mai conferme, incarichi, voti, bacheca, notifiche, spesa o
-// archiviazione. Un evento archiviato si duplica dal suo archivio, che resta com'è.
+// Duplicazione degli eventi e ricorrenze degli eventi (SPEC §25, §28). Si sceglie cosa copiare:
+// menù (portate e piatti), partecipanti da riconfermare, chi porta cosa da riassegnare, piano da
+// rifare, stampa; con un'anteprima che non scrive nulla. Mai conferme, incarichi accettati, voti,
+// bacheca, notifiche, spesa o archiviazione. Un evento archiviato si duplica dal suo archivio.
 import { randomUUID } from 'node:crypto'
-import type { Duplica, Edizione, Edizioni, EsitoDuplica } from '../../src/contratto/edizioni.ts'
+import type { AnteprimaDuplica, Duplica, Edizione, Edizioni, EsitoDuplica } from '../../src/contratto/edizioni.ts'
+import type { Precedente } from '../../src/contratto/famiglia.ts'
 import type { SceltaRicorrenza } from '../../src/contratto/eventi.ts'
 import type { Invito } from '../../src/contratto/partecipanti.ts'
 import { NESSUN_ANONIMO } from '../../src/domain/partecipanti.ts'
@@ -22,7 +23,7 @@ import * as repoStampa from '../db/repo/stampa.ts'
 import { copiaPiattoDaSnapshot, eventoDaSnapshot, snapshotValido } from './archivio.ts'
 import type { CartellaFile } from './cartella.ts'
 import { creaAttivita, elencaAttivita } from './attivita.ts'
-import { piattoPerEvento } from './condivisione.ts'
+import { esitoRicetta, piattoPerEvento } from './condivisione.ts'
 import { ErroreApi, nonTrovato, regolaViolata } from './errori.ts'
 import { creaEvento, creaVoci, leggiEvento, leggiMenu, richiediModificabile } from './eventi.ts'
 import { perArchivio } from './partecipanti.ts'
@@ -30,6 +31,102 @@ import { risolviScelta } from './ricorrenze.ts'
 import { permessoEvento, richiediEvento, type UtenteCorrente } from './permessi.ts'
 
 const puoModificare = (p: string | null) => p === 'proprietario' || p === 'modifica'
+
+/** Cosa copiare: ciò che il client non dice vale come prima della 7.6 (SPEC §25). */
+function scelte(d: Duplica) {
+  const c = d.copia ?? {}
+  return { menu: c.menu ?? true, partecipanti: c.partecipanti ?? d.copiaPartecipanti, incarichi: c.incarichi ?? false, piano: c.piano ?? true, stampa: c.stampa ?? true }
+}
+
+const avvisoNonDisponibile = (nome: string) => `«${nome}»: la ricetta non è disponibile per te, la voce resta senza ricetta`
+const avvisoDallArchivio = (nome: string) => `«${nome}»: la ricetta non c'è più, ricreata dall'archivio come tua ricetta privata`
+const avvisoSparita = (nome: string) => `«${nome}»: la ricetta non c'è più, la voce resta senza ricetta`
+
+/** Chi se ne occupava nell'originale (D7): gli id si verificano quando si leggono gli incarichi. */
+const precedenteDi = (nome: string, utenteId: string | null, esternoId: string | null): Precedente | null => (nome ? { nome, utenteId, esternoId } : null)
+
+/** Lettura dell'originale e scelte comuni ad anteprima e duplicazione (nessuna scrittura). */
+function prepara(db: Db, u: UtenteCorrente, origineId: string, d: Duplica) {
+  richiediEvento(db, u, origineId, 'lettura')
+  const vivo = leggiEvento(db, origineId)
+  const snap = vivo.stato === 'archiviato' ? snapshotValido(db, origineId) : undefined
+  const origine = snap ? eventoDaSnapshot(snap.contenuto.evento) : vivo
+  const c = scelte(d)
+  // Famiglia: quella scelta (se ne fai parte), altrimenti quella dell'originale se ne fai parte.
+  const famigliaOrigine = repoAccesso.gruppoEvento(db, origineId)
+  const gruppoId = d.gruppoId !== undefined ? d.gruppoId : famigliaOrigine && repoAccesso.ruoloNelGruppo(db, famigliaOrigine, u.id) ? famigliaOrigine : null
+  if (gruppoId && !repoAccesso.ruoloNelGruppo(db, gruppoId, u.id)) throw nonTrovato('Famiglia')
+  const portate = snap ? snap.contenuto.menu : leggiMenu(db, origineId).portate
+  const giorni = differenzaGiorni(origine.data, d.data)
+  const attivita = c.piano ? (snap ? snap.contenuto.attivita : elencaAttivita(db, origineId)) : []
+  // Chi porta cosa: solo da un evento vivo (l'archivio non conserva gli incarichi).
+  const incarichi = c.incarichi && !snap
+  const vociIncarico = new Map(incarichi ? repoFam.vociIncarichi(db, origineId).map((v) => [v.id, v]) : [])
+  return {
+    vivo,
+    snap,
+    origine,
+    c,
+    gruppoId,
+    famigliaOrigine,
+    portate,
+    stile: c.stampa ? (snap ? (snap.contenuto.stampa ?? null) : JSON.parse(repoStampa.leggiStile(db, origineId)?.opzioni ?? 'null')) : null,
+    attivita: attivita.map((a) => ({ ...a, data: aggiungiGiorni(a.data, giorni) })),
+    inviti: c.partecipanti ? (snap ? (snap.contenuto.partecipanti ?? []) : perArchivio(db, origineId)) : ([] as Invito[]),
+    vociIncarico,
+    cose: incarichi ? repoFam.coseEvento(db, origineId) : [],
+  }
+}
+
+/**
+ * Anteprima di «Duplica evento» (SPEC §25, D8): cosa verrà creato con le scelte fatte, senza
+ * scrivere nulla. Le ricette seguono le stesse regole della duplicazione (`esitoRicetta`).
+ */
+export function anteprimaDuplica(db: Db, u: UtenteCorrente, origineId: string, d: Duplica): AnteprimaDuplica {
+  return lettura(db, () => {
+    const p = prepara(db, u, origineId, d)
+    const avvisi: string[] = []
+    const esiti = new Map<string, AnteprimaDuplica['portate'][number]['voci'][number]['ricetta']>()
+    const ricetta = (piattoId: string | null, nome: string) => {
+      if (!piattoId) return 'nessuna' as const
+      if (!esiti.has(piattoId)) {
+        if (repoRic.leggiPiatto(db, piattoId)) {
+          try {
+            const e = esitoRicetta(db, u, u.id, p.gruppoId, piattoId)
+            esiti.set(piattoId, e.tipo === 'stessa' ? 'collegata' : e.tipo === 'riusa' ? 'copia_esistente' : 'copia')
+          } catch (e) {
+            if (!(e instanceof ErroreApi)) throw e
+            avvisi.push(avvisoNonDisponibile(nome))
+            esiti.set(piattoId, 'non_disponibile')
+          }
+        } else if (p.snap?.contenuto.piatti.some((x) => x.id === piattoId)) {
+          avvisi.push(avvisoDallArchivio(nome))
+          esiti.set(piattoId, 'dall_archivio')
+        } else {
+          avvisi.push(avvisoSparita(nome))
+          esiti.set(piattoId, 'non_disponibile')
+        }
+      }
+      return esiti.get(piattoId)!
+    }
+    const voci = p.c.menu ? p.portate.flatMap((x) => x.voci) : []
+    return {
+      portate: p.portate.map((x) => ({ nome: x.nome, voci: p.c.menu ? x.voci.map((v) => ({ nome: v.nome, ricetta: ricetta(v.piattoId, v.nome) })) : [] })),
+      attivita: p.attivita.map((a) => ({ titolo: a.titolo, data: a.data, ora: a.ora })),
+      partecipanti: p.inviti.reduce((n, i) => n + 1 + i.accompagnatori.length, 0),
+      incarichi: [
+        ...voci.flatMap((v) => {
+          const r = p.vociIncarico.get(v.id)
+          return r?.incaricato ? [{ nome: v.nome, precedente: r.incaricato }] : []
+        }),
+        ...p.cose.map((c) => ({ nome: c.nome, precedente: c.incaricato || null })),
+      ],
+      stampa: p.stile !== null,
+      incarichiDisponibili: !p.snap,
+      avvisi,
+    }
+  })
+}
 
 export function duplica(db: Db, cartellaFoto: CartellaFile, u: UtenteCorrente, origineId: string, d: Duplica, adesso = Date.now()): EsitoDuplica {
   return transazione(db, () => {
@@ -39,19 +136,9 @@ export function duplica(db: Db, cartellaFoto: CartellaFile, u: UtenteCorrente, o
       if (repoAccesso.proprietarioEvento(db, d.id) === u.id) return { evento: leggiEvento(db, d.id), avvisi: [] }
       throw regolaViolata('id_esistente', 'Identificativo già usato')
     }
-    const vivo = leggiEvento(db, origineId)
-    const snap = vivo.stato === 'archiviato' ? snapshotValido(db, origineId) : undefined
-    const origine = snap ? eventoDaSnapshot(snap.contenuto.evento) : vivo
-    const portate = snap ? snap.contenuto.menu : leggiMenu(db, origineId).portate
-    const stile = snap ? (snap.contenuto.stampa ?? null) : JSON.parse(repoStampa.leggiStile(db, origineId)?.opzioni ?? 'null')
-    const attivita = snap ? snap.contenuto.attivita : elencaAttivita(db, origineId)
-    const inviti: Invito[] = d.copiaPartecipanti ? (snap ? (snap.contenuto.partecipanti ?? []) : perArchivio(db, origineId)) : []
+    const { vivo, snap, origine, c, gruppoId, famigliaOrigine, portate, stile, attivita, inviti, vociIncarico, cose } = prepara(db, u, origineId, d)
     const avvisi: string[] = []
 
-    // Famiglia: quella scelta (se ne fai parte), altrimenti quella dell'originale se ne fai parte.
-    const famigliaOrigine = repoAccesso.gruppoEvento(db, origineId)
-    const gruppoId = d.gruppoId !== undefined ? d.gruppoId : famigliaOrigine && repoAccesso.ruoloNelGruppo(db, famigliaOrigine, u.id) ? famigliaOrigine : null
-    if (gruppoId && !repoAccesso.ruoloNelGruppo(db, gruppoId, u.id)) throw nonTrovato('Famiglia')
     // Ricorrenza: quella scelta (della Famiglia del nuovo evento, o standard), altrimenti quella
     // dell'originale: una standard vale in ogni Famiglia, una della Famiglia solo se la Famiglia
     // resta la stessa e la ricorrenza esiste ancora. Mai una nuova definizione (SPEC §28, §30).
@@ -102,19 +189,19 @@ export function duplica(db: Db, cartellaFoto: CartellaFile, u: UtenteCorrente, o
           id = piattoPerEvento(db, cartellaFoto, u, d.id, piattoId, adesso)
         } catch (e) {
           if (!(e instanceof ErroreApi)) throw e
-          avvisi.push(`«${nome}»: la ricetta non è disponibile per te, la voce resta senza ricetta`)
+          avvisi.push(avvisoNonDisponibile(nome))
         }
       } else if (snap?.contenuto.piatti.some((p) => p.id === piattoId)) {
         id = copiaPiattoDaSnapshot(db, snap.id, piattoId, randomUUID(), u.id, gruppoId).id
-        avvisi.push(`«${nome}»: la ricetta non c'è più, ricreata dall'archivio come tua ricetta privata`)
+        avvisi.push(avvisoDallArchivio(nome))
       } else {
-        avvisi.push(`«${nome}»: la ricetta non c'è più, la voce resta senza ricetta`)
+        avvisi.push(avvisoSparita(nome))
       }
       ricette.set(piattoId, id)
       return id
     }
     const idVoci = new Map<string, string>()
-    for (const p of portate) {
+    for (const p of c.menu ? portate : []) {
       if (!p.voci.length) continue
       creaVoci(
         db,
@@ -133,12 +220,26 @@ export function duplica(db: Db, cartellaFoto: CartellaFile, u: UtenteCorrente, o
     // Da quale voce viene ciascuna: identità per il confronto fra edizioni.
     for (const [origine, nuova] of idVoci) repo.impostaOrigineVoce(db, nuova, origine)
 
+    // Chi porta cosa (D7): da assegnare, ricordando chi se ne occupava; nessun incarico accettato.
+    for (const [origine, nuova] of idVoci) {
+      const r = vociIncarico.get(origine)
+      const prec = r ? precedenteDi(r.incaricato, r.incaricato_id, r.incaricato_esterno_id) : null
+      if (prec) repoFam.impostaPrecedenteVoce(db, nuova, JSON.stringify(prec))
+    }
+    for (const x of cose) {
+      const prec = precedenteDi(x.incaricato, x.incaricato_id, x.incaricato_esterno_id)
+      repoFam.inserisciCosa(
+        db,
+        { id: randomUUID(), eventoId: d.id, nome: x.nome, quantita: x.quantita, quantitaNumero: x.quantita_numero, unita: x.unita, note: x.note, creatoDa: u.id, precedente: prec ? JSON.stringify(prec) : null },
+        adesso,
+      )
+    }
+
     if (stile) repoStampa.inserisciStile(db, d.id, JSON.stringify(stile), adesso)
 
     // Piano: le stesse attività spostate sulla nuova data, tutte da fare.
-    const giorni = differenzaGiorni(origine.data, d.data)
     for (const a of attivita) {
-      creaAttivita(db, d.id, { id: randomUUID(), titolo: a.titolo, data: aggiungiGiorni(a.data, giorni), ora: a.ora, voceMenuId: a.voceMenuId ? (idVoci.get(a.voceMenuId) ?? null) : null, note: a.note }, adesso)
+      creaAttivita(db, d.id, { id: randomUUID(), titolo: a.titolo, data: a.data, ora: a.ora, voceMenuId: a.voceMenuId ? (idVoci.get(a.voceMenuId) ?? null) : null, note: a.note }, adesso)
     }
 
     // Partecipanti: stessa composizione, tutto da riconfermare.

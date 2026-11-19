@@ -116,6 +116,8 @@ function Riga({ i, d, evidenziato }: { i: Incarico; d: Incarichi; evidenziato: b
             ) : (
               <Badge variante="avviso">da assegnare</Badge>
             )}
+            {/* Evento duplicato (SPEC §25): chi se ne occupava nell'originale, solo come promemoria. */}
+            {!i.incaricato && i.precedente ? <span data-testid="incarico-precedente">l&apos;ultima volta: {i.precedente.nome}</span> : null}
             {i.stato === 'completato' ? <Badge variante="successo">fatto</Badge> : null}
             {i.responsabileAssente ? (
               <Badge variante="avviso" role="note">
@@ -141,9 +143,23 @@ function Riga({ i, d, evidenziato }: { i: Incarico; d: Incarichi; evidenziato: b
               <CheckCircle2 /> Fatto
             </Button>
           ) : null}
+          {d.puoAssegnare && !i.incaricato && i.precedente ? (
+            <Button
+              misura="piccolo"
+              variante="contorno"
+              disabled={!connesso || azione.inCorso}
+              onClick={() => {
+                const p = i.precedente!
+                // A chi se ne occupava: con l'app se vede l'evento, dalla rubrica, o per nome.
+                void azione.esegui({ verbo: 'assegna', corpo: p.utenteId ? { utenteId: p.utenteId } : p.esternoId ? { esternoId: p.esternoId } : { nome: p.nome } })
+              }}
+            >
+              <UserRound /> Affida a {i.precedente.nome}
+            </Button>
+          ) : null}
           {d.puoAssegnare && !i.incaricato ? (
             <Button misura="piccolo" variante="contorno" disabled={!connesso} onClick={() => setAffida(true)}>
-              <UserRound /> Affida
+              <UserRound /> {i.precedente ? 'Affida ad altri' : 'Affida'}
             </Button>
           ) : null}
           <MenuAzioni

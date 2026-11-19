@@ -10,7 +10,7 @@
 //   per quella presa in carico; altrimenti la spesa non cambia.
 // Le persone senza account sono solo nomi: nessuna identità, sessione o permesso.
 import { randomUUID } from 'node:crypto'
-import type { Assegnazione, Incarichi, Incarico } from '../../src/contratto/famiglia.ts'
+import type { Assegnazione, Incarichi, Incarico, Precedente } from '../../src/contratto/famiglia.ts'
 import { norm, pulisci } from '../../src/domain/testo.ts'
 import { stessaPersona } from '../../src/domain/partecipanti.ts'
 import { type Db, lettura, transazione } from '../db/connessione.ts'
@@ -37,6 +37,7 @@ function persone(db: Db, eventoId: string) {
     .map((x) => ({ id: x!.id, nome: x!.nome }))
 }
 
+
 export function elenca(db: Db, u: UtenteCorrente, eventoId: string): Incarichi {
   return lettura(db, () => {
     const permesso = richiediEvento(db, u, eventoId, 'lettura')
@@ -48,6 +49,15 @@ export function elenca(db: Db, u: UtenteCorrente, eventoId: string): Incarichi {
     const assenti = presenti.filter((p) => p.stato === 'assente').map((p) => ({ utenteId: p.utente_id, esternoId: p.esterno_id, nomeNorm: p.nome_norm }))
     const assente = (incaricato: string, incaricatoId: string | null, esternoId: string | null) =>
       assenti.some((p) => stessaPersona({ incaricatoId, esternoId, nomeNorm: norm(incaricato) }, p))
+    // Chi se ne occupava nell'evento d'origine (SPEC §25): gli id valgono solo se oggi gli si può
+    // affidare l'incarico (vede l'evento; è nella rubrica della Famiglia), altrimenti resta il nome.
+    const invitati = new Set(personeEvento(db, eventoId))
+    const precedente = (json: string | null): Precedente | null => {
+      if (!json) return null
+      const p = JSON.parse(json) as Precedente
+      const esterno = p.esternoId && famigliaId ? repo.leggiEsterno(db, p.esternoId) : undefined
+      return { nome: p.nome, utenteId: p.utenteId && invitati.has(p.utenteId) ? p.utenteId : null, esternoId: esterno?.gruppo_id === famigliaId ? esterno.id : null }
+    }
     const flags = (incaricato: string, incaricatoId: string | null, creatoDa: string | null) => ({
       puoPrendere: partecipa && !incaricato,
       puoRinunciare: Boolean(incaricato) && ((partecipa && incaricatoId === u.id) || gestisce),
@@ -68,6 +78,7 @@ export function elenca(db: Db, u: UtenteCorrente, eventoId: string): Incarichi {
       incaricatoId: v.incaricato_id,
       incaricatoEsternoId: v.incaricato_esterno_id,
       stato: stato({ incaricato: v.incaricato, completato: v.incarico_completato === 1 }),
+      precedente: v.incaricato ? null : precedente(v.incarico_precedente),
       inSpesa: v.in_spesa === 1,
       spesaToltaDaIncarico: v.spesa_tolta_da_incarico === 1,
       versione: v.versione,
@@ -89,6 +100,7 @@ export function elenca(db: Db, u: UtenteCorrente, eventoId: string): Incarichi {
       incaricatoId: c.incaricato_id,
       incaricatoEsternoId: c.incaricato_esterno_id,
       stato: stato({ incaricato: c.incaricato, completato: c.completato === 1 }),
+      precedente: c.incaricato ? null : precedente(c.incarico_precedente),
       inSpesa: null,
       spesaToltaDaIncarico: false,
       versione: c.versione,

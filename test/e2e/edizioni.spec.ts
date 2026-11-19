@@ -20,6 +20,9 @@ test('duplica Natale come nuova edizione, con i partecipanti da riconfermare', a
     ],
   })
   await apiScrivi(request, 'post', '/eventi/ed-2026/partecipanti', { id: 'ed-p1', nome: 'Zio Ugo', stato: 'confermato' })
+  // Chi porta cosa: il vino lo portava Zia Rosa.
+  await apiScrivi(request, 'post', '/eventi/ed-2026/cose', { id: 'ed-vino', nome: 'Vino' })
+  expect((await apiScrivi(request, 'post', '/cose/ed-vino/assegna', { versione: 1, nome: 'Zia Rosa' })).stato).toBe(200)
   await apiScrivi(request, 'post', `/famiglie/${famiglia.id}/ricorrenze`, { id: 'ed-natale', nome: 'Natale dai nonni' })
 
   // La ricorrenza si sceglie dalla Panoramica.
@@ -31,14 +34,19 @@ test('duplica Natale come nuova edizione, con i partecipanti da riconfermare', a
   await azioneEvento(page, 'Duplica evento')
   const dialogo = page.getByRole('dialog')
   await expect(dialogo.getByLabel('Nome del nuovo evento')).toHaveValue('Natale dai nonni 2027')
-  await expect(dialogo.getByLabel('Data')).toHaveValue('2027-12-25')
+  await expect(dialogo.getByLabel('Data', { exact: true })).toHaveValue('2027-12-25')
   await expect(dialogo.getByLabel('Ricorrenza')).toHaveValue('famiglia:ed-natale')
   // Si vede da quale evento si parte, la ricorrenza proposta e cosa si copia o no.
   await expect(dialogo).toContainText('a partire da «Natale dai nonni 2026»')
   await expect(dialogo).toContainText('Proposta la stessa dell\'evento originale')
-  await expect(dialogo.getByTestId('cosa-si-copia')).toContainText('Non si copia')
-  await expect(dialogo.getByTestId('cosa-si-copia')).toContainText('voti, bacheca e sondaggi')
-  await dialogo.getByText('Copia anche i partecipanti').click()
+  // Si sceglie cosa copiare e l'anteprima mostra cosa verrà creato (SPEC §25).
+  const anteprima = dialogo.getByTestId('anteprima-duplica')
+  await expect(anteprima).toContainText('Menù: 2 piatti')
+  await expect(anteprima).toContainText('Mai copiati: conferme, voti')
+  await dialogo.getByRole('checkbox', { name: /^Partecipanti/ }).check()
+  await expect(anteprima).toContainText('Partecipanti: 1, tutti in attesa')
+  await dialogo.getByRole('checkbox', { name: /^Chi porta cosa/ }).check()
+  await expect(anteprima).toContainText('Vino — l\'ultima volta: Zia Rosa')
   await foto(page, '01-duplica')
   await dialogo.getByRole('button', { name: 'Duplica' }).click()
 
@@ -54,6 +62,14 @@ test('duplica Natale come nuova edizione, con i partecipanti da riconfermare', a
   const ugo = page.getByTestId('invito').filter({ hasText: 'Zio Ugo' })
   await expect(ugo.getByRole('row').first()).toContainText('in attesa')
   await foto(page, '02-nuova-edizione')
+  // Il vino è da assegnare, con il promemoria; un tocco lo riaffida a Zia Rosa.
+  await page.goto(`/#/eventi/${id}/chi-porta`)
+  const vino = page.getByTestId('incarico').filter({ hasText: 'Vino' })
+  await expect(vino).toContainText('da assegnare')
+  await expect(vino.getByTestId('incarico-precedente')).toHaveText('l\'ultima volta: Zia Rosa')
+  await vino.getByRole('button', { name: 'Affida a Zia Rosa' }).click()
+  await expect(vino).toContainText('Zia Rosa')
+  await expect(vino).not.toContainText('da assegnare')
 
   // ── Confronta con l'anno scorso: un piatto nuovo, uno tolto, quelli rimasti
   const menu = await apiLeggi<{ portate: { id: string; nome: string; voci: { id: string; nome: string; versione: number }[] }[] }>(request, `/eventi/${id}/menu`)

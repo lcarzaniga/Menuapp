@@ -2145,25 +2145,35 @@ Richiesta di Loris (16/11/2026, «Evoluzione organizzazione eventi», M1). Migra
 
 ## 25. Duplicazione degli eventi ed edizioni
 
-M2. Migrazioni `0011_edizioni.sql` (`eventi.serie_id`) e `0012_origine_voci.sql`
-(`voci_menu.voce_origine_id`). «Duplica evento» in Panoramica, anche da eventi archiviati.
+M2, esteso nella 7.6 (piano di evoluzione fase 2, D7–D8). Migrazioni `0011_edizioni.sql`,
+`0012_origine_voci.sql`, `0018_incarico_precedente.sql`. «Duplica evento» in Panoramica, anche da
+eventi archiviati; un solo meccanismo (`server/servizi/duplicazione.ts`), nessuna logica parallela.
 
-- Si sceglie nome (l'anno nel nome segue la data), data, Famiglia (solo le proprie) e se copiare
-  i partecipanti. Chi può leggere l'evento può duplicarlo: il nuovo evento è suo.
-- Si copiano: portate, voci (nome, ricetta, porzioni personalizzate, note; tornano in spesa le
-  voci uscite per un incarico), stile di stampa, note dell'evento, coperti effettivi come numeri
-  manuali, limite degli accompagnatori, piano spostato sulla nuova data e tutto da fare.
-- Non si copiano: conferme, incarichi e cose da portare, voti, sondaggi, bacheca, notifiche,
-  stato della spesa, archiviazione, condivisioni.
-- **Ricette** con le regole di sempre (§19.4, §21.3): del nuovo proprietario restano collegate,
-  altrimenti una copia privata (riusata se esiste già). Ricetta non disponibile: voce senza
-  ricetta con avviso. Da un archiviato, se la ricetta non esiste più, si ricrea dall'archivio
-  come ricetta privata (avviso); l'archivio originale non cambia.
-- **Partecipanti** (a richiesta): stessa composizione, tutti in attesa, accompagnatori senza
-  nome in attesa; collegamenti alla rubrica solo se della Famiglia di destinazione.
-- **Ricorrenza**: la copia riceve la ricorrenza dell'originale, cambiabile o da togliere (dalla
-  6.1 le serie anonime della 0011 sono sostituite dalle ricorrenze della Famiglia, §28). Ogni
-  voce copiata ricorda la voce d'origine (identità per §27).
+- Si sceglie nome (l'anno nel nome segue la data), data, Famiglia (solo le proprie), ricorrenza e
+  **cosa copiare**: menù (portate e piatti; senza, solo le portate), partecipanti, chi porta cosa,
+  piano delle attività, impostazioni di stampa. Predefiniti: menù, piano e stampa sì; partecipanti e
+  chi porta cosa no. Chi può leggere l'evento può duplicarlo: il nuovo evento è suo.
+- **Anteprima** (`POST /eventi/:id/duplica` con `anteprima: true`, nessuna scrittura): piatti con
+  l'esito della ricetta (collegata, copiata nel ricettario, copia già esistente, ricreata
+  dall'archivio, senza ricetta), partecipanti, incarichi da riassegnare con chi se ne occupava,
+  attività con le nuove date, stampa, avvisi. Si aggiorna a ogni scelta; poi si conferma. Dopo la
+  creazione il nuovo evento si modifica come ogni altro (nessuno stato «bozza»).
+- Sempre: coperti effettivi come numeri manuali, note, limite degli accompagnatori. Il piano si
+  sposta degli stessi giorni ed è tutto da fare. La spesa riparte da zero (nessun «Comprato» o «Ce
+  l'ho»). Mai: conferme, voti, sondaggi, bacheca, notifiche, archiviazione, condivisioni.
+- **Chi porta cosa** (a scelta, non da un archiviato): piatti affidati e cose da portare nascono
+  **da assegnare**, con il promemoria di chi se ne occupava (`incarico_precedente`: nome e, se
+  ancora validi quando si legge, utente che vede l'evento o persona della rubrica della Famiglia).
+  In Chi porta: «l'ultima volta: Anna» e «Affida a Anna» con un tocco; nessun incarico è accettato
+  in automatico. Le voci tolte dalla spesa per un incarico tornano in spesa.
+- **Ricette** con le regole di sempre (§19.4, §21.3, §36, §37; `esitoRicetta` per anteprima e
+  duplicazione): del nuovo proprietario e della Famiglia del nuovo evento restano collegate,
+  altrimenti una copia (riusata se esiste). Non disponibile: voce senza ricetta con avviso. Da un
+  archiviato, se la ricetta non esiste più, si ricrea dall'archivio come ricetta privata.
+- **Partecipanti** (a richiesta): stessa composizione, tutti in attesa, accompagnatori senza nome
+  in attesa; collegamenti alla rubrica solo se della Famiglia di destinazione.
+- **Ricorrenza**: la copia riceve la ricorrenza dell'originale, cambiabile o da togliere. Ogni voce
+  copiata ricorda la voce d'origine (identità per §27).
 - Test: `server/api/duplicazione.test.ts`, e2e `edizioni.spec.ts`.
 
 ## 26. Riepilogo «A che punto siamo?»
@@ -2758,6 +2768,7 @@ altrove lo si copia in un'altra Famiglia o come ricetta personale. Nessuna migra
 | 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |
 | 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |
 | 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |
+| 19/11/2026 | 7.6 — **Riuso degli eventi** (§25): scelta di cosa copiare, anteprima senza scritture, chi porta cosa da riassegnare con il promemoria di chi se ne occupava (migrazione 0018) |
 | 19/11/2026 | 7.5 — **Riepilogo a gruppi** (§26): Da organizzare, Da acquistare, Da preparare; livelli da risolvere / aperto / suggerimento; ritardo con l'ora italiana, prossima attività, piatti senza ricetta o ingredienti come suggerimento, evento passato |
 | 19/11/2026 | 7.4 — **Ricette della Famiglia attiva** (§37): personali sempre visibili, quelle di una Famiglia solo con quella attiva; nei menù una ricetta di un'altra Famiglia entra come copia |
 | 19/11/2026 | 7.3 — **Ricette pubbliche** fra Famiglie (§36): visibilità pubblica per gli utenti con sessione, preferenza «Includi ricette pubbliche», copia privata in una propria Famiglia, uso nei menù tramite copia; le copie fra Famiglie nascono private |

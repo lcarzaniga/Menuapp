@@ -305,32 +305,46 @@ export function copiaPiatto(db: Db, cartellaFoto: CartellaFile, u: UtenteCorrent
 }
 
 /**
- * Piatto da collegare a una voce dell'evento: deve essere del proprietario dell'evento. Se
- * l'utente collega una ricetta che può leggere ma di un altro, il proprietario dell'evento ne
- * riceve una copia indipendente (riusata se esiste già). Da chiamare in una transazione.
+ * Cosa succede collegando un piatto a un evento di `proprietarioEvento` nella Famiglia `gruppoEvento`,
+ * senza scrivere nulla (serve anche all'anteprima della duplicazione, SPEC §25):
+ * - stessa: è del proprietario e non di un'altra Famiglia, si collega così;
+ * - riusa: c'è già una sua copia adatta;
+ * - copia: si copia (indipendente se pubblica o di un'altra Famiglia, SPEC §36–§37).
+ * Lancia un errore se l'utente non può usarla.
  */
-export function piattoPerEvento(db: Db, cartellaFoto: CartellaFile, u: UtenteCorrente, eventoId: string, piattoId: string, adesso = Date.now()): string {
+export type EsitoRicetta = { tipo: 'stessa' } | { tipo: 'riusa'; id: string } | { tipo: 'copia'; indipendente: boolean }
+
+export function esitoRicetta(db: Db, u: UtenteCorrente, proprietarioEvento: string, gruppoEvento: string | null, piattoId: string): EsitoRicetta {
   richiediPiatto(db, u, piattoId, 'lettura')
-  const proprietarioEvento = repo.proprietarioEvento(db, eventoId)
-  if (!proprietarioEvento) throw nonTrovato('Evento')
   const proprietarioPiatto = repo.proprietarioPiatto(db, piattoId)!
   // Una ricetta di un'altra Famiglia resta di quella Famiglia (SPEC §37): nell'evento entra una copia.
-  const gruppoEvento = repo.gruppoEvento(db, eventoId) ?? null
   const famigliaRicetta = repo.famigliePiatto(db, piattoId)[0] ?? null
   const altraFamiglia = famigliaRicetta !== null && famigliaRicetta.id !== gruppoEvento
-  if (proprietarioPiatto === proprietarioEvento && !altraFamiglia) return piattoId
+  if (proprietarioPiatto === proprietarioEvento && !altraFamiglia) return { tipo: 'stessa' }
   if (proprietarioPiatto !== u.id && !repo.piattoLeggibileDaAltri(db, piattoId, u.id)) throw accessoNegato('Ricetta non disponibile')
   // Copia già fatta, purché non sia a sua volta di un'altra Famiglia.
   const esistente = repoRic.copiaEsistente(db, piattoId, proprietarioEvento)
-  if (esistente && (repo.famigliePiatto(db, esistente)[0]?.id ?? gruppoEvento) === gruppoEvento) return esistente
-  const famigliaOrigine = repo.famigliaEventoPer(db, eventoId, proprietarioEvento)
-  // Pubblica o di un'altra Famiglia (SPEC §36, §37): copia indipendente con la provenienza, come dal
-  // ricettario; nessun legame con voti e classifiche della Famiglia d'origine.
+  if (esistente && (repo.famigliePiatto(db, esistente)[0]?.id ?? gruppoEvento) === gruppoEvento) return { tipo: 'riusa', id: esistente }
+  // Pubblica o di un'altra Famiglia: copia indipendente con la provenienza, come dal ricettario;
+  // nessun legame con voti e classifiche della Famiglia d'origine.
   const soloPubblica = !repo.piattoLeggibileDaAltri(db, piattoId, proprietarioEvento, false) && repoRic.ePubblica(db, piattoId)
-  if (altraFamiglia || soloPubblica) {
-    const id = copiaPiattoInterna(db, cartellaFoto, piattoId, randomUUID(), proprietarioEvento, adesso, { indipendente: true, famigliaOrigine })
-    repoRic.impostaProvenienza(db, id, provenienzaDi(db, piattoId, u, repoRic.proprietaPiatto(db, piattoId)!.famigliaOrigine?.nome ?? null, adesso))
-    return id
-  }
-  return copiaPiattoInterna(db, cartellaFoto, piattoId, randomUUID(), proprietarioEvento, adesso, { famigliaOrigine })
+  return { tipo: 'copia', indipendente: altraFamiglia || soloPubblica }
+}
+
+/**
+ * Piatto da collegare a una voce dell'evento: deve essere del proprietario dell'evento (e della sua
+ * Famiglia). Altrimenti il proprietario ne riceve una copia (riusata se esiste già). Da chiamare in
+ * una transazione.
+ */
+export function piattoPerEvento(db: Db, cartellaFoto: CartellaFile, u: UtenteCorrente, eventoId: string, piattoId: string, adesso = Date.now()): string {
+  const proprietarioEvento = repo.proprietarioEvento(db, eventoId)
+  if (!proprietarioEvento) throw nonTrovato('Evento')
+  const esito = esitoRicetta(db, u, proprietarioEvento, repo.gruppoEvento(db, eventoId) ?? null, piattoId)
+  if (esito.tipo === 'stessa') return piattoId
+  if (esito.tipo === 'riusa') return esito.id
+  const famigliaOrigine = repo.famigliaEventoPer(db, eventoId, proprietarioEvento)
+  if (!esito.indipendente) return copiaPiattoInterna(db, cartellaFoto, piattoId, randomUUID(), proprietarioEvento, adesso, { famigliaOrigine })
+  const id = copiaPiattoInterna(db, cartellaFoto, piattoId, randomUUID(), proprietarioEvento, adesso, { indipendente: true, famigliaOrigine })
+  repoRic.impostaProvenienza(db, id, provenienzaDi(db, piattoId, u, repoRic.proprietaPiatto(db, piattoId)!.famigliaOrigine?.nome ?? null, adesso))
+  return id
 }

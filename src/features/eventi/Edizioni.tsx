@@ -1,5 +1,6 @@
 // Duplica evento e ricorrenza dell'evento (SPEC §25, §28, §30).
 import { Copy, Repeat } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
@@ -10,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Campo, Casella, Input, Select } from '@/components/ui/campi'
 import { Finestra } from '@/components/ui/dialog'
 import { usePuoScrivere } from '@/connessione/stato'
-import type { Edizioni, EsitoDuplica } from '@/contratto/edizioni.ts'
+import type { AnteprimaDuplica, Edizioni, EsitoDuplica } from '@/contratto/edizioni.ts'
 import { useEdizioni, useRicorrenze } from '@/api/query'
 import { etichettaRicorrenza, SelettoreRicorrenza, sceltaDi, type ValoreRicorrenza, valoreDi } from './SceltaRicorrenza'
 import { annoDopo, nomeEdizione } from '@/domain/edizioni.ts'
@@ -18,6 +19,7 @@ import { dataBreve } from '@/domain/tempo.ts'
 import type { Evento } from '@/domain/tipi.ts'
 import { useAccessoEvento } from '@/features/accesso/sessione'
 import { useFamigliaAttiva } from '@/features/famiglia/attiva'
+import { cn } from '@/lib/utils'
 
 
 
@@ -30,7 +32,9 @@ export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiud
   const [nome, setNome] = useState(nomeEdizione(e.nome, e.data, iniziale))
   const [nomeToccato, setNomeToccato] = useState(false)
   const [gruppoId, setGruppoId] = useState<string>(famigliaEvento && famiglie.some((f) => f.id === famigliaEvento) ? famigliaEvento : (famiglie[0]?.id ?? ''))
-  const [partecipanti, setPartecipanti] = useState(false)
+  // Cosa copiare (SPEC §25): i valori di sempre, più partecipanti e chi porta cosa a scelta.
+  const [copia, setCopia] = useState({ menu: true, partecipanti: false, incarichi: false, piano: true, stampa: true })
+  const [id] = useState(nuovoId)
   const stessaFamiglia = (gruppoId || null) === famigliaEvento
   // Si propone la stessa ricorrenza dell'originale: una standard vale in ogni Famiglia, una della
   // Famiglia solo nella sua (cambiando Famiglia si sceglie fra quelle della nuova).
@@ -44,16 +48,17 @@ export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiud
         ? ricorrenze.data.some((x) => `famiglia:${x.id}` === ricorrenza) ? ricorrenza : ''
         : stessaFamiglia ? ricorrenza : ''
       : ricorrenza
+  const richiesta = { id, nome: nome.trim() || e.nome, data, gruppoId: gruppoId || null, copia, ricorrenza: sceltaDi(sceltaRicorrenza) }
+  // Anteprima (D8): cosa verrà creato con queste scelte, ricalcolata a ogni cambio; non scrive nulla.
+  const anteprima = useQuery({
+    queryKey: ['anteprima-duplica', e.id, data, gruppoId, copia],
+    queryFn: () => api.crea<{ anteprima: AnteprimaDuplica }>(`/eventi/${e.id}/duplica`, { ...richiesta, anteprima: true }),
+    enabled: Boolean(data),
+    staleTime: 0,
+  })
+  const a = anteprima.data?.anteprima
   const duplica = useScrittura(
-    () =>
-      api.crea<EsitoDuplica>(`/eventi/${e.id}/duplica`, {
-        id: nuovoId(),
-        nome: nome.trim(),
-        data,
-        gruppoId: gruppoId || null,
-        copiaPartecipanti: partecipanti,
-        ricorrenza: sceltaDi(sceltaRicorrenza),
-      }),
+    () => api.crea<EsitoDuplica>(`/eventi/${e.id}/duplica`, richiesta),
     {
       successo: (r) => `Creato «${r.evento.nome}»`,
       dopo: (r) => {
@@ -110,9 +115,21 @@ export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiud
             </Select>
           </Campo>
         ) : null}
-        <label className="flex min-h-11 items-center gap-3 text-sm">
-          <Casella checked={partecipanti} onChange={(ev) => setPartecipanti(ev.target.checked)} /> Copia anche i partecipanti (tutti in attesa, da riconfermare)
-        </label>
+        <fieldset className="flex flex-col" aria-label="Cosa copiare">
+          <legend className="mb-1 text-sm font-medium">Cosa copiare</legend>
+          {SCELTE.map((x) => {
+            const disponibile = x.id !== 'incarichi' || a?.incarichiDisponibili !== false
+            return (
+              <label key={x.id} className={cn('flex min-h-11 items-center gap-3 text-sm', !disponibile && 'text-testo-tenue')}>
+                <Casella checked={copia[x.id] && disponibile} disabled={!disponibile} onChange={(ev) => setCopia({ ...copia, [x.id]: ev.target.checked })} />
+                <span>
+                  {x.etichetta}
+                  <span className="block text-xs text-testo-tenue">{disponibile ? x.dettaglio : 'non disponibile da un evento archiviato'}</span>
+                </span>
+              </label>
+            )
+          })}
+        </fieldset>
         {gruppoId ? (
           <Campo
             etichetta="Ricorrenza"
@@ -122,29 +139,83 @@ export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiud
             <SelettoreRicorrenza id="dup-ricorrenza" valore={sceltaRicorrenza} onCambia={setRicorrenza} famiglia={ricorrenze.data ?? []} />
           </Campo>
         ) : null}
-        <div className="grid gap-3 rounded-xl bg-tenue/60 p-3 text-xs sm:grid-cols-2" data-testid="cosa-si-copia">
-          <div>
-            <p className="mb-1 font-semibold text-successo">Si copia</p>
-            <ul className="list-inside list-disc text-testo-tenue">
-              <li>portate, piatti e porzioni</li>
-              <li>coperti, come numeri manuali</li>
-              <li>note e stile di stampa</li>
-              <li>piano, spostato sulla nuova data e tutto da fare</li>
-              {partecipanti ? <li>partecipanti, tutti in attesa</li> : null}
-            </ul>
-          </div>
-          <div>
-            <p className="mb-1 font-semibold text-testo">Non si copia</p>
-            <ul className="list-inside list-disc text-testo-tenue">
-              <li>conferme{partecipanti ? '' : ' e partecipanti'}</li>
-              <li>chi porta cosa e incarichi</li>
-              <li>voti, bacheca e sondaggi</li>
-              <li>stato della spesa e condivisioni</li>
-            </ul>
-          </div>
-        </div>
+        <AnteprimaDuplicazione a={a} caricamento={anteprima.isFetching} />
       </div>
     </Finestra>
+  )
+}
+
+const SCELTE = [
+  { id: 'menu', etichetta: 'Menù', dettaglio: 'portate, piatti e porzioni (senza: solo le portate)' },
+  { id: 'partecipanti', etichetta: 'Partecipanti', dettaglio: 'tutti in attesa, da riconfermare; i coperti si copiano sempre come numeri' },
+  { id: 'incarichi', etichetta: 'Chi porta cosa', dettaglio: 'piatti affidati e cose da portare, da riassegnare: nessuno è già d\'accordo' },
+  { id: 'piano', etichetta: 'Piano delle attività', dettaglio: 'spostato sulla nuova data, tutto da fare' },
+  { id: 'stampa', etichetta: 'Impostazioni di stampa', dettaglio: 'modello e note del menù stampato' },
+] as const
+
+const ESITO: Record<AnteprimaDuplica['portate'][number]['voci'][number]['ricetta'], string | null> = {
+  collegata: null,
+  nessuna: null,
+  copia: 'copiata nel tuo ricettario',
+  copia_esistente: 'userà la tua copia',
+  dall_archivio: 'ricreata dall\'archivio',
+  non_disponibile: 'senza ricetta',
+}
+
+/** Cosa verrà creato (D8): si controlla prima di confermare; dopo, il nuovo evento si modifica come ogni altro. */
+function AnteprimaDuplicazione({ a, caricamento }: { a: AnteprimaDuplica | undefined; caricamento: boolean }) {
+  if (!a) return <p className="text-sm text-testo-tenue">{caricamento ? 'Preparo l\'anteprima…' : ''}</p>
+  const voci = a.portate.flatMap((p) => p.voci)
+  const particolari = voci.filter((v) => ESITO[v.ricetta])
+  const mostra = <T,>(l: T[], n = 4) => ({ primi: l.slice(0, n), altri: l.length - n })
+  const attivita = mostra(a.attivita)
+  const incarichi = mostra(a.incarichi)
+  return (
+    <section className="flex flex-col gap-2 rounded-xl bg-tenue/60 p-3 text-sm" aria-label="Anteprima" data-testid="anteprima-duplica">
+      <p className="font-semibold">Verrà creato</p>
+      <ul className="flex flex-col gap-1.5 text-testo-tenue">
+        <li>
+          <span className="text-testo">Menù:</span> {voci.length ? `${voci.length} ${voci.length === 1 ? 'piatto' : 'piatti'}` : 'nessun piatto'} in {a.portate.length} portate
+          {particolari.map((v) => (
+            <span key={v.nome} className="block text-xs">
+              «{v.nome}»: {ESITO[v.ricetta]}
+            </span>
+          ))}
+        </li>
+        {a.partecipanti ? <li><span className="text-testo">Partecipanti:</span> {a.partecipanti}, tutti in attesa</li> : null}
+        {a.incarichi.length ? (
+          <li>
+            <span className="text-testo">Da riassegnare:</span>
+            {incarichi.primi.map((x) => (
+              <span key={x.nome} className="block text-xs">
+                {x.nome}
+                {x.precedente ? ` — l'ultima volta: ${x.precedente}` : ''}
+              </span>
+            ))}
+            {incarichi.altri > 0 ? <span className="block text-xs">e altri {incarichi.altri}</span> : null}
+          </li>
+        ) : null}
+        {a.attivita.length ? (
+          <li>
+            <span className="text-testo">Piano:</span> {a.attivita.length} attività da fare
+            {attivita.primi.map((x, k) => (
+              <span key={k} className="block text-xs">
+                {dataBreve(x.data)}
+                {x.ora ? ` ${x.ora}` : ''} · {x.titolo}
+              </span>
+            ))}
+            {attivita.altri > 0 ? <span className="block text-xs">e altre {attivita.altri}</span> : null}
+          </li>
+        ) : null}
+        {a.stampa ? <li><span className="text-testo">Stampa:</span> stesse impostazioni</li> : null}
+      </ul>
+      {a.avvisi.map((x) => (
+        <p key={x} className="text-xs text-avviso">
+          {x}
+        </p>
+      ))}
+      <p className="text-xs text-testo-tenue">Mai copiati: conferme, voti, bacheca e sondaggi, stato della spesa, condivisioni. Dopo puoi modificare tutto.</p>
+    </section>
   )
 }
 

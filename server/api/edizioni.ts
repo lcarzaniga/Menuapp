@@ -20,7 +20,10 @@ export function rotteEdizioni(app: FastifyInstance, ctx: Contesto): void {
   app.post<ConId>(`${P}/eventi/:id/duplica`, async (req, reply) => {
     const u = chi(req)
     richiediEvento(db, u, req.params.id, 'lettura')
-    return reply.code(201).send(duplicazione.duplica(db, ctx.foto, u, req.params.id, valida(SchemaDuplica, req.body)))
+    const d = valida(SchemaDuplica, req.body)
+    // Anteprima (SPEC §25): cosa verrà creato, senza scrivere nulla.
+    if (d.anteprima) return reply.code(200).send({ anteprima: duplicazione.anteprimaDuplica(db, u, req.params.id, d) })
+    return reply.code(201).send(duplicazione.duplica(db, ctx.foto, u, req.params.id, d))
   })
   app.get<ConId>(`${P}/eventi/:id/confronto`, async (req) => {
     const u = chi(req)

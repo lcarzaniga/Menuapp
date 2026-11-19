@@ -177,12 +177,13 @@ export interface RigaVoceIncarico {
   incaricato_esterno_id: string | null
   note_incarico: string
   porzioni: number | null
+  incarico_precedente: string | null
 }
 export const vociIncarichi = (db: Db, eventoId: string) =>
   tutti<RigaVoceIncarico>(
     db,
     `SELECT v.id, v.nome, p.nome AS portata, v.incaricato, v.incaricato_id, v.incarico_completato, v.spesa_tolta_da_incarico, v.in_spesa, v.versione,
-       v.incaricato_esterno_id, v.note_incarico, v.porzioni
+       v.incaricato_esterno_id, v.note_incarico, v.porzioni, v.incarico_precedente
      FROM voci_menu v JOIN portate_evento p ON p.id = v.portata_id WHERE v.evento_id = ? ORDER BY p.ordine, v.ordine`,
     eventoId,
   )
@@ -190,7 +191,7 @@ export const leggiVoceIncarico = (db: Db, id: string) =>
   uno<RigaVoceIncarico & { evento_id: string }>(
     db,
     `SELECT v.id, v.evento_id, v.nome, p.nome AS portata, v.incaricato, v.incaricato_id, v.incarico_completato, v.spesa_tolta_da_incarico, v.in_spesa, v.versione,
-       v.incaricato_esterno_id, v.note_incarico, v.porzioni
+       v.incaricato_esterno_id, v.note_incarico, v.porzioni, v.incarico_precedente
      FROM voci_menu v JOIN portate_evento p ON p.id = v.portata_id WHERE v.id = ?`,
     id,
   )
@@ -224,6 +225,7 @@ export interface RigaCosa {
   incaricato_esterno_id: string | null
   quantita_numero: number | null
   unita: string
+  incarico_precedente: string | null
 }
 export const coseEvento = (db: Db, eventoId: string) => tutti<RigaCosa>(db, 'SELECT * FROM cose_da_portare WHERE evento_id = ? ORDER BY ordine, creato_il', eventoId)
 export const leggiCosa = (db: Db, id: string) => uno<RigaCosa>(db, 'SELECT * FROM cose_da_portare WHERE id = ?', id)
@@ -234,15 +236,19 @@ export interface DatiCosa {
   unita: string
   note: string
 }
-export function inserisciCosa(db: Db, c: DatiCosa & { id: string; eventoId: string; creatoDa: string }, adesso: number): void {
+export function inserisciCosa(db: Db, c: DatiCosa & { id: string; eventoId: string; creatoDa: string; precedente?: string | null }, adesso: number): void {
   const ordine = (uno<{ m: number | null }>(db, 'SELECT max(ordine) AS m FROM cose_da_portare WHERE evento_id = ?', c.eventoId)?.m ?? -1) + 1
   esegui(
     db,
-    `INSERT INTO cose_da_portare (id, evento_id, nome, quantita, quantita_numero, unita, note, creato_da, ordine, creato_il, aggiornato_il)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    c.id, c.eventoId, c.nome, c.quantita, c.quantitaNumero, c.unita, c.note, c.creatoDa, ordine, adesso, adesso,
+    `INSERT INTO cose_da_portare (id, evento_id, nome, quantita, quantita_numero, unita, note, creato_da, ordine, incarico_precedente, creato_il, aggiornato_il)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    c.id, c.eventoId, c.nome, c.quantita, c.quantitaNumero, c.unita, c.note, c.creatoDa, ordine, c.precedente ?? null, adesso, adesso,
   )
 }
+
+/** Chi se ne occupava nell'evento da cui è stato duplicato (solo un promemoria, SPEC §25). */
+export const impostaPrecedenteVoce = (db: Db, voceId: string, precedente: string) =>
+  esegui(db, 'UPDATE voci_menu SET incarico_precedente = ? WHERE id = ?', precedente, voceId)
 export const aggiornaCosa = (db: Db, id: string, versione: number, c: DatiCosa, adesso: number) =>
   esegui(
     db,

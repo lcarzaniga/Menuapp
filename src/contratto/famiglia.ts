@@ -156,6 +156,9 @@ export type Bacheca = z.infer<typeof SchemaBacheca>
 export const STATI_INCARICO = ['da_assegnare', 'assegnato', 'completato'] as const
 export type StatoIncarico = (typeof STATI_INCARICO)[number]
 
+export const SchemaPrecedente = z.object({ nome: z.string(), utenteId: Id.nullable(), esternoId: Id.nullable() })
+export type Precedente = z.infer<typeof SchemaPrecedente>
+
 export const SchemaIncarico = z.object({
   tipo: z.enum(['voce', 'cosa']),
   id: Id,
@@ -174,6 +177,11 @@ export const SchemaIncarico = z.object({
   /** Porzioni della voce del menù («lasagne per 10»): la quantità di un piatto. */
   porzioni: z.number().nullable(),
   stato: z.enum(STATI_INCARICO),
+  /**
+   * Da assegnare in un evento duplicato: chi se ne occupava nell'originale (SPEC §25), per
+   * riaffidarlo con un tocco. Gli id solo se ancora validi in questa Famiglia.
+   */
+  precedente: SchemaPrecedente.nullable(),
   inSpesa: z.boolean().nullable(),
   spesaToltaDaIncarico: z.boolean(),
   versione: Versione,

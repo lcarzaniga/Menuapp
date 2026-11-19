@@ -138,6 +138,78 @@ describe('duplica evento', () => {
   })
 })
 
+describe('scelte, chi porta cosa e anteprima (SPEC §25, piano di evoluzione fase 2)', () => {
+  async function conIncarichi() {
+    // Ospite della rubrica per il vino, Bruno (con l'app) per l'arrosto, un nome scritto a mano per il pane.
+    const arrosto = corpo(await t.leggi(`${P}/eventi/n26/incarichi`)).incarichi.find((i: { id: string }) => i.id === 'v-arrosto')
+    await ok(t.scrivi('POST', `${P}/voci/v-arrosto/assegna`, { versione: arrosto.versione, utenteId: bruno.id, togliDallaSpesa: true }))
+    await ok(t.scrivi('POST', `${P}/eventi/n26/cose`, { id: 'c-vino', nome: 'Vino', quantita: '6 bottiglie' }))
+    const vino = corpo(await t.leggi(`${P}/eventi/n26/incarichi`)).incarichi.find((i: { id: string }) => i.id === 'c-vino')
+    await ok(t.scrivi('POST', `${P}/cose/c-vino/assegna`, { versione: vino.versione, nome: 'Zia Rosa', salvaInRubrica: true }))
+    await ok(t.scrivi('POST', `${P}/voci/v-arrosto/completa`, { versione: arrosto.versione + 1, completato: true }))
+    await ok(t.scrivi('POST', `${P}/eventi/n26/cose`, { id: 'c-ghiaccio', nome: 'Ghiaccio' }))
+  }
+
+  it('anteprima: cosa verrà creato con le scelte, senza scrivere nulla', async () => {
+    await conIncarichi()
+    const revisione = uno<{ valore: string }>(t.db, "SELECT valore FROM meta WHERE chiave = 'revisione'")
+    const eventi = uno<{ n: number }>(t.db, 'SELECT count(*) AS n FROM eventi')!.n
+    const { anteprima } = await ok(duplica(t, 'n26', { id: 'n27', anteprima: true, copia: { incarichi: true, partecipanti: false } }))
+    expect(anteprima.portate.flatMap((p: { voci: unknown[] }) => p.voci)).toEqual([
+      { nome: 'Lasagne', ricetta: 'collegata' },
+      { nome: 'Arrosto', ricetta: 'collegata' },
+      { nome: 'Pane', ricetta: 'nessuna' },
+    ])
+    expect(anteprima.attivita).toEqual([{ titolo: 'Ragù', data: '2027-12-24', ora: '10:00' }])
+    expect(anteprima.incarichi).toEqual([
+      { nome: 'Arrosto', precedente: 'Bruno' },
+      { nome: 'Vino', precedente: 'Zia Rosa' },
+      { nome: 'Ghiaccio', precedente: null },
+    ])
+    expect(anteprima).toMatchObject({ stampa: true, partecipanti: 0, incarichiDisponibili: true, avvisi: [] })
+    // Nulla è cambiato.
+    expect(uno<{ n: number }>(t.db, 'SELECT count(*) AS n FROM eventi')!.n).toBe(eventi)
+    expect(uno<{ valore: string }>(t.db, "SELECT valore FROM meta WHERE chiave = 'revisione'")).toEqual(revisione)
+    // Le scelte cambiano l'anteprima: senza menù solo le portate, senza piano e stampa niente.
+    const senza = (await ok(duplica(t, 'n26', { id: 'n27', anteprima: true, copia: { menu: false, piano: false, stampa: false } }))).anteprima
+    expect(senza.portate.every((p: { voci: unknown[] }) => p.voci.length === 0)).toBe(true)
+    expect(senza).toMatchObject({ attivita: [], stampa: false, incarichi: [] })
+  })
+
+  it('chi porta cosa: tutto da assegnare con chi se ne occupava; niente accettato o fatto; la spesa torna', async () => {
+    await conIncarichi()
+    await ok(duplica(t, 'n26', { id: 'n27', copia: { incarichi: true } }))
+    const inc = corpo(await t.leggi(`${P}/eventi/n27/incarichi`)).incarichi as { nome: string; stato: string; incaricato: string; precedente: unknown; inSpesa: boolean | null }[]
+    const per = (nome: string) => inc.find((i) => i.nome === nome)!
+    // Bruno non vede ancora il nuovo evento (le condivisioni non si copiano): per ora solo il nome.
+    expect(per('Arrosto')).toMatchObject({ stato: 'da_assegnare', incaricato: '', precedente: { nome: 'Bruno', utenteId: null, esternoId: null }, inSpesa: true })
+    expect(per('Vino')).toMatchObject({ stato: 'da_assegnare', incaricato: '', precedente: { nome: 'Zia Rosa', utenteId: null, esternoId: expect.any(String) } })
+    expect(per('Ghiaccio')).toMatchObject({ stato: 'da_assegnare', precedente: null })
+    // Condiviso con Bruno, il promemoria lo riconosce; riaffidare con un tocco, il promemoria sparisce.
+    await ok(t.scrivi('PUT', `${P}/eventi/n27/condivisioni/${bruno.id}`, { permesso: 'modifica' }))
+    const arrosto = corpo(await t.leggi(`${P}/eventi/n27/incarichi`)).incarichi.find((i: { nome: string }) => i.nome === 'Arrosto')
+    expect(arrosto.precedente).toEqual({ nome: 'Bruno', utenteId: bruno.id, esternoId: null })
+    await ok(t.scrivi('POST', `${P}/voci/${arrosto.id}/assegna`, { versione: arrosto.versione, utenteId: bruno.id }))
+    expect(corpo(await t.leggi(`${P}/eventi/n27/incarichi`)).incarichi.find((i: { nome: string }) => i.nome === 'Arrosto')).toMatchObject({ stato: 'assegnato', incaricato: 'Bruno', precedente: null })
+    // L'originale non cambia.
+    expect(corpo(await t.leggi(`${P}/eventi/n26/incarichi`)).incarichi.find((i: { id: string }) => i.id === 'v-arrosto')).toMatchObject({ stato: 'completato' })
+  })
+
+  it('in un\'altra Famiglia gli id non validi restano solo nome; senza menù solo le portate; senza piano né stampa', async () => {
+    await conIncarichi()
+    await ok(t.scrivi('POST', `${P}/famiglie`, { id: 'mia', nome: 'Solo mia' }))
+    await ok(duplica(t, 'n26', { id: 'n27', gruppoId: 'mia', copia: { incarichi: true } }))
+    const inc = corpo(await t.leggi(`${P}/eventi/n27/incarichi`)).incarichi as { nome: string; precedente: unknown }[]
+    expect(inc.find((i) => i.nome === 'Arrosto')?.precedente).toEqual({ nome: 'Bruno', utenteId: null, esternoId: null })
+    expect(inc.find((i) => i.nome === 'Vino')?.precedente).toEqual({ nome: 'Zia Rosa', utenteId: null, esternoId: null })
+
+    await ok(duplica(t, 'n26', { id: 'n28', copia: { menu: false, piano: false, stampa: false } }))
+    expect(await voci('n28')).toEqual([])
+    expect((await menu('n28')).portate.map((p: { nome: string }) => p.nome)).toEqual((await menu('n26')).portate.map((p: { nome: string }) => p.nome))
+    expect([conta('attivita', 'n28'), conta('stili_stampa', 'n28'), conta('cose_da_portare', 'n28')]).toEqual([0, 0, 0])
+  })
+})
+
 describe('migrazioni 0011 e 0012', () => {
   it('eventi esistenti senza serie, nessun collegamento dedotto dai nomi; voci senza origine', async () => {
     const cartella = mkdtempSync(join(tmpdir(), 'menuapp-0011-'))
