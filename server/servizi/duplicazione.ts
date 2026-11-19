@@ -211,7 +211,18 @@ export function duplica(db: Db, cartellaFoto: CartellaFile, u: UtenteCorrente, o
           idVoci.set(v.id, id)
           // Uscite dalla spesa per un incarico: nella copia l'incarico non c'è, quindi tornano.
           const toltaDaIncarico = snap ? Boolean(v.incaricato) && !v.inSpesa : repoFam.leggiVoceIncarico(db, v.id)?.spesa_tolta_da_incarico === 1
-          return { id, portataId: idPortate.get(p.id)!, nome: v.nome, piattoId: ricetta(v.piattoId, v.nome), porzioni: v.porzioni, inSpesa: v.inSpesa || toltaDaIncarico, note: v.note, incaricato: '' }
+          return {
+            id,
+            portataId: idPortate.get(p.id)!,
+            nome: v.nome,
+            piattoId: ricetta(v.piattoId, v.nome),
+            porzioni: v.porzioni,
+            inSpesa: v.inSpesa || toltaDaIncarico,
+            note: v.note,
+            incaricato: '',
+            daDefinire: v.daDefinire ?? false,
+            contributi: v.contributi ?? 1,
+          }
         }),
         (id) => id,
         adesso,

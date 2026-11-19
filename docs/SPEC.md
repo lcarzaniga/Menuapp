@@ -2766,6 +2766,31 @@ la regia è una vista del **piano delle attività** con i dati delle ricette del
   conferma; mai automatico. Nessuna pianificazione delle risorse.
 - Test: `src/domain/regia.test.ts`, `server/api/regia.test.ts`, e2e `regia.spec.ts`.
 
+## 39. «Chi porta cosa» flessibile (7.8)
+
+Migrazione `0019_contributi_da_definire.sql`. Un incarico non richiede un piatto o una ricetta.
+Menù e Chi porta restano **lo stesso record** (`voci_menu` per i piatti, `cose_da_portare` per il
+resto): nessun doppione da tenere allineato.
+
+- Tre modalità: **piatto definito** («Lucia porta le lasagne»: una voce come sempre); **piatto a
+  scelta** («Marco porta un primo a sua scelta»: una voce `da_definire` in una portata, con una
+  descrizione libera e `contributi` = quanti, es. «2 × Antipasti a scelta»); **contributo generico**
+  («Anna porta qualcosa da bere»: una cosa da portare, con descrizione e quantità libere).
+- Piatto a scelta: si aggiunge da Chi porta («Piatto a scelta»: portata, descrizione, quanti, «me
+  ne occupo io») o dal menù («Da definire» e «Quanti» nella voce). Nel menù compare «da definire»
+  con chi se ne occupa. Nessuna ricetta (trigger: mai una ricetta su una voce da definire), fuori
+  dalla spesa e senza avvisi; la portata conta come coperta nel riepilogo.
+- **Precisare** (`POST /voci/:id/precisa`, chi lo porta o chi organizza): diventa un piatto preciso
+  con il suo nome; responsabile, stato, note e spesa restano (stesso record). Collegare una ricetta
+  dal menù lo precisa. Le assegnazioni, gli stati (da assegnare, assegnato, fatto) e i promemoria di
+  §25 sono quelli di sempre.
+- «A che punto siamo?»: un piatto a scelta con qualcuno è una scelta intenzionale (nessun avviso);
+  senza nessuno è una cosa aperta («Un piatto a scelta senza nessuno»), non un piatto mancante né
+  «non affidato».
+- Duplicazione: i piatti a scelta restano a scelta (con i loro contributi). Archivi precedenti:
+  `daDefinire` false, `contributi` 1.
+- Test: `server/api/contributi.test.ts`, `src/features/eventi/Riepilogo.test.tsx`, e2e `contributi.spec.ts`.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2792,6 +2817,7 @@ la regia è una vista del **piano delle attività** con i dati delle ricette del
 | 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |
 | 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |
 | 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |
+| 19/11/2026 | 7.8 — **Chi porta cosa flessibile** (§39): piatti a scelta «da definire» con quanti contributi, precisabili senza perdere l'incarico; menù e Chi porta stesso record |
 | 19/11/2026 | 7.7 — **Regia della cucina** (§38): vista del piano per il giorno dell'evento, colonne per fase, filtri, attrezzature dal testo delle ricette, testo grande, schermo acceso, «Prepara il piano dai piatti» |
 | 19/11/2026 | 7.6 — **Riuso degli eventi** (§25): scelta di cosa copiare, anteprima senza scritture, chi porta cosa da riassegnare con il promemoria di chi se ne occupava (migrazione 0018) |
 | 19/11/2026 | 7.5 — **Riepilogo a gruppi** (§26): Da organizzare, Da acquistare, Da preparare; livelli da risolvere / aperto / suggerimento; ritardo con l'ora italiana, prossima attività, piatti senza ricetta o ingredienti come suggerimento, evento passato |

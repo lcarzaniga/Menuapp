@@ -228,7 +228,21 @@ function RigaVoce({
   )
   const ripristina = useScrittura((v: VoceDelMenu) =>
     api.crea(`/eventi/${evento.id}/voci`, {
-      voci: [{ id: v.id, portataId: v.portataId, nome: v.nome, piattoId: v.piattoId, porzioni: v.porzioni, incaricato: v.incaricato, inSpesa: v.inSpesa, note: v.note, ordine: v.ordine }],
+      voci: [
+        {
+          id: v.id,
+          portataId: v.portataId,
+          nome: v.nome,
+          piattoId: v.piattoId,
+          porzioni: v.porzioni,
+          incaricato: v.incaricato,
+          inSpesa: v.inSpesa,
+          note: v.note,
+          daDefinire: v.daDefinire,
+          contributi: v.contributi,
+          ordine: v.ordine,
+        },
+      ],
     }),
     { successo: 'Voce ripristinata' },
   )
@@ -264,8 +278,13 @@ function RigaVoce({
         onClick={() => onApri(voce)}
         aria-label={`${voce.nome}: apri dettagli`}
       >
-        <span className="font-medium leading-snug">{voce.nome}</span>
+        <span className="font-medium leading-snug">
+          {voce.contributi > 1 ? `${voce.contributi} × ` : ''}
+          {voce.nome}
+        </span>
         <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-testo-tenue">
+          {/* Contributo a scelta di chi lo porta (SPEC §39): lo stesso incarico di Chi porta. */}
+          {voce.daDefinire ? <Badge variante="avviso">da definire</Badge> : null}
           {voce.piattoId ? (
             <Badge variante="successo">
               <ChefHat className="size-3" /> ricetta

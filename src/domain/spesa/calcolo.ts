@@ -40,7 +40,8 @@ export interface AvvisoSpesa {
 
 export interface DatiCalcolo {
   evento: { adulti: number; bambini: number; coefficienteBambini: number }
-  voci: { id: Id; nome: string; piattoId: Id | null; porzioni: number | null; inSpesa: boolean }[]
+  /** `daDefinire`: contributo a scelta di chi lo porta (SPEC §39), fuori dalla spesa e senza avvisi. */
+  voci: { id: Id; nome: string; piattoId: Id | null; porzioni: number | null; inSpesa: boolean; daDefinire?: boolean }[]
   piatti: ReadonlyMap<Id, Piatto>
   catalogo: ReadonlyMap<Id, { id: Id; nome: string; repartoId: Id }>
 }
@@ -71,7 +72,7 @@ export function calcolaSpesa(d: DatiCalcolo): RisultatoCalcolo {
   const avvisi: AvvisoSpesa[] = []
 
   for (const voce of d.voci) {
-    if (!voce.inSpesa) continue
+    if (!voce.inSpesa || voce.daDefinire) continue
     if (!voce.piattoId) {
       avvisi.push({ tipo: 'voce_senza_ricetta', voceId: voce.id, nomeVoce: voce.nome, messaggio: `${voce.nome}: nessuna ricetta — aggiungila o crea un articolo manuale` })
       continue

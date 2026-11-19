@@ -79,6 +79,8 @@ const PARTECIPAZIONE = [
   `POST ${P}/voci/:id/prendi`,
   `POST ${P}/voci/:id/rinuncia`,
   `POST ${P}/voci/:id/completa`,
+  // Chi porta un piatto a scelta lo precisa anche se vede l'evento in sola lettura (SPEC §39).
+  `POST ${P}/voci/:id/precisa`,
   `PUT ${P}/voci/:id/valutazione`,
   `DELETE ${P}/voci/:id/valutazione`,
 ]

@@ -36,7 +36,7 @@ export function riepilogo(db: Db, u: UtenteCorrente, eventoId: string, adesso = 
     const inc = elencaIncarichi(db, u, eventoId).incarichi
     const voci = inc.filter((i) => i.tipo === 'voce')
     const cose = inc.filter((i) => i.tipo === 'cosa')
-    const usato = cose.length > 0 || voci.some((v) => v.incaricato)
+    const usato = cose.length > 0 || voci.some((v) => v.incaricato || v.daDefinire)
     const a = repo.attivita(db, eventoId, oggi, ora)
     const s = listaSpesa(db, eventoId)
     const articoli = s.voci.length + s.manuali.length
@@ -48,7 +48,9 @@ export function riepilogo(db: Db, u: UtenteCorrente, eventoId: string, adesso = 
         ? {
             coseSenzaResponsabile: cose.filter((x) => !x.incaricato).length,
             daCompletare: inc.filter((x) => x.stato === 'assegnato').length,
-            piattiNonAffidati: voci.filter((v) => !v.incaricato).length,
+            // I contributi da definire senza nessuno sono cose aperte, non piatti «non affidati».
+            piattiNonAffidati: voci.filter((v) => !v.incaricato && !v.daDefinire).length,
+            contributiSenzaResponsabile: voci.filter((v) => !v.incaricato && v.daDefinire).length,
             responsabiliAssenti: inc.filter((x) => x.responsabileAssente).length,
           }
         : null,

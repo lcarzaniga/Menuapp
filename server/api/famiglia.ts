@@ -16,6 +16,7 @@ import {
   SchemaAssegna,
   SchemaCompleta,
   SchemaNuovaCosa,
+  SchemaPrecisa,
   SchemaPrendi,
   SchemaValuta,
   SchemaAggiornaMessaggio,
@@ -251,6 +252,13 @@ export function rotteFamiglia(app: FastifyInstance, ctx: Contesto): void {
       return incarichi.completa(db, u, tipo, req.params.id, d.versione, d.completato)
     })
   }
+  // Un contributo a scelta diventa un piatto preciso (SPEC §39).
+  app.post<ConId>(`${P}/voci/:id/precisa`, async (req) => {
+    const u = chi(req)
+    incarichi.richiediIncarico(db, u, 'voce', req.params.id)
+    const d = valida(SchemaPrecisa, req.body)
+    return incarichi.precisa(db, u, req.params.id, d.versione, d.nome)
+  })
 
   // ── Rubrica delle persone senza account (per Famiglia) ──
   app.get<ConId>(`${P}/famiglie/:id/rubrica`, async (req) => rubrica.elenca(db, chi(req), req.params.id))

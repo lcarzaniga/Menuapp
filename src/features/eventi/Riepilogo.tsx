@@ -79,9 +79,13 @@ export function indicatori(r: RiepilogoOrganizzativo): Indicatore[] {
     const i = r.incarichi
     if (i.responsabiliAssenti) lista.push({ testo: `${plurale(i.responsabiliAssenti, 'incarico', 'incarichi')} di chi non partecipa`, livello: 'attenzione', gruppo: o, a: 'chi-porta' })
     if (i.coseSenzaResponsabile) lista.push({ testo: `${plurale(i.coseSenzaResponsabile, 'cosa', 'cose')} da portare senza nessuno`, livello: 'da_fare', gruppo: o, a: 'chi-porta' })
+    // Piatti a scelta (SPEC §39): con qualcuno sono una scelta intenzionale; senza, una cosa aperta.
+    if (i.contributiSenzaResponsabile) {
+      lista.push({ testo: `${i.contributiSenzaResponsabile === 1 ? 'Un piatto' : `${i.contributiSenzaResponsabile} piatti`} a scelta senza nessuno`, dettaglio: 'affidali a chi li porterà', livello: 'da_fare', gruppo: o, a: 'chi-porta' })
+    }
     if (i.daCompletare) lista.push({ testo: `${plurale(i.daCompletare, 'incarico', 'incarichi')} da completare`, dettaglio: 'affidati e non ancora segnati come fatti', livello: 'da_fare', gruppo: o, a: 'chi-porta' })
     if (i.piattiNonAffidati) lista.push({ testo: `${i.piattiNonAffidati} ${i.piattiNonAffidati === 1 ? 'piatto non affidato' : 'piatti non affidati'}`, dettaglio: 'se li preparate voi va bene così', livello: 'nota', gruppo: o, a: 'chi-porta' })
-    if (!i.responsabiliAssenti && !i.coseSenzaResponsabile && !i.daCompletare) lista.push({ testo: 'Incarichi completati', livello: 'ok', gruppo: o, a: 'chi-porta' })
+    if (!i.responsabiliAssenti && !i.coseSenzaResponsabile && !i.contributiSenzaResponsabile && !i.daCompletare) lista.push({ testo: 'Incarichi completati', livello: 'ok', gruppo: o, a: 'chi-porta' })
   }
   if (r.proposte) lista.push({ testo: `${plurale(r.proposte.inAttesa, 'proposta', 'proposte')} da decidere`, livello: 'da_fare', gruppo: o, a: 'bacheca' })
   if (r.sondaggi) lista.push({ testo: `${plurale(r.sondaggi.aperti, 'sondaggio aperto', 'sondaggi aperti')}`, livello: 'da_fare', gruppo: o, a: 'bacheca' })

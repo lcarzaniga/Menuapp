@@ -6,6 +6,7 @@ import { api } from '@/api/client'
 import { useScrittura } from '@/api/scrittura'
 import { Button } from '@/components/ui/button'
 import { Campo, Casella, Input, Textarea } from '@/components/ui/campi'
+import { cn } from '@/lib/utils'
 import { Finestra } from '@/components/ui/dialog'
 import { usePuoScrivere } from '@/connessione/stato'
 import type { Menu, VoceDelMenu } from '@/contratto/eventi.ts'
@@ -21,6 +22,8 @@ interface Dati {
   incaricato: string
   inSpesa: boolean
   note: string
+  daDefinire: boolean
+  contributi: number
 }
 
 export function EditorVoce({ evento, menu, voce, onChiudi }: { evento: Evento; menu: Menu; voce: VoceDelMenu; onChiudi: () => void }) {
@@ -33,6 +36,8 @@ export function EditorVoce({ evento, menu, voce, onChiudi }: { evento: Evento; m
     incaricato: voce.incaricato,
     inSpesa: voce.inSpesa,
     note: voce.note,
+    daDefinire: voce.daDefinire,
+    contributi: voce.contributi,
   })
   const [preparazione, setPreparazione] = useState(false)
   const [porzioniTesto, setPorzioniTesto] = useState(voce.porzioni === null ? '' : String(voce.porzioni).replace('.', ','))
@@ -42,7 +47,16 @@ export function EditorVoce({ evento, menu, voce, onChiudi }: { evento: Evento; m
     sovrascrivi: (x, attuale) => ({ ...x, versione: (attuale as VoceMenu).versione }),
   })
   const porzioniValide = porzioniTesto.trim() === '' || Number(porzioniTesto.replace(',', '.')) > 0
-  const modificato = JSON.stringify(d) !== JSON.stringify({ nome: voce.nome, piattoId: voce.piattoId, porzioni: voce.porzioni, incaricato: voce.incaricato, inSpesa: voce.inSpesa, note: voce.note })
+  const modificato = JSON.stringify(d) !== JSON.stringify({
+    nome: voce.nome,
+    piattoId: voce.piattoId,
+    porzioni: voce.porzioni,
+    incaricato: voce.incaricato,
+    inSpesa: voce.inSpesa,
+    note: voce.note,
+    daDefinire: voce.daDefinire,
+    contributi: voce.contributi,
+  })
 
   return (
     <Finestra aperta onCambia={(a) => !a && onChiudi()} titolo={solaLettura ? voce.nome : 'Voce del menù'}>
@@ -89,8 +103,31 @@ export function EditorVoce({ evento, menu, voce, onChiudi }: { evento: Evento; m
               </p>
             </div>
           </div>
-          <label className="flex items-center gap-3 rounded-xl border border-bordo px-3 py-3 text-sm">
-            <Casella checked={d.inSpesa} onChange={(e) => setD({ ...d, inSpesa: e.target.checked })} />
+          {/* Contributo a scelta di chi lo porta (SPEC §39): nessuna ricetta, fuori dalla spesa. */}
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-bordo px-3 py-3 text-sm">
+            <label className="flex flex-1 basis-56 items-center gap-3">
+              <Casella checked={d.daDefinire} onChange={(e) => setD({ ...d, daDefinire: e.target.checked, piattoId: e.target.checked ? null : d.piattoId })} />
+              <span>
+                <strong className="font-medium">Da definire</strong>
+                <span className="block text-testo-tenue">A scelta di chi lo porta: si precisa più tardi.</span>
+              </span>
+            </label>
+            <label className="flex items-center gap-2">
+              Quanti
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={99}
+                className="w-20"
+                aria-label="Quanti contributi"
+                value={d.contributi}
+                onChange={(e) => setD({ ...d, contributi: Math.min(99, Math.max(1, Number(e.target.value) || 1)) })}
+              />
+            </label>
+          </div>
+          <label className={cn('flex items-center gap-3 rounded-xl border border-bordo px-3 py-3 text-sm', d.daDefinire && 'opacity-60')}>
+            <Casella checked={d.inSpesa && !d.daDefinire} disabled={d.daDefinire} onChange={(e) => setD({ ...d, inSpesa: e.target.checked })} />
             <span>
               <strong className="font-medium">Includi nella spesa</strong>
               <span className="block text-testo-tenue">Togli la spunta se lo porta qualcun altro o è già pronto.</span>

@@ -99,10 +99,15 @@ export const SchemaVoceMenu = z.object({
   incaricato: z.string(),
   inSpesa: z.boolean(),
   note: z.string(),
+  /** Contributo a scelta di chi lo porta (SPEC §39); assente negli archivi precedenti. */
+  daDefinire: z.boolean().default(false),
+  contributi: z.number().int().default(1),
   versione: Versione,
   creatoIl: Epoch,
   aggiornatoIl: Epoch,
 })
+
+const Contributi = z.number().int().min(1).max(99)
 
 const Porzioni = z.number().positive('Le porzioni devono essere più di zero').max(10_000).nullable()
 
@@ -115,6 +120,9 @@ export const SchemaNuovaVoce = z.object({
   incaricato: TestoBreve.optional(),
   inSpesa: z.boolean().optional(),
   note: TestoLungo.optional(),
+  /** Contributo a scelta di chi lo porta, senza ricetta (SPEC §39). */
+  daDefinire: z.boolean().optional(),
+  contributi: Contributi.optional(),
   /** Posizione nella portata (per «Annulla» dopo un'eliminazione); assente = in fondo. */
   ordine: z.number().int().min(0).optional(),
 })
@@ -129,6 +137,9 @@ export const SchemaAggiornaVoce = z.object({
   incaricato: TestoBreve,
   inSpesa: z.boolean(),
   note: TestoLungo,
+  /** Assenti: restano come sono (client precedenti). Collegare una ricetta lo precisa. */
+  daDefinire: z.boolean().optional(),
+  contributi: Contributi.optional(),
   versione: Versione,
 })
 export type AggiornaVoce = z.infer<typeof SchemaAggiornaVoce>

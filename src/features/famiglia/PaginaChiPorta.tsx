@@ -1,8 +1,9 @@
 // Chi porta cosa (SPEC §20.5): piatti del menù e cose da portare, chi se ne occupa, stato.
 // La responsabilità di un piatto è la stessa «A cura di» del menù.
-import { AlertTriangle, CheckCircle2, Circle, HandHeart, Plus, ShoppingBasket, Undo2, UserRound } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Circle, HandHeart, PencilLine, Plus, ShoppingBasket, Undo2, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import { api, nuovoId } from '@/api/client'
+import { useMenu } from '@/api/query'
 import { useScrittura } from '@/api/scrittura'
 import { Caricamento, Vuoto } from '@/components/Pagina'
 import { Badge } from '@/components/ui/badge'
@@ -24,6 +25,7 @@ export function PaginaChiPorta() {
   const e = useEventoCorrente()
   const q = useIncarichi(e.id)
   const [nuova, setNuova] = useState(false)
+  const [contributo, setContributo] = useState(false)
   // Da una notifica: ?incarico=voce:<id> o cosa:<id>.
   const { id: evidenziato, mancante } = useEvidenzia('incarico', 'incarico-', Boolean(q.data))
   if (q.isPending) return <Caricamento />
@@ -42,6 +44,11 @@ export function PaginaChiPorta() {
             'Tutto ha qualcuno che se ne occupa'
           )}
         </p>
+        {d.puoAssegnare ? (
+          <Button variante="contorno" misura="piccolo" onClick={() => setContributo(true)}>
+            <Plus /> Piatto a scelta
+          </Button>
+        ) : null}
         {d.puoPartecipare ? (
           <Button variante="contorno" misura="piccolo" onClick={() => setNuova(true)}>
             <Plus /> Cosa da portare
@@ -62,6 +69,7 @@ export function PaginaChiPorta() {
         </div>
       )}
       <NuovaCosa eventoId={e.id} aperta={nuova} onCambia={setNuova} />
+      {contributo ? <NuovoContributo eventoId={e.id} onChiudi={() => setContributo(false)} /> : null}
     </CorpoScheda>
   )
 }
@@ -88,6 +96,7 @@ function Riga({ i, d, evidenziato }: { i: Incarico; d: Incarichi; evidenziato: b
   const [prendi, setPrendi] = useState(false)
   const [affida, setAffida] = useState(false)
   const [modifica, setModifica] = useState(false)
+  const [precisa, setPrecisa] = useState(false)
   const [togli, setTogli] = useState(true)
   const opzioni = { oggetto: `«${i.nome}»`, successo: null }
   const azione = useScrittura((a: { verbo: 'prendi' | 'rinuncia' | 'completa' | 'assegna'; corpo: Record<string, unknown> }) => api.crea<Incarico>(`${percorso(i)}/${a.verbo}`, { versione: i.versione, ...a.corpo }), opzioni)
@@ -103,11 +112,13 @@ function Riga({ i, d, evidenziato }: { i: Incarico; d: Incarichi; evidenziato: b
         {/* Su telefono i comandi possono andare a capo sotto il testo, che resta leggibile. */}
         <div className="min-w-0 flex-1 basis-40">
           <p className={cn('font-medium', i.stato === 'completato' && 'text-testo-tenue line-through decoration-1')}>
+            {i.contributi > 1 ? `${i.contributi} × ` : ''}
             {i.nome}
             {quantita(i) ? <span className="text-testo-tenue"> · {quantita(i)}</span> : null}
           </p>
           <p className="flex flex-wrap items-center gap-1.5 text-xs text-testo-tenue">
             {i.portata ? <span>{i.portata}</span> : null}
+            {i.daDefinire ? <Badge variante="neutro">a scelta di chi lo porta</Badge> : null}
             {i.incaricato ? (
               <Badge variante={mio ? 'primario' : 'neutro'} title={i.incaricatoId ? undefined : 'Non usa l\'app'}>
                 <UserRound className="size-3" /> {mio ? 'tu' : i.incaricato}
@@ -136,6 +147,11 @@ function Riga({ i, d, evidenziato }: { i: Incarico; d: Incarichi; evidenziato: b
           {i.puoPrendere ? (
             <Button misura="piccolo" disabled={!connesso || azione.inCorso} onClick={() => (i.tipo === 'voce' && i.inSpesa ? setPrendi(true) : void azione.esegui({ verbo: 'prendi', corpo: {} }))}>
               <HandHeart /> Me ne occupo io
+            </Button>
+          ) : null}
+          {i.daDefinire && (d.puoAssegnare || mio) ? (
+            <Button misura="piccolo" variante="contorno" disabled={!connesso} onClick={() => setPrecisa(true)}>
+              <PencilLine /> Precisa
             </Button>
           ) : null}
           {i.puoCompletare && i.stato !== 'completato' ? (
@@ -175,6 +191,7 @@ function Riga({ i, d, evidenziato }: { i: Incarico; d: Incarichi; evidenziato: b
           />
         </div>
       {affida ? <Affida i={i} d={d} onChiudi={() => setAffida(false)} /> : null}
+      {precisa ? <Precisa i={i} onChiudi={() => setPrecisa(false)} /> : null}
       {modifica ? <ModificaCosa i={i} onChiudi={() => setModifica(false)} /> : null}
       <Finestra
         aperta={prendi}
@@ -351,6 +368,92 @@ function ModificaCosa({ i, onChiudi }: { i: Incarico; onChiudi: () => void }) {
           <Input id="mod-cosa-note" value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} />
         </Campo>
       </div>
+    </Finestra>
+  )
+}
+
+/**
+ * Piatto a scelta (SPEC §39): «un primo a scelta», «due antipasti a scelta». È una voce del menù
+ * «da definire», lo stesso record che Chi porta assegna; senza ricetta e fuori dalla spesa.
+ */
+function NuovoContributo({ eventoId, onChiudi }: { eventoId: string; onChiudi: () => void }) {
+  const menu = useMenu(eventoId)
+  const portate = menu.data?.portate ?? []
+  const [portataId, setPortataId] = useState('')
+  const scelta = portate.find((p) => p.id === portataId) ?? portate[0]
+  const [nome, setNome] = useState('')
+  const [quanti, setQuanti] = useState('1')
+  const [prendo, setPrendo] = useState(false)
+  const descrizione = nome.trim() || (scelta ? `${scelta.nome} a scelta` : '')
+  const crea = useScrittura(
+    async () => {
+      const id = nuovoId()
+      const [v] = await api.crea<{ id: string; versione: number }[]>(`/eventi/${eventoId}/voci`, {
+        voci: [{ id, portataId: scelta!.id, nome: descrizione, daDefinire: true, contributi: Math.min(99, Math.max(1, Number(quanti) || 1)) }],
+      })
+      if (prendo && v) await api.crea(`/voci/${id}/prendi`, { versione: v.versione })
+    },
+    { successo: 'Aggiunto: compare anche nel menù', dopo: onChiudi },
+  )
+  return (
+    <Finestra
+      aperta
+      onCambia={(a) => !a && onChiudi()}
+      titolo="Piatto a scelta"
+      descrizione="Per chi porta «un primo a sua scelta»: nel menù compare come «da definire» con chi se ne occupa. Non serve una ricetta e non entra nella spesa; chi lo porta potrà precisarlo."
+      piede={
+        <Button disabled={!scelta || crea.inCorso} onClick={() => void crea.esegui(undefined)}>
+          Aggiungi
+        </Button>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        <Campo etichetta="Portata" htmlFor="contributo-portata">
+          <Select id="contributo-portata" value={scelta?.id ?? ''} onChange={(e) => setPortataId(e.target.value)}>
+            {portate.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nome}
+              </option>
+            ))}
+          </Select>
+        </Campo>
+        <Campo etichetta="Descrizione (facoltativa)" htmlFor="contributo-nome">
+          <Input id="contributo-nome" value={nome} maxLength={200} placeholder={scelta ? `${scelta.nome} a scelta` : ''} onChange={(e) => setNome(e.target.value)} />
+        </Campo>
+        <Campo etichetta="Quanti" htmlFor="contributo-quanti">
+          <Input id="contributo-quanti" type="number" inputMode="numeric" min={1} max={99} className="w-28" value={quanti} onChange={(e) => setQuanti(e.target.value)} />
+        </Campo>
+        <label className="flex min-h-11 items-center gap-3 text-sm">
+          <Casella checked={prendo} onChange={(e) => setPrendo(e.target.checked)} /> Me ne occupo io (altrimenti lo affidi dopo)
+        </label>
+      </div>
+    </Finestra>
+  )
+}
+
+/** Precisare il piatto scelto: stesso incarico, stessa riga del menù (SPEC §39). */
+function Precisa({ i, onChiudi }: { i: Incarico; onChiudi: () => void }) {
+  const [nome, setNome] = useState('')
+  const salva = useScrittura(() => api.crea<Incarico>(`/voci/${i.id}/precisa`, { versione: i.versione, nome: nome.trim() }), {
+    oggetto: `«${i.nome}»`,
+    successo: (r) => `Ora è «${r.nome}»`,
+    dopo: onChiudi,
+  })
+  return (
+    <Finestra
+      aperta
+      onCambia={(a) => !a && onChiudi()}
+      titolo={`Precisa «${i.nome}»`}
+      descrizione={`Quale piatto${i.incaricato ? ` porta ${i.incaricato}` : ''}? Nel menù prende questo nome; chi lo porta e le note restano. Una ricetta si può collegare poi dal menù.`}
+      piede={
+        <Button disabled={!nome.trim() || salva.inCorso} onClick={() => void salva.esegui(undefined)}>
+          Salva
+        </Button>
+      }
+    >
+      <Campo etichetta="Piatto" htmlFor="precisa-nome">
+        <Input id="precisa-nome" value={nome} maxLength={200} placeholder="Es. Lasagne alla bolognese" onChange={(e) => setNome(e.target.value)} autoFocus />
+      </Campo>
     </Finestra>
   )
 }

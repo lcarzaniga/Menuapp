@@ -110,6 +110,8 @@ export const SchemaRiepilogoEvento = z.object({
       daCompletare: z.number().int(),
       /** Piatti del menù non affidati: solo un'informazione (li può preparare chi organizza). */
       piattiNonAffidati: z.number().int(),
+      /** Contributi a scelta (da definire) ancora senza chi li porta (SPEC §39). */
+      contributiSenzaResponsabile: z.number().int().default(0),
       /** Responsabili che hanno detto che non vengono. */
       responsabiliAssenti: z.number().int(),
     })

@@ -182,6 +182,10 @@ export const SchemaIncarico = z.object({
    * riaffidarlo con un tocco. Gli id solo se ancora validi in questa Famiglia.
    */
   precedente: SchemaPrecedente.nullable(),
+  /** Piatto a scelta di chi lo porta, ancora da precisare (SPEC §39); sempre false per le cose. */
+  daDefinire: z.boolean(),
+  /** Quanti contributi (piatti); per le cose la quantità è in `quantita`. */
+  contributi: z.number().int(),
   inSpesa: z.boolean().nullable(),
   spesaToltaDaIncarico: z.boolean(),
   versione: Versione,
@@ -249,6 +253,9 @@ export const SchemaAssegna = z
     message: 'Indica una persona: con l\'app, dalla rubrica o un nome',
   })
 export type Assegnazione = z.infer<typeof SchemaAssegna>
+
+/** Precisare un contributo da definire (SPEC §39): il piatto scelto, senza perdere l'incarico. */
+export const SchemaPrecisa = z.object({ versione: Versione, nome: NomeObbligatorio })
 
 // ── Rubrica delle persone senza account ─────────────────────
 

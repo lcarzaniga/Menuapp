@@ -53,13 +53,13 @@ describe('a che punto siamo: indicatori', () => {
   })
 
   it('chi porta: responsabili assenti da risolvere, cose senza nessuno aperte; piatti non affidati solo suggerimenti', () => {
-    const l = indicatori({ ...base, incarichi: { coseSenzaResponsabile: 1, daCompletare: 0, piattiNonAffidati: 3, responsabiliAssenti: 1 } })
+    const l = indicatori({ ...base, incarichi: { coseSenzaResponsabile: 1, daCompletare: 0, piattiNonAffidati: 3, contributiSenzaResponsabile: 0, responsabiliAssenti: 1 } })
     expect(l.filter(inSospeso).map((x) => [x.testo, x.livello])).toEqual([
       ['1 incarico di chi non partecipa', 'attenzione'],
       ['1 cosa da portare senza nessuno', 'da_fare'],
     ])
     expect(l.find((x) => x.testo === '3 piatti non affidati')).toMatchObject({ livello: 'nota', a: 'chi-porta' })
-    expect(indicatori({ ...base, incarichi: { coseSenzaResponsabile: 0, daCompletare: 0, piattiNonAffidati: 1, responsabiliAssenti: 0 } }).find((x) => x.livello === 'nota')?.testo).toBe('1 piatto non affidato')
+    expect(indicatori({ ...base, incarichi: { coseSenzaResponsabile: 0, daCompletare: 0, piattiNonAffidati: 1, contributiSenzaResponsabile: 0, responsabiliAssenti: 0 } }).find((x) => x.livello === 'nota')?.testo).toBe('1 piatto non affidato')
   })
 
   it('da acquistare: da verificare da risolvere, da comprare aperto; piatti senza ricetta o ingredienti solo suggerimenti', () => {
@@ -105,6 +105,12 @@ describe('a che punto siamo: indicatori', () => {
       ['Piano completato', 'piano', 'ok'],
       ['Chi porta cosa', 'chi-porta', 'facoltativo'],
     ])
+  })
+
+  it('piatti a scelta: senza nessuno sono aperti, con qualcuno non contano', () => {
+    const l = indicatori({ ...base, incarichi: { coseSenzaResponsabile: 0, daCompletare: 0, piattiNonAffidati: 0, contributiSenzaResponsabile: 2, responsabiliAssenti: 0 } })
+    expect(l.filter(inSospeso).map((x) => [x.testo, x.livello, x.a])).toEqual([['2 piatti a scelta senza nessuno', 'da_fare', 'chi-porta']])
+    expect(l.some((x) => x.testo === 'Incarichi completati')).toBe(false)
   })
 
   it('tutto pronto: nessuna cosa in sospeso', () => {

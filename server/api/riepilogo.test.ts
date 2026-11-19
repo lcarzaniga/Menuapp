@@ -77,7 +77,7 @@ describe('a che punto siamo', () => {
     await ok(t.scrivi('POST', `${P}/voci/v2/assegna`, { versione: torta.versione, partecipanteId: 'pm', togliDallaSpesa: true }))
     await ok(t.scrivi('POST', `${P}/eventi/ev/cose`, { id: 'c-vino', nome: 'Vino' }))
     r = await riepilogo()
-    expect(r.incarichi).toEqual({ coseSenzaResponsabile: 1, daCompletare: 1, piattiNonAffidati: 1, responsabiliAssenti: 0 })
+    expect(r.incarichi).toEqual({ coseSenzaResponsabile: 1, daCompletare: 1, piattiNonAffidati: 1, contributiSenzaResponsabile: 0, responsabiliAssenti: 0 })
     // La torta è fuori dalla spesa e nessun altro piatto ha ricetta: niente da comprare.
     // …solo il suggerimento del risotto, che non ha una ricetta.
     expect(r.spesa).toMatchObject({ articoli: 0, daComprare: 0, senzaRicetta: ['Risotto'] })

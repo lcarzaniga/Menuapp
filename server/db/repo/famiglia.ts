@@ -178,12 +178,14 @@ export interface RigaVoceIncarico {
   note_incarico: string
   porzioni: number | null
   incarico_precedente: string | null
+  da_definire: number
+  contributi: number
 }
 export const vociIncarichi = (db: Db, eventoId: string) =>
   tutti<RigaVoceIncarico>(
     db,
     `SELECT v.id, v.nome, p.nome AS portata, v.incaricato, v.incaricato_id, v.incarico_completato, v.spesa_tolta_da_incarico, v.in_spesa, v.versione,
-       v.incaricato_esterno_id, v.note_incarico, v.porzioni, v.incarico_precedente
+       v.incaricato_esterno_id, v.note_incarico, v.porzioni, v.incarico_precedente, v.da_definire, v.contributi
      FROM voci_menu v JOIN portate_evento p ON p.id = v.portata_id WHERE v.evento_id = ? ORDER BY p.ordine, v.ordine`,
     eventoId,
   )
@@ -191,7 +193,7 @@ export const leggiVoceIncarico = (db: Db, id: string) =>
   uno<RigaVoceIncarico & { evento_id: string }>(
     db,
     `SELECT v.id, v.evento_id, v.nome, p.nome AS portata, v.incaricato, v.incaricato_id, v.incarico_completato, v.spesa_tolta_da_incarico, v.in_spesa, v.versione,
-       v.incaricato_esterno_id, v.note_incarico, v.porzioni, v.incarico_precedente
+       v.incaricato_esterno_id, v.note_incarico, v.porzioni, v.incarico_precedente, v.da_definire, v.contributi
      FROM voci_menu v JOIN portate_evento p ON p.id = v.portata_id WHERE v.id = ?`,
     id,
   )
@@ -245,6 +247,11 @@ export function inserisciCosa(db: Db, c: DatiCosa & { id: string; eventoId: stri
     c.id, c.eventoId, c.nome, c.quantita, c.quantitaNumero, c.unita, c.note, c.creatoDa, ordine, c.precedente ?? null, adesso, adesso,
   )
 }
+
+export const voceDaDefinire = (db: Db, id: string) => uno(db, 'SELECT 1 FROM voci_menu WHERE id = ? AND da_definire = 1', id) !== undefined
+/** Il contributo diventa un piatto preciso: solo nome e «da definire», il resto dell'incarico resta. */
+export const precisaVoce = (db: Db, id: string, nome: string, adesso: number) =>
+  esegui(db, 'UPDATE voci_menu SET nome = ?, da_definire = 0, versione = versione + 1, aggiornato_il = ? WHERE id = ?', nome, adesso, id)
 
 /** Chi se ne occupava nell'evento da cui è stato duplicato (solo un promemoria, SPEC §25). */
 export const impostaPrecedenteVoce = (db: Db, voceId: string, precedente: string) =>

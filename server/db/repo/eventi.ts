@@ -155,6 +155,8 @@ interface RigaVoce {
   incaricato: string
   in_spesa: number
   note: string
+  da_definire: number
+  contributi: number
   versione: number
   creato_il: number
   aggiornato_il: number
@@ -171,6 +173,8 @@ const daRigaVoce = (r: RigaVoce): VoceMenu => ({
   incaricato: r.incaricato,
   inSpesa: r.in_spesa === 1,
   note: r.note,
+  daDefinire: r.da_definire === 1,
+  contributi: r.contributi,
   versione: r.versione,
   creatoIl: r.creato_il,
   aggiornatoIl: r.aggiornato_il,
@@ -198,9 +202,9 @@ export function vociPortata(db: Db, portataId: string): VoceMenu[] {
 export function inserisciVoce(db: Db, v: Omit<VoceMenu, 'versione'>): void {
   esegui(
     db,
-    `INSERT INTO voci_menu (id, evento_id, portata_id, ordine, nome, piatto_id, porzioni, incaricato, in_spesa, note,
-       versione, creato_il, aggiornato_il) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
-    v.id, v.eventoId, v.portataId, v.ordine, v.nome, v.piattoId, v.porzioni, v.incaricato, v.inSpesa, v.note, v.creatoIl, v.aggiornatoIl,
+    `INSERT INTO voci_menu (id, evento_id, portata_id, ordine, nome, piatto_id, porzioni, incaricato, in_spesa, note, da_definire, contributi,
+       versione, creato_il, aggiornato_il) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+    v.id, v.eventoId, v.portataId, v.ordine, v.nome, v.piattoId, v.porzioni, v.incaricato, v.inSpesa, v.note, v.daDefinire, v.contributi, v.creatoIl, v.aggiornatoIl,
   )
 }
 

@@ -79,6 +79,8 @@ export function elenca(db: Db, u: UtenteCorrente, eventoId: string): Incarichi {
       incaricatoEsternoId: v.incaricato_esterno_id,
       stato: stato({ incaricato: v.incaricato, completato: v.incarico_completato === 1 }),
       precedente: v.incaricato ? null : precedente(v.incarico_precedente),
+      daDefinire: v.da_definire === 1,
+      contributi: v.contributi,
       inSpesa: v.in_spesa === 1,
       spesaToltaDaIncarico: v.spesa_tolta_da_incarico === 1,
       versione: v.versione,
@@ -101,6 +103,8 @@ export function elenca(db: Db, u: UtenteCorrente, eventoId: string): Incarichi {
       incaricatoEsternoId: c.incaricato_esterno_id,
       stato: stato({ incaricato: c.incaricato, completato: c.completato === 1 }),
       precedente: c.incaricato ? null : precedente(c.incarico_precedente),
+      daDefinire: false,
+      contributi: 1,
       inSpesa: null,
       spesaToltaDaIncarico: false,
       versione: c.versione,
@@ -195,6 +199,24 @@ function preparaScrittura(db: Db, u: UtenteCorrente, tipo: TipoIncarico, id: str
   if (r.versione !== versione) throw conflittoVersione(incaricoAttuale(db, u, r))
   const permesso = permessoEvento(db, u, r.eventoId)
   return { r, gestisce: permesso === 'proprietario' || permesso === 'modifica' }
+}
+
+/**
+ * Precisare un contributo da definire (SPEC §39): «un primo a scelta» diventa «Lasagne». Stesso
+ * record del menù: responsabile, stato, note e spesa restano. Lo fa chi organizza o chi lo porta.
+ */
+export function precisa(db: Db, u: UtenteCorrente, id: string, versione: number, nome: string, adesso = Date.now()): Incarico {
+  return transazione(db, () => {
+    const { r, gestisce } = preparaScrittura(db, u, 'voce', id, versione)
+    if (!gestisce && r.incaricatoId !== u.id) throw accessoNegato('Lo precisa chi lo porta o chi organizza')
+    if (!repo.voceDaDefinire(db, id)) throw regolaViolata('gia_definito', 'Il piatto è già definito: si modifica dal menù')
+    repo.precisaVoce(db, id, pulisci(nome), adesso)
+    if (!gestisce) {
+      avvisa(db, { tipo: 'incarico', attoreId: u.id, destinatari: personeEvento(db, r.eventoId), chiave: `incarichi:${r.eventoId}`, eventoId: r.eventoId, ancora: `voce:${id}`, testo: `${u.nome} porta «${pulisci(nome)}»` }, adesso)
+    }
+    incrementaRevisione(db)
+    return incaricoAttuale(db, u, leggi(db, 'voce', id))
+  })
 }
 
 /** Mi offro: solo se nessuno se n'è già preso carico. */

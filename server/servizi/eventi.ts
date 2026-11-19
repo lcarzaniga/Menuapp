@@ -204,7 +204,9 @@ export function creaVoci(db: Db, eventoId: string, voci: NuovaVoce[], risolvi: R
     let create = 0
     for (const v of voci) {
       if (!repo.portataDiEvento(db, eventoId, v.portataId)) throw richiestaNonValida('La portata non appartiene a questo evento')
-      const piattoId = controllaPiatto(db, v.piattoId, risolvi)
+      // Un contributo da definire non ha ancora una ricetta (SPEC §39).
+      const daDefinire = v.daDefinire ?? false
+      const piattoId = daDefinire ? null : controllaPiatto(db, v.piattoId, risolvi)
       const dati = {
         nome: pulisci(v.nome),
         piattoId,
@@ -212,6 +214,8 @@ export function creaVoci(db: Db, eventoId: string, voci: NuovaVoce[], risolvi: R
         incaricato: pulisci(v.incaricato ?? ''),
         inSpesa: v.inSpesa ?? true,
         note: v.note ?? '',
+        daDefinire,
+        contributi: v.contributi ?? 1,
       }
       const esito = creaIdempotente(
         db,
@@ -247,12 +251,23 @@ export function aggiornaVoce(db: Db, id: string, d: AggiornaVoce, risolvi: Risol
     richiediModificabile(leggiEvento(db, v.eventoId))
     // Lo stesso piatto già collegato non passa di nuovo dalla verifica (resta com'è).
     const piattoId = d.piattoId === v.piattoId ? v.piattoId : controllaPiatto(db, d.piattoId, risolvi)
+    // Collegare una ricetta precisa il contributo; senza indicazione resta com'era (SPEC §39).
+    const daDefinire = piattoId ? false : (d.daDefinire ?? v.daDefinire)
     aggiornaConVersione(
       db,
       'voci_menu',
       id,
       d.versione,
-      { nome: pulisci(d.nome), piatto_id: piattoId, porzioni: d.porzioni, incaricato: pulisci(d.incaricato), in_spesa: d.inSpesa, note: d.note },
+      {
+        nome: pulisci(d.nome),
+        piatto_id: piattoId,
+        porzioni: d.porzioni,
+        incaricato: pulisci(d.incaricato),
+        in_spesa: d.inSpesa,
+        note: d.note,
+        da_definire: daDefinire,
+        contributi: d.contributi ?? v.contributi,
+      },
       () => leggiVoce(db, id),
       adesso,
     )

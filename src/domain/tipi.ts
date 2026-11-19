@@ -64,6 +64,10 @@ export interface VoceMenu extends Versionato {
   incaricato: string
   inSpesa: boolean
   note: string
+  /** Contributo a scelta di chi lo porta («un primo a scelta»): niente ricetta né spesa (SPEC §39). */
+  daDefinire: boolean
+  /** Quanti contributi vale la voce («due antipasti a scelta»): 1 di solito. */
+  contributi: number
 }
 
 export const STATI_PARSING = ['certo', 'da_verificare', 'confermato'] as const

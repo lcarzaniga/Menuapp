@@ -547,8 +547,15 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   la barra di scorrimento usciva dal bordo arrotondato → in tutte le finestre scorre solo il
   contenuto, titolo e pulsanti restano fermi (`src/components/ui/dialog.tsx`).
 
-## Fase 4 del piano — Regia della cucina (19/11/2026, ramo `regia-cucina`)
+## Fase 4 del piano — Regia della cucina (19/11/2026, su TEST `20261119-1357-25757e9`)
 
 - `/eventi/:id/regia` sul piano esistente: In ritardo / Adesso / Più tardi / Fatto, filtri per
   attrezzatura e giorno, attrezzature dal testo delle ricette, «Ricetta in cucina», spunta, testo
   grande, Wake Lock condiviso; «Prepara il piano dai piatti» con l'ora suggerita. SPEC §38.
+
+## «Chi porta cosa» flessibile (19/11/2026, ramo `chi-porta-flessibile`, schema 19)
+
+- Richiesta di Loris (19/11). Analisi: le voci del menù sono già gli incarichi dei piatti (stesso
+  record) e le cose da portare coprono i contributi generici: bastava «da definire» e «contributi»
+  sulla voce (migrazione 0019, trigger senza ricetta), «Piatto a scelta» e «Precisa» in Chi porta,
+  «da definire» nel menù e nell'editor, spesa e riepilogo coerenti, duplicazione. SPEC §39.
