@@ -459,8 +459,8 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Rilasciato da Loris il 18/11 sera: Debian `20261118-1709-c75e999`, Worker (deploy 16:12 UTC).
   Verificato il 19/11 in sola lettura: salute di `app.…` ok, console «non attiva» con un codice di
   prova, dominio principale ancora «Sito in costruzione», salute di Debian ok.
-- Prossimi passi: inviti a Raffa e Palli e ricollegamento di Lucia su `app.…`; dismissione di
-  Debian e Funnel su conferma di Loris.
+- Prossimi passi: ~~inviti a Raffa e Palli e ricollegamento di Lucia su `app.…`~~ (fatti da Loris il
+  19/11: tutti collegati); Funnel spento il 19/11; Debian resta come TEST.
 
 ## Ambienti TEST e PRODUZIONE; «A che punto siamo?» e il menù (19/11/2026, in produzione: TEST `20261119-0922-1f0eff1`, Cloudflare `20261119-0925-1f0eff1`)
 
