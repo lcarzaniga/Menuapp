@@ -580,8 +580,8 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 
 ## Collaborazione sulle ricette e proprietà (19/11/2026, ramo `collaborazione-ricette`, schema 21)
 
-Stato: **sviluppato e testato automaticamente**; non ancora su TEST (in attesa dell'autorizzazione
-di Loris, docs/RILASCI.md punto 2); non collaudato; non in PRODUZIONE.
+Stato: **sviluppato, testato, su TEST** (`20261119-1546-1806441`, poi con la correzione del backup
+`20261119-1615-60c2d67`), **collaudato da Loris**, **in PRODUZIONE** dal 19/11/2026 (vedi sotto).
 
 - Situazione di partenza: PRODUZIONE `20261119-1453-d949431` (schema 20); TEST `20261119-1458-9a44716`
   (in più solo il backup pre-migrazione del Worker, in attesa dell'OK per la produzione).
@@ -611,3 +611,9 @@ di Loris, docs/RILASCI.md punto 2); non collaudato; non in PRODUZIONE.
   allo schema 20, poi Worker nuovo sugli stessi dati: backup `pre-migrazione-…-v20.json` in R2,
   migrazione, risposte corrette).
 - PRODUZIONE resta su `d949431` (schema 20) finché la correzione non passa da TEST.
+- Correzione su TEST (`20261119-1615-60c2d67`, autorizzato da Loris), poi PRODUZIONE su suo OK:
+  Cloudflare `20261119-1630-60c2d67` (versione `94d01118`), schema 20 → 21. Backup
+  `pre-migrazione-20261119-153113-v20.json` (572 KB) creato in R2 prima della migrazione. Verificato:
+  salute ok, 401 senza sessione anche su proposte e cronologia, file dell'app uguali alla build,
+  dominio principale ancora «Sito in costruzione». Accesso, ricette, foto, famiglie e notifiche con
+  una sessione: da controllare da Loris nell'app (senza console non ho una sessione di produzione).
