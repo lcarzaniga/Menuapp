@@ -10,12 +10,15 @@ import {
   SchemaNuovoIngrediente,
   SchemaNuovoPiatto,
   SchemaCopiaInFamiglia,
+  SchemaElencoPiatti,
   SchemaFamigliaOrigine,
+  SchemaPreferenze,
   SchemaFamigliePiatto,
   SchemaVisibilita,
 } from '../../src/contratto/ricettario.ts'
 import * as r from '../servizi/ricettario.ts'
 import { SchemaCopiaPiatto } from '../../src/contratto/accesso.ts'
+import * as preferenze from '../servizi/preferenze.ts'
 import * as condivisione from '../servizi/condivisione.ts'
 import { richiediAmministratore, richiediPiatto, richiediVoce } from '../servizi/permessi.ts'
 import { chi, type Contesto, valida } from './aiuti.ts'
@@ -24,14 +27,19 @@ const SchemaImpostaCondivisioniPiatto = z.object({ utenti: z.array(z.string().mi
 
 type ConId = { Params: { id: string } }
 const SchemaQueryVersione = z.object({ versione: z.coerce.number().int().min(0) })
-const SchemaRicerca = z.object({ q: z.string().max(200).optional() })
 
 export function rotteRicettario(app: FastifyInstance, ctx: Contesto): void {
   const { db } = ctx
   const P = PREFISSO_API
 
   // Ricettario: piatti propri e condivisi; modifica solo del proprietario.
-  app.get(`${P}/piatti`, async (req) => r.elencaPiatti(db, chi(req).id, valida(SchemaRicerca, req.query).q))
+  // Preferenze personali del ricettario (SPEC §36).
+  app.get(`${P}/account/preferenze`, async (req) => preferenze.leggiPreferenze(db, chi(req).id))
+  app.put(`${P}/account/preferenze`, async (req) => preferenze.impostaPreferenze(db, chi(req).id, valida(SchemaPreferenze, req.body)))
+  app.get(`${P}/piatti`, async (req) => {
+    const q = valida(SchemaElencoPiatti, req.query)
+    return r.elencaPiatti(db, chi(req).id, q.q, q.pubbliche)
+  })
   app.post(`${P}/piatti`, async (req, reply) => {
     const u = chi(req)
     const d = valida(SchemaNuovoPiatto, req.body)

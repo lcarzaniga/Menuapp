@@ -4,7 +4,7 @@ import { SchemaStatoBackup } from '@/contratto/backup.ts'
 import { SchemaSalute } from '@/contratto/comune.ts'
 import type { Edizioni, PerTe, Ricorrenza } from '@/contratto/edizioni.ts'
 import type { Menu, RiepilogoEvento } from '@/contratto/eventi.ts'
-import type { DettaglioPiatto, RiepilogoPiatto } from '@/contratto/ricettario.ts'
+import type { DettaglioPiatto, Preferenze, RiepilogoPiatto } from '@/contratto/ricettario.ts'
 import type { InfoRiapertura, Snapshot } from '@/contratto/archivio.ts'
 import type { RispostaSpesa } from '@/contratto/spesa.ts'
 import type { StileStampa } from '@/contratto/stampa.ts'
@@ -49,7 +49,15 @@ export const chiaviRicettario = {
   piatto: (id: string) => ['piatto', id] as const,
   ingredienti: ['ingredienti'] as const,
 }
-export const usePiatti = () => useQuery({ queryKey: chiaviRicettario.piatti, queryFn: () => api.leggi<RiepilogoPiatto[]>('/piatti') })
+/** Ricette dell'utente; con `pubbliche` anche quelle pubbliche nell'app, o solo quelle (SPEC §36). */
+export const usePiatti = (pubbliche: 'no' | 'si' | 'solo' = 'no') =>
+  useQuery({
+    queryKey: [...chiaviRicettario.piatti, pubbliche],
+    queryFn: () => api.leggi<RiepilogoPiatto[]>(pubbliche === 'no' ? '/piatti' : `/piatti?pubbliche=${pubbliche}`),
+  })
+export const usePreferenze = () => useQuery({ queryKey: ['preferenze'], queryFn: () => api.leggi<Preferenze>('/account/preferenze') })
+/** «Includi ricette pubbliche»: spenta finché le preferenze non sono arrivate. */
+export const useIncludiPubbliche = () => usePreferenze().data?.includiPubbliche ?? false
 export const usePiatto = (id: string) =>
   useQuery({ queryKey: chiaviRicettario.piatto(id), queryFn: () => api.leggi<DettaglioPiatto>(`/piatti/${id}`), enabled: Boolean(id) })
 export const useIngredienti = () =>

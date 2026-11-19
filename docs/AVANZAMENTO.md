@@ -491,7 +491,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   modificato. Dati di TEST letti in sola lettura: 77 ricette tutte con Famiglia d'origine
   determinabile, 0 attività nel piano, attrezzature solo testo libero.
 
-## Fase 1A — Famiglia d'origine delle ricette (19/11/2026, ramo `famiglia-origine`, schema 16)
+## Fase 1A — Famiglia d'origine delle ricette (19/11/2026, su TEST `20261119-1027-48ed40d`, schema 16)
 
 - Decisioni di Loris sul piano: D1–D12 approvate; D5 rivista (pubbliche cercabili nei suggerimenti
   del menù, copiate al collegamento e riusate).
@@ -500,3 +500,14 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   console. SPEC §35.
 - Prova a secco su una copia del database di TEST: 77/77 determinate, condivisioni invariate,
   integrità e chiavi esterne ok. Test: `npm run check` (699), `test:cloudflare` (8), e2e mirati.
+- Rilasciata su TEST da Loris (19/11), verificata: schema 16, `origini` → 77/77. Provata da Loris.
+  Produzione: un unico rilascio alla fine delle fasi (decisione di Loris).
+
+## Fase 1B — Ricette pubbliche fra Famiglie (19/11/2026, ramo `ricette-pubbliche`, schema 17)
+
+- Migrazione 0017 (`piatti.pubblica`, trigger «serve l'origine», `preferenze_utente`); lettura delle
+  pubbliche per chi ha una sessione in `piattoLeggibileDaAltri` (scheda, foto, esportazione, bacheca,
+  classifiche) ed elenco `?pubbliche=no|si|solo`; visibilità a tre livelli; copie sempre private
+  (D4) e indipendenti con provenienza e id sorgente; nei menù copia riusata (D5); preferenza
+  personale. Interfaccia: filtri ed etichette del ricettario, «Pubblica nell'app…» con conferma,
+  «Copia in una mia Famiglia», «Hai già una copia», suggerimenti del menù. SPEC §36.

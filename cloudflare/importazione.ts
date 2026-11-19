@@ -23,7 +23,7 @@ export const PREFISSO_IMPORTAZIONE = 'importazione/'
 export const RE_ID_IMPORTAZIONE = /^[0-9]{8}-[0-9]{4,6}$/
 
 /** Tabelle dell'identità di Cloudflare: mai sostituite dall'importazione. */
-export const TABELLE_IDENTITA = ['utenti', 'sessioni', 'preferenze_notifiche'] as const
+export const TABELLE_IDENTITA = ['utenti', 'sessioni', 'preferenze_notifiche', 'preferenze_utente'] as const
 const TABELLE_IMPORTATE = TABELLE_CONTENUTO.filter((t) => !(TABELLE_IDENTITA as readonly string[]).includes(t))
 
 /** Utente Debian → utente Cloudflare esistente, oppure da creare (senza dispositivi). */

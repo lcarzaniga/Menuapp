@@ -76,7 +76,13 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
     <Pagina
       titolo={p.nome}
       sottotitolo={
-        [p.portataSuggerita, !p.mio ? `ricetta di ${p.proprietario.nome}` : p.origineAutore ? `dalla ricetta di ${p.origineAutore}` : null].filter(Boolean).join(' · ') ||
+        [
+          p.portataSuggerita,
+          p.soloPubblica ? `pubblica · ${p.famigliaOrigine?.nome ?? ''}` : null,
+          !p.mio ? `ricetta di ${p.proprietario.nome}` : p.origineAutore ? `dalla ricetta di ${p.origineAutore}` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ') ||
         undefined
       }
       indietro="/ricettario"

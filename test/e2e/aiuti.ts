@@ -70,11 +70,14 @@ export async function chiediAccesso(page: Page, link: string, dispositivo: strin
   return codice
 }
 
-/** Nuovo familiare con il suo telefono autorizzato (invito e approvazione via API dell'amministratore). */
-export async function familiare(browser: Browser, request: APIRequestContext, nome: string) {
+/**
+ * Nuovo familiare con il suo telefono autorizzato (invito e approvazione via API dell'amministratore).
+ * Con `famiglia` false non entra nella Famiglia dell'amministratore.
+ */
+export async function familiare(browser: Browser, request: APIRequestContext, nome: string, famiglia = true) {
   const id = `utente-e2e-${nome.toLowerCase()}`
   const esiste = (await apiLeggi<{ id: string }[]>(request, '/admin/utenti')).some((u) => u.id === id)
-  if (!esiste) expect((await apiScrivi(request, 'post', '/admin/utenti', { id, nome, famiglia: true })).stato).toBe(201)
+  if (!esiste) expect((await apiScrivi(request, 'post', '/admin/utenti', { id, nome, famiglia })).stato).toBe(201)
   const invito = (await apiScrivi(request, 'post', `/admin/utenti/${id}/inviti`, {})).corpo as { link: string }
   const ctx = await browser.newContext({ ...devices['Pixel 7'], locale: 'it-IT', storageState: { cookies: [], origins: [] } })
   const page = await ctx.newPage()

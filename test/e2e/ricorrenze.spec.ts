@@ -54,7 +54,8 @@ test('copia di una ricetta in un\'altra Famiglia, indipendente e con la provenie
   await dialogo.getByText('Indica che viene da').click()
   await dialogo.getByRole('button', { name: 'Copia' }).click()
   await expect(page.getByTestId('provenienza-ricetta')).toContainText('da «Famiglia» (era «Pesto genovese»)')
-  await expect(page.getByTestId('visibilita-ricetta')).toContainText('Amici del mare')
+  // Nasce privata nella Famiglia scelta (D4): poi la si condivide.
+  await expect(page.getByTestId('visibilita-ricetta')).toContainText('Privata')
   await expect(page.getByTestId('famiglia-origine')).toHaveText('Nata in Amici del mare')
   await foto(page, '02-copia-ricetta')
   const copiaId = /ricettario\/([^/?]+)/.exec(page.url())![1]!
@@ -63,5 +64,5 @@ test('copia di una ricetta in un\'altra Famiglia, indipendente e con la provenie
   // L'originale cambia, la copia no.
   const originale = await apiLeggi<Record<string, unknown>>(request, '/piatti/ric-pesto')
   await apiScrivi(request, 'put', '/piatti/ric-pesto', { ...originale, procedimento: ['Frullare'] })
-  expect((await apiLeggi<{ procedimento: string[]; famiglie: { id: string }[] }>(request, `/piatti/${copiaId}`))).toMatchObject({ procedimento: ['Pestare nel mortaio'], famiglie: [{ id: altra.id }] })
+  expect((await apiLeggi<{ procedimento: string[]; famiglie: { id: string }[] }>(request, `/piatti/${copiaId}`))).toMatchObject({ procedimento: ['Pestare nel mortaio'], famiglie: [], famigliaOrigine: { id: altra.id } })
 })

@@ -145,7 +145,8 @@ describe('copia delle ricette fra Famiglie', () => {
   it('copia indipendente con ingredienti, procedimento, foto proprie e provenienza solo descrittiva', async () => {
     await ricettaConFoto()
     const c = SchemaDettaglioPiatto.parse(await ok(copia(anna, { indicaFamiglia: true })))
-    expect(c).toMatchObject({ id: 'c-ragu', nome: 'Ragù della nonna', mio: true, porzioniBase: 6, procedimento: ['Soffritto', 'Cottura lenta'], originePiattoId: null, famiglie: [{ id: 'rossi' }], famiglia: { id: 'rossi', nome: 'Famiglia Rossi' } })
+    // Nasce privata nella Famiglia di destinazione (D4 del piano di evoluzione, SPEC §36).
+    expect(c).toMatchObject({ id: 'c-ragu', nome: 'Ragù della nonna', mio: true, porzioniBase: 6, procedimento: ['Soffritto', 'Cottura lenta'], originePiattoId: null, famiglie: [], famiglia: null, visibilita: 'privata', famigliaOrigine: { id: 'rossi', nome: 'Famiglia Rossi' } })
     expect(c.ingredienti.map((i) => [i.nome, i.quantita, i.unita])).toEqual([['macinato', 500, 'g']])
     expect(c.provenienza).toMatchObject({ titolo: 'Ragù della nonna', copiataDa: 'Anna', famiglia: 'Famiglia' })
     expect(c.foto).toHaveLength(1)
@@ -156,7 +157,9 @@ describe('copia delle ricette fra Famiglie', () => {
     expect((await t.scrivi('POST', `${P}/piatti/p-ragu/copia-in-famiglia`, { id: 'c2', gruppoId: 'rossi' })).statusCode).toBe(404)
     const solo = await ok(anna.scrivi('POST', `${P}/piatti/p-ragu/copia-in-famiglia`, { id: 'c3', gruppoId: 'rossi' }))
     expect(solo.provenienza.famiglia).toBeNull()
-    // Carla (solo Rossi) vede la copia, non l'originale: la provenienza non apre nulla.
+    // Privata finché Anna non la condivide; poi Carla (solo Rossi) vede la copia, non l'originale.
+    expect((await carla.leggi(`${P}/piatti/c-ragu`)).statusCode).toBe(404)
+    await ok(anna.scrivi('PUT', `${P}/piatti/c-ragu/famiglie`, { gruppi: ['rossi'] }))
     expect((await carla.leggi(`${P}/piatti/c-ragu`)).statusCode).toBe(200)
     expect((await carla.leggi(`${P}/piatti/p-ragu`)).statusCode).toBe(404)
     expect((await carla.leggi(`${P}/foto/f-ragu`)).statusCode).toBe(404)
@@ -167,6 +170,7 @@ describe('copia delle ricette fra Famiglie', () => {
     const ev = await evento(t, 'n26', '2026-12-25')
     await ok(t.scrivi('POST', `${P}/eventi/n26/voci`, { voci: [{ id: 'v-ragu', portataId: ev.portate[1].id, nome: 'Ragù', piattoId: 'p-ragu' }] }))
     await ok(copia(anna))
+    await ok(anna.scrivi('PUT', `${P}/piatti/c-ragu/famiglie`, { gruppi: ['rossi'] }))
     const originale = corpo(await t.leggi(`${P}/piatti/p-ragu`))
     await ok(t.scrivi('PUT', `${P}/piatti/p-ragu`, { ...originale, nome: 'Ragù cambiato', procedimento: ['Tutto diverso'] }))
     expect(corpo(await carla.leggi(`${P}/piatti/c-ragu`))).toMatchObject({ nome: 'Ragù della nonna', procedimento: ['Soffritto', 'Cottura lenta'] })

@@ -219,10 +219,10 @@ export const proprietarioEvento = (db: Db, id: string) => uno<{ proprietario_id:
 
 /**
  * Lettura di un piatto non proprio: del ricettario di famiglia (non privato), condiviso con
- * l'utente, oppure collegato a una voce di un evento che l'utente può leggere (la ricetta
- * serve per cucinare quel menù).
+ * l'utente, collegato a una voce di un evento che l'utente può leggere (la ricetta serve per
+ * cucinare quel menù), oppure pubblico nell'app (SPEC §36; con `pubbliche` false si escludono).
  */
-export function piattoLeggibileDaAltri(db: Db, piattoId: string, utenteId: string): boolean {
+export function piattoLeggibileDaAltri(db: Db, piattoId: string, utenteId: string, pubbliche = true): boolean {
   return (
     uno(
       db,
@@ -232,6 +232,8 @@ export function piattoLeggibileDaAltri(db: Db, piattoId: string, utenteId: strin
        UNION ALL
        SELECT 1 FROM voci_menu v JOIN eventi e ON e.id = v.evento_id
        WHERE v.piatto_id = ? AND (e.proprietario_id = ? OR EXISTS (SELECT 1 FROM condivisioni_evento c WHERE c.evento_id = e.id AND c.utente_id = ?))
+       UNION ALL
+       SELECT 1 FROM piatti WHERE id = ? AND pubblica = 1 AND ?
        LIMIT 1`,
       piattoId,
       utenteId,
@@ -240,6 +242,8 @@ export function piattoLeggibileDaAltri(db: Db, piattoId: string, utenteId: strin
       piattoId,
       utenteId,
       utenteId,
+      piattoId,
+      pubbliche ? 1 : 0,
     ) !== undefined
   )
 }

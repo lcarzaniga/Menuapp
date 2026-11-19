@@ -1,8 +1,8 @@
 // Ricette: Famiglia d'origine, dove è visibile (privata o in una Famiglia), condivisione con
 // persone, copie indipendenti nel proprio ricettario o in un'altra Famiglia (SPEC §19.4, §28, §35).
-import { Copy, History, House, Lock, Share2, UsersRound } from 'lucide-react'
+import { Copy, Globe, History, House, Lock, Share2, UsersRound } from 'lucide-react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { api, nuovoId } from '@/api/client'
 import { useScrittura } from '@/api/scrittura'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { Finestra } from '@/components/ui/dialog'
 import type { DettaglioPiatto, Provenienza } from '@/contratto/ricettario.ts'
 import { useStatoConnessione } from '@/connessione/stato'
 import { useFamigliaAttiva } from '@/features/famiglia/attiva'
+import { cn } from '@/lib/utils'
 import { usePersone } from './sessione'
 
 /**
@@ -68,7 +69,7 @@ export function VisibilitaRicetta({ piatto }: { piatto: DettaglioPiatto }) {
     successo: (p) => (p.famiglie.length ? `Visibile in ${p.famiglie[0]!.nome}` : 'Ricetta privata: la vedi solo tu'),
   })
   const condivisa = new Set(piatto.famiglie.map((f) => f.id))
-  const privata = condivisa.size === 0
+  const privata = condivisa.size === 0 && piatto.visibilita !== 'pubblica'
   return (
     <div className="flex flex-col gap-2 rounded-2xl border border-bordo/70 bg-carta px-3 py-2 text-sm" data-testid="visibilita-ricetta">
       <div className="flex flex-wrap items-center gap-2">
@@ -101,6 +102,53 @@ export function VisibilitaRicetta({ piatto }: { piatto: DettaglioPiatto }) {
             </option>
           ))}
         </Select>
+      ) : null}
+      <PubblicaRicetta piatto={piatto} />
+    </div>
+  )
+}
+
+/**
+ * «Pubblica nell'app» (SPEC §36): tutti gli utenti dell'app la leggono e possono copiarla, mai chi
+ * non ha un accesso. Serve la Famiglia d'origine; togliendola la ricetta resta nella sua Famiglia.
+ */
+function PubblicaRicetta({ piatto }: { piatto: DettaglioPiatto }) {
+  const connesso = useStatoConnessione() === 'connesso'
+  const [conferma, setConferma] = useState(false)
+  const pubblica = piatto.visibilita === 'pubblica'
+  const imposta = useScrittura((v: 'pubblica' | 'famiglia') => api.modifica<DettaglioPiatto>(`/piatti/${piatto.id}/visibilita`, { visibilita: v }), {
+    successo: (p) => (p.visibilita === 'pubblica' ? 'Ricetta pubblica nell\'app' : 'Non più pubblica'),
+    dopo: () => setConferma(false),
+  })
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-t border-bordo/60 pt-2" data-testid="pubblica-ricetta">
+      <Globe className={cn('size-4', pubblica ? 'text-primario' : 'text-testo-tenue')} />
+      <span className="flex-1">
+        {pubblica ? 'Pubblica nell\'app: tutti gli utenti la leggono e possono copiarla' : piatto.famigliaOrigine ? 'Non pubblica' : 'Per pubblicarla indica prima in quale Famiglia è nata'}
+      </span>
+      {pubblica ? (
+        <Button variante="fantasma" misura="piccolo" disabled={!connesso || imposta.inCorso} onClick={() => void imposta.esegui('famiglia')}>
+          Togli dalle pubbliche
+        </Button>
+      ) : piatto.famigliaOrigine ? (
+        <Button variante="fantasma" misura="piccolo" disabled={!connesso} onClick={() => setConferma(true)}>
+          Pubblica nell&apos;app…
+        </Button>
+      ) : null}
+      {conferma ? (
+        <Finestra
+          aperta
+          onCambia={(a) => !a && setConferma(false)}
+          titolo={`Pubblicare «${piatto.nome}»?`}
+          descrizione={`Tutti gli utenti dell'app, anche di altre Famiglie, potranno leggerla con le foto e copiarla; vedranno che è nata in ${piatto.famigliaOrigine?.nome ?? ''} e che è tua. Chi non ha un accesso all'app non la vede. Puoi toglierla quando vuoi: le copie già fatte restano a chi le ha fatte.`}
+          piede={
+            <Button disabled={imposta.inCorso} onClick={() => void imposta.esegui('pubblica')}>
+              <Globe /> Pubblica
+            </Button>
+          }
+        >
+          {null}
+        </Finestra>
       ) : null}
     </div>
   )
@@ -162,6 +210,36 @@ function FinestraCondivisione({ piatto, onChiudi }: { piatto: DettaglioPiatto; o
 }
 
 export function CopiaRicetta({ piatto }: { piatto: DettaglioPiatto }) {
+  const { famiglie } = useFamigliaAttiva()
+  // Pubblica di un'altra Famiglia (SPEC §36): la copia nasce privata in una delle proprie Famiglie.
+  if (piatto.miaCopia) {
+    return (
+      <Button asChild variante="contorno" misura="piccolo">
+        <Link to={`/ricettario/${piatto.miaCopia}`}>
+          <Copy /> Hai già una copia
+        </Link>
+      </Button>
+    )
+  }
+  if (piatto.soloPubblica && famiglie.length) return <CopiaPubblica piatto={piatto} />
+  return <CopiaNelRicettario piatto={piatto} />
+}
+
+function CopiaPubblica({ piatto }: { piatto: DettaglioPiatto }) {
+  const { famiglie } = useFamigliaAttiva()
+  const [aperta, setAperta] = useState(false)
+  const connesso = useStatoConnessione() === 'connesso'
+  return (
+    <>
+      <Button misura="piccolo" disabled={!connesso} onClick={() => setAperta(true)}>
+        <Copy /> Copia in una mia Famiglia
+      </Button>
+      {aperta ? <FinestraCopiaInFamiglia piatto={piatto} famiglie={famiglie} origine={piatto.famigliaOrigine?.nome ?? ''} pubblica onChiudi={() => setAperta(false)} /> : null}
+    </>
+  )
+}
+
+function CopiaNelRicettario({ piatto }: { piatto: DettaglioPiatto }) {
   const naviga = useNavigate()
   const connesso = useStatoConnessione() === 'connesso'
   const copia = useScrittura(() => api.crea<DettaglioPiatto>(`/piatti/${piatto.id}/copia`, { id: nuovoId() }), {
@@ -195,7 +273,20 @@ export function CopiaInFamiglia({ piatto }: { piatto: DettaglioPiatto }) {
   )
 }
 
-function FinestraCopiaInFamiglia({ piatto, famiglie, origine, onChiudi }: { piatto: DettaglioPiatto; famiglie: { id: string; nome: string }[]; origine: string; onChiudi: () => void }) {
+function FinestraCopiaInFamiglia({
+  piatto,
+  famiglie,
+  origine,
+  pubblica = false,
+  onChiudi,
+}: {
+  piatto: DettaglioPiatto
+  famiglie: { id: string; nome: string }[]
+  origine: string
+  /** Da una pubblica la Famiglia d'origine si ricorda sempre (è già nota a tutti). */
+  pubblica?: boolean
+  onChiudi: () => void
+}) {
   const naviga = useNavigate()
   const [gruppoId, setGruppoId] = useState(famiglie[0]!.id)
   const [indica, setIndica] = useState(false)
@@ -211,7 +302,7 @@ function FinestraCopiaInFamiglia({ piatto, famiglie, origine, onChiudi }: { piat
       aperta
       onCambia={(a) => !a && onChiudi()}
       titolo={`Copia «${piatto.nome}»`}
-      descrizione="Nasce una nuova ricetta tua, con ingredienti, procedimento e foto. È indipendente: le modifiche all'originale non la cambiano, e voti e commenti non la seguono."
+      descrizione="Nasce una nuova ricetta tua, privata, nella Famiglia che scegli, con ingredienti, procedimento e foto. È indipendente: le modifiche all'originale non la cambiano, e voti e commenti non la seguono. Poi puoi condividerla con la Famiglia o pubblicarla."
       piede={
         <Button disabled={copia.inCorso} onClick={() => void copia.esegui(undefined)}>
           <Copy /> Copia
@@ -228,9 +319,13 @@ function FinestraCopiaInFamiglia({ piatto, famiglie, origine, onChiudi }: { piat
             ))}
           </Select>
         </Campo>
-        <label className="flex min-h-11 items-center gap-3 text-sm">
-          <Casella checked={indica} onChange={(e) => setIndica(e.target.checked)} /> Indica che viene da «{origine}»
-        </label>
+        {pubblica ? (
+          <p className="text-sm text-testo-tenue">La copia ricorda che viene da «{origine}».</p>
+        ) : (
+          <label className="flex min-h-11 items-center gap-3 text-sm">
+            <Casella checked={indica} onChange={(e) => setIndica(e.target.checked)} /> Indica che viene da «{origine}»
+          </label>
+        )}
       </div>
     </Finestra>
   )

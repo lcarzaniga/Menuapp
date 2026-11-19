@@ -16,9 +16,9 @@ import { elencaFoto, fotoPrincipali, ricollegaPassi } from './foto.ts'
 import { aggiornaConVersione, controllaVersioni, creaIdempotente, eliminaConVersione, incrementaVersione } from './versioni.ts'
 
 /** Ricette leggibili; con `ricerca` solo quelle trovate, nell'ordine della ricerca (§23). */
-export function elencaPiatti(db: Db, utenteId: string, ricerca?: string): RiepilogoPiatto[] {
+export function elencaPiatti(db: Db, utenteId: string, ricerca?: string, pubbliche: repo.PubblicheInElenco = 'no'): RiepilogoPiatto[] {
   const principali = fotoPrincipali(db)
-  const elenco = repo.elencaPiatti(db, utenteId).map((p) => ({ ...p, fotoPrincipale: principali.get(p.id) ?? null }))
+  const elenco = repo.elencaPiatti(db, utenteId, pubbliche).map((p) => ({ ...p, fotoPrincipale: principali.get(p.id) ?? null }))
   return ricerca && terminiRicerca(ricerca).length ? cercaRicette(elenco, ricerca).map((x) => x.ricetta) : elenco
 }
 
@@ -43,6 +43,8 @@ export function leggiPiatto(db: Db, id: string, utenteId: string): DettaglioPiat
       famiglia: repoAccesso.famigliePiatto(db, id).find((g) => repoAccesso.ruoloNelGruppo(db, g.id, utenteId)) ?? null,
       provenienza: repo.provenienza(db, id),
       condivisaCon: mio ? repoAccesso.condivisioniPiatto(db, id).map((c) => ({ id: c.utente_id, nome: c.nome })) : [],
+      soloPubblica: !mio && !repoAccesso.piattoLeggibileDaAltri(db, id, utenteId, false),
+      miaCopia: mio ? null : (repo.copiaEsistente(db, id, utenteId) ?? null),
     }
   })
 }

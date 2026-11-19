@@ -1,8 +1,11 @@
 // Ricettario: ricerca ed elenco dei piatti (SPEC §5).
-import { Carrot, ChevronRight, FileUp, Plus, Search } from 'lucide-react'
+import { Carrot, ChevronRight, FileUp, Globe, Plus, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { useImpostazioni, usePiatti } from '@/api/query'
+import { api } from '@/api/client'
+import { useImpostazioni, usePiatti, usePreferenze } from '@/api/query'
+import { useScrittura } from '@/api/scrittura'
+import type { Preferenze } from '@/contratto/ricettario.ts'
 import { Caricamento, Pagina, Vuoto } from '@/components/Pagina'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -27,11 +30,19 @@ const classeFiltro = (attivo: boolean) =>
   )
 
 export function PaginaRicettario() {
-  const piatti = usePiatti()
+  // «Includi ricette pubbliche» (SPEC §36): preferenza personale, uguale su tutti i dispositivi.
+  const preferenze = usePreferenze()
+  const includiPubbliche = preferenze.data?.includiPubbliche ?? false
+  const cambiaPubbliche = useScrittura(
+    (p: Preferenze) => api.modifica<Preferenze>('/account/preferenze', { includiPubbliche: !p.includiPubbliche, versione: p.versione }),
+    { oggetto: 'Le preferenze' },
+  )
+  const piatti = usePiatti(includiPubbliche ? 'si' : 'no')
   const imp = useImpostazioni()
   const [parametri, setParametri] = useSearchParams()
   const [soloVuoti, setSoloVuoti] = useState(false)
   const [soloMie, setSoloMie] = useState(false)
+  const [soloPubbliche, setSoloPubbliche] = useState(false)
   const [importa, setImporta] = useState(false)
   const tutti = useMemo(() => piatti.data ?? [], [piatti.data])
   const predefinite = useMemo(() => (imp.data?.portatePredefinite ?? []).map((p) => p.nome), [imp.data])
@@ -46,8 +57,15 @@ export function PaginaRicettario() {
   const scegli = (nome: string | null) => aggiorna(nome, cerca)
   const setCerca = (testo: string) => aggiorna(portata, testo)
   const filtrati = useMemo(
-    () => tutti.filter((p) => (!soloVuoti || p.numeroIngredienti === 0) && (!soloMie || p.mio) && (!portata || portataDelPiatto(p.portataSuggerita, predefinite) === portata)),
-    [tutti, soloVuoti, soloMie, portata, predefinite],
+    () =>
+      tutti.filter(
+        (p) =>
+          (!soloVuoti || p.numeroIngredienti === 0) &&
+          (!soloMie || p.mio) &&
+          (!soloPubbliche || !includiPubbliche || p.visibilita === 'pubblica') &&
+          (!portata || portataDelPiatto(p.portataSuggerita, predefinite) === portata),
+      ),
+    [tutti, soloVuoti, soloMie, soloPubbliche, includiPubbliche, portata, predefinite],
   )
   // Con una ricerca: per pertinenza (nome, poi ingredienti, poi in parte); senza: rubrica alfabetica.
   const risultati = useMemo(() => (terminiRicerca(cerca).length ? cercaRicette(filtrati, cerca) : null), [filtrati, cerca])
@@ -81,37 +99,53 @@ export function PaginaRicettario() {
         <Search className="absolute left-3 top-3.5 size-4 text-testo-tenue" />
         <Input className="pl-9" placeholder="Cerca per nome o ingredienti" aria-label="Cerca un piatto" value={cerca} onChange={(e) => setCerca(e.target.value)} />
       </div>
-      {portate.length > 1 || vuoti > 0 || tutti.some((p) => !p.mio) ? (
-        <div role="group" aria-label="Filtra per portata" className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
-          {portate.length > 1 ? (
-            <>
-              <button type="button" aria-pressed={!portata} onClick={() => scegli(null)} className={classeFiltro(!portata)}>
-                Tutte
+      {/* I filtri ci sono sempre: anche «Includi ricette pubbliche» (spenta all'inizio). */}
+      <div role="group" aria-label="Filtra per portata" className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
+        {portate.length > 1 ? (
+          <>
+            <button type="button" aria-pressed={!portata} onClick={() => scegli(null)} className={classeFiltro(!portata)}>
+              Tutte
+            </button>
+            {portate.map((p) => (
+              <button key={p.nome} type="button" aria-pressed={portata === p.nome} onClick={() => scegli(portata === p.nome ? null : p.nome)} className={classeFiltro(portata === p.nome)}>
+                {p.nome} <span className="tabular-nums opacity-70">{p.numero}</span>
               </button>
-              {portate.map((p) => (
-                <button key={p.nome} type="button" aria-pressed={portata === p.nome} onClick={() => scegli(portata === p.nome ? null : p.nome)} className={classeFiltro(portata === p.nome)}>
-                  {p.nome} <span className="tabular-nums opacity-70">{p.numero}</span>
-                </button>
-              ))}
-            </>
-          ) : null}
-          {tutti.some((p) => !p.mio) ? (
-            <button type="button" aria-pressed={soloMie} onClick={() => setSoloMie(!soloMie)} className={cn(classeFiltro(soloMie), 'border-dashed', soloMie && 'border-solid')}>
-              Solo le mie
-            </button>
-          ) : null}
-          {vuoti > 0 ? (
-            <button
-              type="button"
-              aria-pressed={soloVuoti}
-              onClick={() => setSoloVuoti(!soloVuoti)}
-              className={cn(classeFiltro(false), 'border-dashed', soloVuoti && 'border-solid border-avviso bg-avviso-tenue text-avviso')}
-            >
-              Senza ingredienti <span className="tabular-nums opacity-70">{vuoti}</span>
-            </button>
-          ) : null}
-        </div>
-      ) : null}
+            ))}
+          </>
+        ) : null}
+        <button
+          type="button"
+          aria-pressed={includiPubbliche}
+          disabled={!preferenze.data || cambiaPubbliche.inCorso}
+          onClick={() => {
+            if (preferenze.data) void cambiaPubbliche.esegui(preferenze.data)
+            setSoloPubbliche(false)
+          }}
+          className={cn(classeFiltro(false), 'border-dashed', includiPubbliche && 'border-solid border-primario text-primario')}
+        >
+          <Globe className="size-4" /> Includi ricette pubbliche
+        </button>
+        {includiPubbliche ? (
+          <button type="button" aria-pressed={soloPubbliche} onClick={() => setSoloPubbliche(!soloPubbliche)} className={classeFiltro(soloPubbliche)}>
+            Solo pubbliche
+          </button>
+        ) : null}
+        {tutti.some((p) => !p.mio) ? (
+          <button type="button" aria-pressed={soloMie} onClick={() => setSoloMie(!soloMie)} className={cn(classeFiltro(soloMie), 'border-dashed', soloMie && 'border-solid')}>
+            Solo le mie
+          </button>
+        ) : null}
+        {vuoti > 0 ? (
+          <button
+            type="button"
+            aria-pressed={soloVuoti}
+            onClick={() => setSoloVuoti(!soloVuoti)}
+            className={cn(classeFiltro(false), 'border-dashed', soloVuoti && 'border-solid border-avviso bg-avviso-tenue text-avviso')}
+          >
+            Senza ingredienti <span className="tabular-nums opacity-70">{vuoti}</span>
+          </button>
+        ) : null}
+      </div>
       {piatti.isPending ? (
         <Caricamento />
       ) : !piatti.data?.length ? (
@@ -186,6 +220,12 @@ function RigaPiatto({ piatto: p, ingredienti = [] }: { piatto: RiepilogoPiatto; 
       <div className="min-w-0 flex-1">
         <p className="titolo truncate text-lg font-semibold">{p.nome}</p>
         <p className="mt-0.5 flex flex-wrap gap-1.5 text-xs text-testo-tenue">
+          {p.visibilita === 'pubblica' ? (
+            <Badge variante="info">
+              <Globe className="mr-1 inline size-3" />
+              {p.soloPubblica && p.famigliaOrigine ? `pubblica · ${p.famigliaOrigine.nome}` : 'pubblica'}
+            </Badge>
+          ) : null}
           {!p.mio ? <Badge variante="info">di {p.proprietario.nome}</Badge> : p.visibilita === 'privata' ? <Badge>{p.condiviso ? 'privata, condivisa' : 'privata'}</Badge> : null}
           {p.portataSuggerita ? <span>{p.portataSuggerita}</span> : null}
           {p.porzioniBase ? <span>per {formattaCoperti(p.porzioniBase)}</span> : <span>porzioni da indicare</span>}

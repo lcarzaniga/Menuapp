@@ -3,17 +3,21 @@ import { ChefHat, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { api, nuovoId } from '@/api/client'
-import { usePiatti } from '@/api/query'
+import { useIncludiPubbliche, usePiatti } from '@/api/query'
 import { useScrittura } from '@/api/scrittura'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/campi'
+import { Casella, Input } from '@/components/ui/campi'
 import { usePuoScrivere } from '@/connessione/stato'
 import type { VoceMenu } from '@/domain/tipi.ts'
-import { cercaPiatti, NotaIngredienti } from './SuggerimentiPiatti'
+import { cercaPiatti, NotaIngredienti, NotaPubblica } from './SuggerimentiPiatti'
 
 export function CollegaPiatto({ voce, onCollega, onCreato }: { voce: VoceMenu; onCollega: (piattoId: string) => void; onCreato: () => void }) {
   const [cerca, setCerca] = useState('')
-  const piatti = usePiatti()
+  // «Cerca anche nelle pubbliche» (D5): parte dalla preferenza del ricettario.
+  const preferenza = useIncludiPubbliche()
+  const [anchePubbliche, setAnchePubbliche] = useState<boolean | null>(null)
+  const pubbliche = anchePubbliche ?? preferenza
+  const piatti = usePiatti(pubbliche ? 'si' : 'no')
   const naviga = useNavigate()
   const puoScrivere = usePuoScrivere()
   const crea = useScrittura((piattoId: string) => api.crea<{ piatto: { id: string } }>(`/voci/${voce.id}/crea-piatto`, { piattoId, versione: voce.versione }), {
@@ -24,7 +28,9 @@ export function CollegaPiatto({ voce, onCollega, onCreato }: { voce: VoceMenu; o
       naviga(`/ricettario/${r.piatto.id}?modifica=1`)
     },
   })
-  const trovati = cercaPiatti(piatti.data ?? [], cerca || voce.nome, 6)
+  const trovati = cercaPiatti(piatti.data ?? [], cerca || voce.nome, 12)
+    .sort((a, b) => Number(a.ricetta.soloPubblica) - Number(b.ricetta.soloPubblica))
+    .slice(0, 6)
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm text-testo-tenue">Nessuna ricetta collegata. La voce funziona anche così; una ricetta serve per la spesa e la vista cucina.</p>
@@ -32,6 +38,9 @@ export function CollegaPiatto({ voce, onCollega, onCreato }: { voce: VoceMenu; o
         <Plus /> Crea «{voce.nome}» nel ricettario
       </Button>
       <Input aria-label="Cerca un piatto esistente" placeholder="…oppure cerca per nome o ingredienti" value={cerca} onChange={(e) => setCerca(e.target.value)} />
+      <label className="flex min-h-10 items-center gap-2 text-sm">
+        <Casella checked={pubbliche} onChange={(e) => setAnchePubbliche(e.target.checked)} /> Cerca anche nelle ricette pubbliche
+      </label>
       {trovati.length ? (
         <ul className="flex flex-col">
           {trovati.map((r) => (
@@ -41,6 +50,7 @@ export function CollegaPiatto({ voce, onCollega, onCreato }: { voce: VoceMenu; o
                 <span className="min-w-0">
                   {r.ricetta.nome}
                   <NotaIngredienti r={r} />
+                  <NotaPubblica piatto={r.ricetta} />
                 </span>
                 <span className="ml-auto text-xs text-testo-tenue">collega</span>
               </button>

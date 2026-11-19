@@ -42,6 +42,7 @@ export const TABELLE_CONTENUTO = [
   'valutazioni',
   'notifiche',
   'preferenze_notifiche',
+  'preferenze_utente',
   'meta',
 ] as const
 

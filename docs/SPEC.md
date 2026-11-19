@@ -2231,7 +2231,8 @@ Richiesta di Loris (16/11/2026). Migrazione `0013_ricorrenze.sql`.
   più Famiglie insieme (indice unico; regola `una_famiglia`).
 - «Copia in un'altra Famiglia» (per chi fa parte di più Famiglie, da una ricetta che vede in una
   di esse): nuova ricetta dell'utente con nuovo id, ingredienti, quantità, procedimento, tempi,
-  note e foto **duplicate** (file propri), visibile nella Famiglia di destinazione. Nessun
+  note e foto **duplicate** (file propri), nata nella Famiglia di destinazione e, dalla 7.3,
+  **privata** finché l'utente non la condivide (§36). Nessun
   legame operativo: `origine_piatto_id` vuoto (classifiche, copie e confronto separati), niente
   voti, commenti o dati degli eventi; resta anche se l'originale cambia o sparisce o se
   l'utente esce dalla Famiglia d'origine.
@@ -2663,6 +2664,43 @@ Prima fase del piano di evoluzione (docs/PIANO-EVOLUZIONE.md §1, fase 1A). Migr
   rinomina ed eliminazione della Famiglia, ripristino), `test/cloudflare` (console), e2e
   `ricorrenze.spec.ts`.
 
+## 36. Ricette pubbliche fra Famiglie (7.3)
+
+Seconda fase del piano di evoluzione (docs/PIANO-EVOLUZIONE.md §1, fase 1B, decisioni D1–D6).
+Migrazione `0017_ricette_pubbliche.sql`.
+
+- **Visibilità** in tre livelli: privata (solo il proprietario, più le eventuali persone scelte di
+  §19.4), di famiglia (una Famiglia, §28), **pubblica nell'app** (`piatti.pubblica`): in sola lettura
+  a ogni utente con una sessione, di qualunque Famiglia; mai agli anonimi (ogni `/api` senza sessione
+  → 401, foto comprese). Pubblica include la Famiglia: una privata resa pubblica entra anche nella
+  sua Famiglia d'origine. Solo il proprietario pubblica, con conferma, e solo con la Famiglia
+  d'origine indicata (§35; trigger `piatti_pubblica_con_origine`); proprietà e origine non cambiano.
+  «Di famiglia» toglie la pubblicazione, «privata» toglie anche la Famiglia. Nessuna ricetta
+  esistente è diventata pubblica.
+- Cosa vede chi legge una pubblica di un'altra Famiglia: contenuto, foto, Famiglia d'origine e nome
+  dell'autore (D2); nulla di membri, eventi, voti o commenti di quella Famiglia. Le altre ricette di
+  quella Famiglia restano invisibili.
+- **Preferenza** «Includi ricette pubbliche» (`preferenze_utente`, `GET/PUT /account/preferenze` con
+  versione): personale, uguale su tutti i dispositivi, spenta all'inizio. Nel ricettario: pulsante
+  nella fila dei filtri, poi «Solo pubbliche»; etichetta «pubblica · <Famiglia>» sulle pubbliche
+  delle altre Famiglie. `GET /piatti?pubbliche=no|si|solo`; una pubblica della propria Famiglia
+  compare una volta sola, come ricetta di famiglia con l'etichetta «pubblica» (`soloPubblica`
+  distingue le altre).
+- **Copia** (D4): «Copia in una mia Famiglia» dalla scheda di una pubblica; la copia nasce sempre
+  **privata**, dell'utente, con origine nella Famiglia scelta, indipendente (ingredienti e foto
+  propri, nessun `origine_piatto_id`) e con la provenienza (titolo, Famiglia d'origine, data, chi,
+  id della sorgente: solo memoria). Vale anche per «Copia in un'altra Famiglia» delle ricette di
+  famiglia (prima nasceva visibile nella destinazione). La scheda di una pubblica già copiata dice
+  «Hai già una copia». Privatizzare, modificare o eliminare l'originale non tocca le copie.
+- **Menù** (D5 rivista): con la preferenza attiva i suggerimenti includono le pubbliche (dopo le
+  proprie) con «pubblica · <Famiglia> · verrà copiata nel ricettario»; in «Collega un piatto» la
+  casella «Cerca anche nelle ricette pubbliche» parte dalla preferenza. Collegarla crea una copia
+  privata e indipendente nel ricettario del proprietario dell'evento, nella Famiglia dell'evento,
+  riusata ai collegamenti successivi (`copiaEsistente` guarda anche la provenienza).
+- Test: `server/api/ricette-pubbliche.test.ts` (pubblicazione, permessi, isolamento, anonimi, foto,
+  doppioni, copie, menù, preferenze, migrazione), `ricorrenze.test.ts` (copie private), e2e
+  `ricette-pubbliche.spec.ts`, `ricorrenze.spec.ts`.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2689,6 +2727,7 @@ Prima fase del piano di evoluzione (docs/PIANO-EVOLUZIONE.md §1, fase 1A). Migr
 | 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |
 | 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |
 | 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |
+| 19/11/2026 | 7.3 — **Ricette pubbliche** fra Famiglie (§36): visibilità pubblica per gli utenti con sessione, preferenza «Includi ricette pubbliche», copia privata in una propria Famiglia, uso nei menù tramite copia; le copie fra Famiglie nascono private |
 | 19/11/2026 | 7.2 — **Famiglia d'origine** delle ricette (§35): migrazione 0016 senza assegnazioni arbitrarie, origine alla nascita, fissa, indicata dal proprietario se manca |
 | 18/11/2026 | 7.1 — **Migrazione da Debian** (§33): importazione dei contenuti con corrispondenza esplicita degli utenti, piano di prova, backup pre-migrazione, verifica e annullamento; **domini** (§34): app su `app.ricettedifamiglia.online`, dominio principale con la sola pagina «Sito in costruzione» in un Worker separato |
 | 18/11/2026 | 7.0 — **Installazione su Cloudflare** (§32): Worker, Durable Object SQLite, R2 privato; motore leggero con le stesse rotte; interfacce `Db` e `CartellaFile` comuni; ingresso `unico`; console con segreto; backup in R2 e ripristino solo dalla console; rilascio manuale |

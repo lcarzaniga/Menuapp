@@ -1,7 +1,7 @@
 // Suggerimenti dal ricettario durante l'inserimento rapido (SPEC F2.3): sceglierne uno
 // collega la voce al piatto; ignorarli lascia la voce libera. Da tastiera: frecce, Invio, Esc.
-import { ChefHat } from 'lucide-react'
-import { usePiatti } from '@/api/query'
+import { ChefHat, Globe } from 'lucide-react'
+import { useIncludiPubbliche, usePiatti } from '@/api/query'
 import type { RiepilogoPiatto } from '@/contratto/ricettario.ts'
 import { cercaRicette, type Risultato } from '@/domain/ricerca.ts'
 import { cn } from '@/lib/utils'
@@ -16,10 +16,26 @@ export function NotaIngredienti({ r }: { r: Risultato<RiepilogoPiatto> }) {
   return r.ingredientiTrovati.length ? <span className="block truncate text-xs text-testo-tenue">con {r.ingredientiTrovati.join(', ')}</span> : null
 }
 
+/**
+ * Una pubblica di un'altra Famiglia si usa per copia (SPEC §36, D5): collegarla ne crea una copia
+ * privata nel ricettario di chi organizza l'evento (riusata se esiste già). Lo si dice prima.
+ */
+export function NotaPubblica({ piatto }: { piatto: RiepilogoPiatto }) {
+  return piatto.soloPubblica ? (
+    <span className="block truncate text-xs text-primario">
+      <Globe className="mr-1 inline size-3" />
+      pubblica{piatto.famigliaOrigine ? ` · ${piatto.famigliaOrigine.nome}` : ''} · verrà copiata nel ricettario
+    </span>
+  ) : null
+}
+
+/** Le proprie prima delle pubbliche di altre Famiglie, a parità di pertinenza. */
+const propriePrima = (r: Risultato<RiepilogoPiatto>[]) => [...r.filter((x) => !x.ricetta.soloPubblica), ...r.filter((x) => x.ricetta.soloPubblica)]
+
 /** Ricette proposte per il testo scritto (le stesse che mostra SuggerimentiPiatti). */
 export function usePiattiProposti(testo: string, attivi: boolean): Risultato<RiepilogoPiatto>[] {
-  const piatti = usePiatti()
-  return attivi ? cercaPiatti(piatti.data ?? [], testo) : []
+  const piatti = usePiatti(useIncludiPubbliche() ? 'si' : 'no')
+  return attivi ? propriePrima(cercaPiatti(piatti.data ?? [], testo, 10)).slice(0, 5) : []
 }
 
 /**
@@ -46,6 +62,7 @@ export function SuggerimentiPiatti({ id, trovati, attivo, onScegli }: { id: stri
             <span className="min-w-0">
               {r.ricetta.nome}
               <NotaIngredienti r={r} />
+              <NotaPubblica piatto={r.ricetta} />
             </span>
           </li>
         ))}

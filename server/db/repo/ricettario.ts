@@ -1,5 +1,5 @@
 // SQL di piatti, ingredienti dei piatti, catalogo ingredienti e sinonimi.
-import type { Provenienza } from '../../../src/contratto/ricettario.ts'
+import type { Provenienza, VisibilitaPiatto } from '../../../src/contratto/ricettario.ts'
 import { norm } from '../../../src/domain/testo.ts'
 import type { CodiceUnita, Ingrediente, IngredientePiatto, Piatto, Scalatura, StatoParsing } from '../../../src/domain/tipi.ts'
 import { type Db, esegui, tutti, uno } from '../connessione.ts'
@@ -101,6 +101,9 @@ function senzaDoppioni(nomi: string[]): string[] {
   })
 }
 
+/** Visibilità per l'interfaccia: pubblica (che include la Famiglia), di famiglia o privata. */
+const VISIBILITA = "CASE WHEN p.pubblica = 1 THEN 'pubblica' WHEN EXISTS (SELECT 1 FROM condivisioni_piatto_gruppo cg WHERE cg.piatto_id = p.id) THEN 'famiglia' ELSE 'privata' END AS visibilita"
+
 export interface FamigliaOrigine {
   /** null: la Famiglia non esiste più (resta il nome). */
   id: string | null
@@ -112,7 +115,13 @@ const ORIGINE = 'p.famiglia_origine_id AS origine_id, coalesce((SELECT g.nome FR
 const famigliaOrigine = (r: { origine_id: string | null; origine_nome: string | null }): FamigliaOrigine | null => (r.origine_nome ? { id: r.origine_id, nome: r.origine_nome } : null)
 
 /** Ricette leggibili dall'utente, con i nomi degli ingredienti per la ricerca (§23). */
-export function elencaPiatti(db: Db, utenteId: string) {
+/** Ricette pubbliche nell'elenco: escluse, aggiunte a quelle dell'utente, o solo quelle (SPEC §36). */
+export type PubblicheInElenco = 'no' | 'si' | 'solo'
+
+export function elencaPiatti(db: Db, utenteId: string, pubbliche: PubblicheInElenco = 'no') {
+  // Le ricette che l'utente vede comunque (sue, delle sue Famiglie, condivise con lui).
+  const cerchia = `(p.proprietario_id = ? OR ${CONDIVISA_CON_LE_MIE_FAMIGLIE} OR EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id AND c.utente_id = ?))`
+  const dove = pubbliche === 'no' ? cerchia : pubbliche === 'si' ? `(${cerchia} OR p.pubblica = 1)` : 'p.pubblica = 1'
   return tutti<{
     id: string
     nome: string
@@ -127,15 +136,16 @@ export function elencaPiatti(db: Db, utenteId: string) {
     proprietario_nome: string
     origine_autore: string
     condiviso: number
-    visibilita: 'famiglia' | 'privata'
+    visibilita: VisibilitaPiatto
     origine_id: string | null
     origine_nome: string | null
+    nella_cerchia: number
     ingredienti: string | null
   }>(
     db,
     `SELECT p.id, p.nome, p.portata_suggerita, p.porzioni_base, p.versione, p.aggiornato_il, p.proprietario_id, p.origine_autore,
-       CASE WHEN EXISTS (SELECT 1 FROM condivisioni_piatto_gruppo cg WHERE cg.piatto_id = p.id) THEN 'famiglia' ELSE 'privata' END AS visibilita,
-       u.nome AS proprietario_nome, ${ORIGINE},
+       ${VISIBILITA},
+       u.nome AS proprietario_nome, ${ORIGINE}, ${cerchia} AS nella_cerchia,
        (SELECT count(*) FROM ingredienti_piatto i WHERE i.piatto_id = p.id) AS numero_ingredienti,
        (SELECT count(*) FROM ingredienti_piatto i WHERE i.piatto_id = p.id AND i.stato_parsing = 'da_verificare') AS da_verificare,
        (SELECT count(*) FROM voci_menu v WHERE v.piatto_id = p.id) AS usi,
@@ -145,11 +155,12 @@ export function elencaPiatti(db: Db, utenteId: string) {
           UNION SELECT c.nome FROM ingredienti_piatto i JOIN ingredienti c ON c.id = i.ingrediente_id WHERE i.piatto_id = p.id
           UNION SELECT s.sinonimo FROM ingredienti_piatto i JOIN sinonimi_ingrediente s ON s.ingrediente_id = i.ingrediente_id WHERE i.piatto_id = p.id)) AS ingredienti
      FROM piatti p JOIN utenti u ON u.id = p.proprietario_id
-     WHERE (p.proprietario_id = ? OR ${CONDIVISA_CON_LE_MIE_FAMIGLIE} OR EXISTS (SELECT 1 FROM condivisioni_piatto c WHERE c.piatto_id = p.id AND c.utente_id = ?))
+     WHERE ${dove}
      ORDER BY p.nome_norm`,
     utenteId,
     utenteId,
     utenteId,
+    ...(pubbliche === 'solo' ? [] : [utenteId, utenteId, utenteId]),
   ).map((r) => ({
     id: r.id,
     nome: r.nome,
@@ -166,6 +177,7 @@ export function elencaPiatti(db: Db, utenteId: string) {
     origineAutore: r.origine_autore,
     visibilita: r.visibilita,
     famigliaOrigine: famigliaOrigine(r),
+    soloPubblica: r.nella_cerchia === 0,
     ingredienti: senzaDoppioni(r.ingredienti ? r.ingredienti.split('\u001f') : []),
   }))
 }
@@ -175,15 +187,15 @@ export interface InfoProprieta {
   proprietarioNome: string
   originePiattoId: string | null
   origineAutore: string
-  visibilita: 'famiglia' | 'privata'
+  visibilita: VisibilitaPiatto
   famigliaOrigine: FamigliaOrigine | null
 }
 
 export function proprietaPiatto(db: Db, id: string): InfoProprieta | undefined {
-  const r = uno<{ proprietario_id: string; nome: string; origine_piatto_id: string | null; origine_autore: string; visibilita: 'famiglia' | 'privata'; origine_id: string | null; origine_nome: string | null }>(
+  const r = uno<{ proprietario_id: string; nome: string; origine_piatto_id: string | null; origine_autore: string; visibilita: VisibilitaPiatto; origine_id: string | null; origine_nome: string | null }>(
     db,
     `SELECT p.proprietario_id, u.nome, p.origine_piatto_id, p.origine_autore, ${ORIGINE},
-       CASE WHEN EXISTS (SELECT 1 FROM condivisioni_piatto_gruppo cg WHERE cg.piatto_id = p.id) THEN 'famiglia' ELSE 'privata' END AS visibilita
+       ${VISIBILITA}
      FROM piatti p JOIN utenti u ON u.id = p.proprietario_id WHERE p.id = ?`,
     id,
   )
@@ -200,8 +212,23 @@ export function proprietaPiatto(db: Db, id: string): InfoProprieta | undefined {
 }
 
 /** Copia già fatta di un piatto nel ricettario di un utente (la più recente). */
+/** Copia già fatta da `proprietarioId` (collegata all'originale, o con l'originale nella provenienza). */
 export const copiaEsistente = (db: Db, originaleId: string, proprietarioId: string) =>
-  uno<{ id: string }>(db, 'SELECT id FROM piatti WHERE origine_piatto_id = ? AND proprietario_id = ? ORDER BY creato_il DESC LIMIT 1', originaleId, proprietarioId)?.id
+  uno<{ id: string }>(
+    db,
+    `SELECT id FROM piatti WHERE proprietario_id = ? AND (origine_piatto_id = ? OR json_extract(provenienza, '$.piattoId') = ?)
+     ORDER BY creato_il DESC LIMIT 1`,
+    proprietarioId,
+    originaleId,
+    originaleId,
+  )?.id
+
+/** Pubblica o no: solo il proprietario la cambia (il servizio lo verifica). */
+export function impostaPubblica(db: Db, piattoId: string, pubblica: boolean, adesso: number): void {
+  esegui(db, 'UPDATE piatti SET pubblica = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ? AND pubblica <> ?', pubblica ? 1 : 0, adesso, piattoId, pubblica ? 1 : 0)
+}
+
+export const ePubblica = (db: Db, piattoId: string) => uno(db, 'SELECT 1 FROM piatti WHERE id = ? AND pubblica = 1', piattoId) !== undefined
 
 /** Voci che usano il piatto, solo negli eventi visibili all'utente indicato. */
 export function usiPiatto(db: Db, piattoId: string, utenteId?: string) {

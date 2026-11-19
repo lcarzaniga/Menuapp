@@ -6,9 +6,16 @@ import { Epoch, Id, NomeObbligatorio, TestoBreve, TestoLungo, Versione } from '.
 import { SchemaFoto } from './foto.ts'
 import { SchemaPersona } from './accesso.ts'
 
-export const VISIBILITA_PIATTO = ['famiglia', 'privata'] as const
+/** privata: solo il proprietario; famiglia: i membri della Famiglia; pubblica: tutti gli utenti dell'app (SPEC §36). */
+export const VISIBILITA_PIATTO = ['famiglia', 'privata', 'pubblica'] as const
 export type VisibilitaPiatto = (typeof VISIBILITA_PIATTO)[number]
 export const SchemaVisibilita = z.object({ visibilita: z.enum(VISIBILITA_PIATTO) })
+/** Ricette pubbliche nell'elenco: no (predefinito), si (anche le pubbliche), solo. */
+export const SchemaElencoPiatti = z.object({ q: z.string().max(200).optional(), pubbliche: z.enum(['no', 'si', 'solo']).default('no') })
+
+/** Preferenze personali, uguali su tutti i dispositivi (SPEC §36). */
+export const SchemaPreferenze = z.object({ includiPubbliche: z.boolean(), versione: Versione })
+export type Preferenze = z.infer<typeof SchemaPreferenze>
 /** Famiglia d'origine di una ricetta che non l'ha ancora (solo il proprietario, una sua Famiglia). */
 export const SchemaFamigliaOrigine = z.object({ gruppoId: Id, versione: Versione })
 /** Famiglia in cui è visibile la ricetta: al massimo una (nessuna = privata), SPEC §28. */
@@ -23,7 +30,14 @@ export const SchemaCopiaInFamiglia = z.object({
 })
 
 /** Provenienza di una copia da un'altra Famiglia: solo testo, fotografato al momento della copia. */
-export const SchemaProvenienza = z.object({ titolo: z.string(), copiataIl: z.number().int(), copiataDa: z.string(), famiglia: z.string().nullable() })
+export const SchemaProvenienza = z.object({
+  titolo: z.string(),
+  copiataIl: z.number().int(),
+  copiataDa: z.string(),
+  famiglia: z.string().nullable(),
+  /** Ricetta da cui è stata copiata: solo memoria storica, non dà accesso (copie dalla 7.3). */
+  piattoId: z.string().optional(),
+})
 export type Provenienza = z.infer<typeof SchemaProvenienza>
 
 const Minuti = z.number().int().min(0).max(100_000).nullable()
@@ -82,6 +96,8 @@ const CampiProprieta = {
    * la Famiglia non esiste più (resta il nome). null: ancora da indicare (ricette nate prima).
    */
   famigliaOrigine: z.object({ id: Id.nullable(), nome: z.string() }).nullable(),
+  /** Visibile all'utente solo perché pubblica (di un'altra Famiglia): si legge e si copia. */
+  soloPubblica: z.boolean(),
 }
 
 export const SchemaDettaglioPiatto = SchemaPiatto.extend({
@@ -97,6 +113,8 @@ export const SchemaDettaglioPiatto = SchemaPiatto.extend({
   provenienza: SchemaProvenienza.nullable(),
   /** Con chi è condivisa una ricetta privata (solo per il proprietario). */
   condivisaCon: z.array(SchemaPersona),
+  /** Copia che l'utente ha già fatto di questa ricetta (pubblica di altri), se c'è. */
+  miaCopia: Id.nullable(),
 })
 export type DettaglioPiatto = z.infer<typeof SchemaDettaglioPiatto>
 
@@ -121,7 +139,7 @@ export type RiepilogoPiatto = z.infer<typeof SchemaRiepilogoPiatto>
 
 export const SchemaNuovoPiatto = z.object({
   id: Id,
-  visibilita: z.enum(VISIBILITA_PIATTO).optional(),
+  visibilita: z.enum(['famiglia', 'privata']).optional(),
   /** Famiglie con cui condividerla (di cui l'autore fa parte). Assente: tutte le sue, salvo `privata`. */
   famiglie: z.array(Id).max(20).optional(),
   /** Famiglia in cui nasce (dell'autore). Assente: quella con cui è condivisa, o l'unica dell'autore. */
