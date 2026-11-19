@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { api, ErroreRichiesta, nuovoId } from '@/api/client'
 import { usePiatto } from '@/api/query'
 import { useScrittura } from '@/api/scrittura'
+import { MemoriaRicetta } from './MemoriaRicetta'
 import { Caricamento, Pagina, Vuoto } from '@/components/Pagina'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -205,6 +206,9 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
             </ul>
           </section>
         ) : null}
+
+        {/* Storia, ricordi ed esperienze: la memoria di famiglia della ricetta (SPEC §40). */}
+        <MemoriaRicetta piatto={p} />
 
         {/* Gestione: ciò che si usa di rado, dopo il contenuto (SPEC §31.3). */}
         <section id="gestione-ricetta" aria-label="Gestione della ricetta" className="mt-2 flex scroll-mt-4 flex-col gap-3 rounded-2xl border border-bordo/70 bg-tenue/40 p-4">

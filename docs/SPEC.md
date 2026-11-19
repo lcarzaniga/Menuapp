@@ -2791,6 +2791,36 @@ resto): nessun doppione da tenere allineato.
   `daDefinire` false, `contributi` 1.
 - Test: `server/api/contributi.test.ts`, `src/features/eventi/Riepilogo.test.tsx`, e2e `contributi.spec.ts`.
 
+## 40. Memoria di famiglia (7.9)
+
+Migrazione `0020_memoria_di_famiglia.sql`. Il ricettario conserva la storia delle ricette.
+
+- **Modello**: una sola tabella `memorie` con `tipo` storia / ricordo / esperienza, autore (id e nome,
+  che resta), date, testo, Famiglia (`gruppo_id`) e ricetta (`piatto_id`). In questa fase ogni
+  contributo è legato a una ricetta; il modello accoglierà poi un **archivio di famiglia** con
+  ricordi senza ricetta (`piatto_id` vuoto, `gruppo_id` della Famiglia), senza migrare i dati. Le
+  **foto** sono le stesse delle ricette (`foto_piatti` con `memoria_id`: file, impronte, backup, R2),
+  ma non entrano nella galleria della ricetta, nelle miniature, nell'esportazione della ricetta né
+  nelle copie; mai principali né di un passaggio (trigger); al massimo 10 per contributo.
+- **Storia della ricetta**: testo libero e facoltativo, con foto storiche; una per ricetta, la
+  scrive il proprietario (`PUT /piatti/:id/storia`). Si pubblica solo esplicitamente («Pubblica
+  anche la storia e le sue foto»), e solo con la ricetta pubblica (§36).
+- **Ricordi** ed **esperienze di preparazione** (`POST /piatti/:id/memorie`): li aggiungono il
+  proprietario e i membri della Famiglia con cui la ricetta è condivisa; autore e data restano.
+  Ognuno modifica solo i suoi (`PUT /memorie/:id`); eliminarli possono l'autore e l'amministratore
+  della Famiglia del contributo (`DELETE /memorie/:id`). Le esperienze possono indicare l'evento in
+  cui la ricetta è stata preparata (nominato solo a chi lo vede) e non modificano ingredienti né
+  procedimento.
+- **Chi vede**: la memoria la vede chi fa parte della ricetta (proprietario, membri della Famiglia
+  con cui è condivisa, persone con cui è condivisa); non chi la legge solo perché pubblica o per un
+  evento. Chi legge una pubblica vede al più la storia pubblicata con le sue foto; mai ricordi,
+  esperienze o loro foto. Anonimi: niente (401). Le foto della memoria seguono le stesse regole
+  (`richiediFoto` → `richiediMemoria`).
+- **Copie**: conservano la provenienza (§28, §36) ma iniziano una memoria propria (vuota).
+- Interfaccia: sezione «Memoria di famiglia» nella scheda della ricetta (storia, ricordi,
+  esperienze; foto ridotte come quelle delle ricette).
+- Test: `server/api/memoria.test.ts` (due motori), e2e `memoria.spec.ts`.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2817,6 +2847,7 @@ resto): nessun doppione da tenere allineato.
 | 17/11/2026 | 6.3 — **Ricorrenze standard** (§30): catalogo comune con id stabili, associazione automatica dall'occasione alla creazione, scelte manuali che prevalgono, proposta al cambio d'occasione, duplicazione ed edizioni nella Famiglia; migrazione `0015_ricorrenze_standard.sql` |
 | 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |
 | 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |
+| 19/11/2026 | 7.9 — **Memoria di famiglia** (§40): storia della ricetta pubblicabile, ricordi ed esperienze dei familiari con foto, privati anche nelle ricette pubbliche, non copiati; modello pronto per un archivio di famiglia |
 | 19/11/2026 | 7.8 — **Chi porta cosa flessibile** (§39): piatti a scelta «da definire» con quanti contributi, precisabili senza perdere l'incarico; menù e Chi porta stesso record |
 | 19/11/2026 | 7.7 — **Regia della cucina** (§38): vista del piano per il giorno dell'evento, colonne per fase, filtri, attrezzature dal testo delle ricette, testo grande, schermo acceso, «Prepara il piano dai piatti» |
 | 19/11/2026 | 7.6 — **Riuso degli eventi** (§25): scelta di cosa copiare, anteprima senza scritture, chi porta cosa da riassegnare con il promemoria di chi se ne occupava (migrazione 0018) |

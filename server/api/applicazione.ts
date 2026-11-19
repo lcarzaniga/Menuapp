@@ -10,7 +10,7 @@ import type { Contesto } from './aiuti.ts'
 import { registraRotte } from './rotte.ts'
 import { registraAutenticazione } from './sessione.ts'
 
-const RE_ROTTE_FOTO = /^\/api\/v1\/(piatti\/[^/]+\/foto|foto\/[^/]+\/file|messaggi\/[^/]+\/allegati)$/
+const RE_ROTTE_FOTO = /^\/api\/v1\/(piatti\/[^/]+\/foto|foto\/[^/]+\/file|messaggi\/[^/]+\/allegati|memorie\/[^/]+\/foto)$/
 
 const METODI_SCRITTURA = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 export const LIMITE_CORPO = 1024 * 1024

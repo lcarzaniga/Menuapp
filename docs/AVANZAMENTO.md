@@ -553,9 +553,17 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   attrezzatura e giorno, attrezzature dal testo delle ricette, «Ricetta in cucina», spunta, testo
   grande, Wake Lock condiviso; «Prepara il piano dai piatti» con l'ora suggerita. SPEC §38.
 
-## «Chi porta cosa» flessibile (19/11/2026, ramo `chi-porta-flessibile`, schema 19)
+## «Chi porta cosa» flessibile (19/11/2026, su TEST `20261119-1413-105f122`, schema 19)
 
 - Richiesta di Loris (19/11). Analisi: le voci del menù sono già gli incarichi dei piatti (stesso
   record) e le cose da portare coprono i contributi generici: bastava «da definire» e «contributi»
   sulla voce (migrazione 0019, trigger senza ricetta), «Piatto a scelta» e «Precisa» in Chi porta,
   «da definire» nel menù e nell'editor, spesa e riepilogo coerenti, duplicazione. SPEC §39.
+
+## Memoria di famiglia (19/11/2026, ramo `memoria-famiglia`, schema 20)
+
+- Richiesta di Loris (19/11). Tabella `memorie` (storia / ricordo / esperienza, con Famiglia: pronta
+  per un archivio senza ricetta), foto in `foto_piatti` con `memoria_id` (stessi file e backup),
+  regole di lettura e scrittura in `permessi.ts` (anche per le foto), sezione nella scheda. La
+  scheda di una ricetta altrui è in sola lettura: la memoria usa solo lo stato della connessione,
+  il server applica i permessi. SPEC §40.

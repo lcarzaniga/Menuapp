@@ -20,6 +20,7 @@ import m0016 from '../server/db/migrazioni/0016_famiglia_origine.sql'
 import m0017 from '../server/db/migrazioni/0017_ricette_pubbliche.sql'
 import m0018 from '../server/db/migrazioni/0018_incarico_precedente.sql'
 import m0019 from '../server/db/migrazioni/0019_contributi_da_definire.sql'
+import m0020 from '../server/db/migrazioni/0020_memoria_di_famiglia.sql'
 
 const FILE: [string, string][] = [
   ['0001_iniziale.sql', m0001],
@@ -41,6 +42,7 @@ const FILE: [string, string][] = [
   ['0017_ricette_pubbliche.sql', m0017],
   ['0018_incarico_precedente.sql', m0018],
   ['0019_contributi_da_definire.sql', m0019],
+  ['0020_memoria_di_famiglia.sql', m0020],
 ]
 
 export const MIGRAZIONI: Migrazione[] = FILE.map(([nome, sql], i) => {

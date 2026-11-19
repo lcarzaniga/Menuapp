@@ -213,6 +213,8 @@ export const eventoDiVoce = (db: Db, id: string) => uno<{ evento_id: string }>(d
 export const eventoDiAttivita = (db: Db, id: string) => uno<{ evento_id: string }>(db, 'SELECT evento_id FROM attivita WHERE id = ?', id)?.evento_id
 export const eventoDiArticolo = (db: Db, id: string) => uno<{ evento_id: string }>(db, 'SELECT evento_id FROM articoli_spesa WHERE id = ?', id)?.evento_id
 export const eventoDiSnapshot = (db: Db, id: string) => uno<{ evento_id: string }>(db, 'SELECT evento_id FROM snapshot_eventi WHERE id = ?', id)?.evento_id
+export const famigliaOriginePiatto = (db: Db, piattoId: string) => uno<{ g: string | null }>(db, 'SELECT famiglia_origine_id AS g FROM piatti WHERE id = ?', piattoId)?.g ?? null
+export const memoriaDiFoto = (db: Db, id: string) => uno<{ memoria_id: string | null }>(db, 'SELECT memoria_id FROM foto_piatti WHERE id = ?', id)?.memoria_id ?? null
 export const piattoDiFoto = (db: Db, id: string) => uno<{ piatto_id: string }>(db, 'SELECT piatto_id FROM foto_piatti WHERE id = ?', id)?.piatto_id
 export const proprietarioPiatto = (db: Db, id: string) => uno<{ proprietario_id: string }>(db, 'SELECT proprietario_id FROM piatti WHERE id = ?', id)?.proprietario_id
 export const proprietarioEvento = (db: Db, id: string) => uno<{ proprietario_id: string }>(db, 'SELECT proprietario_id FROM eventi WHERE id = ?', id)?.proprietario_id

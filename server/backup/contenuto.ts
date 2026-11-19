@@ -23,6 +23,7 @@ export const TABELLE_CONTENUTO = [
   'articoli_spesa',
   'attivita',
   'snapshot_eventi',
+  'memorie',
   'foto_piatti',
   'stili_stampa',
   'condivisioni_evento',

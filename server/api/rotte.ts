@@ -10,6 +10,7 @@ import { rotteEventi } from './eventi.ts'
 import { rotteRicettario } from './ricettario.ts'
 import { rotteSpesa } from './spesa.ts'
 import { rotteFoto } from './foto.ts'
+import { rotteMemoria } from './memoria.ts'
 import { rotteSistema } from './sistema.ts'
 import { rotteStampa } from './stampa.ts'
 
@@ -20,6 +21,7 @@ export function registraRotte(app: FastifyInstance, ctx: Contesto, ingresso: Ing
   rotteRicettario(app, ctx)
   rotteSpesa(app, ctx)
   rotteFoto(app, ctx)
+  rotteMemoria(app, ctx)
   rotteStampa(app, ctx)
   rotteFamiglia(app, ctx)
   rottePartecipanti(app, ctx)
