@@ -632,3 +632,15 @@ Stato: **sviluppato, testato, su TEST** (`20261119-1546-1806441`, poi con la cor
   salute ok, 401 senza sessione anche su proposte e cronologia, file dell'app uguali alla build,
   dominio principale ancora «Sito in costruzione». Accesso, ricette, foto, famiglie e notifiche con
   una sessione: da controllare da Loris nell'app (senza console non ho una sessione di produzione).
+
+## Controlli di GitHub in errore (19/11/2026, ramo `ci-cache-istruzioni`)
+
+- Dal commit `878b0a0` (riuso degli eventi) i «Controlli» di GitHub Actions fallivano su
+  `server/api/partecipanti.test.ts` (migrazione 0010), mentre sul server passavano. Causa: la cache delle
+  istruzioni preparate (`server/db/connessione.ts`) teneva un `SELECT *` preparato prima delle
+  migrazioni; con Node 24.18 (server) restituiva le colonne di prima, con il Node 24 più recente di
+  GitHub quelle nuove, e il test confrontava le righe intere (la 0018 aggiunge una colonna).
+- Correzione: `applicaElenco` svuota la cache dopo ogni migrazione (nessuna istruzione con lo schema
+  vecchio dopo un cambio); il test confronta le colonne di allora (`toMatchObject`). Nessun effetto
+  sull'app in uso: su Debian le migrazioni avvengono all'avvio e il ripristino usa una connessione
+  separata; il Durable Object non tiene istruzioni preparate.

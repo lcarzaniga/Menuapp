@@ -1,6 +1,6 @@
 // Applicazione delle migrazioni, comune al server e al Durable Object (SPEC §6.5, §32):
 // nessun accesso a file, l'elenco e il backup arrivano da chi chiama.
-import { type Db, esegui, transazione, tutti, versioneSchema } from '../connessione.ts'
+import { type Db, dimenticaIstruzioni, esegui, transazione, tutti, versioneSchema } from '../connessione.ts'
 
 /** Codice d'uscita che il servizio systemd non ripete (RestartPreventExitStatus=78). */
 export const CODICE_USCITA_CONFIGURAZIONE = 78
@@ -88,6 +88,9 @@ export async function applicaElenco(db: Db, migrazioni: Migrazione[], backupPrim
       applicate.push(m.nome)
     } catch (e) {
       throw new ErroreMigrazione(`Migrazione ${m.nome} fallita e annullata: ${(e as Error).message}`)
+    } finally {
+      // Lo schema è cambiato (o è tornato com'era): le istruzioni preparate prima non valgono più.
+      dimenticaIstruzioni(db)
     }
   }
 

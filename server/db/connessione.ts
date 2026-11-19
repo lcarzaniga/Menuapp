@@ -28,6 +28,14 @@ export interface Db {
 
 const cache = new WeakMap<Db, Map<string, Istruzione>>()
 
+/**
+ * Dimentica le istruzioni preparate: dopo un cambio di schema (migrazioni) un `SELECT *` preparato
+ * prima può restituire le colonne di prima (succede con alcune versioni di node:sqlite).
+ */
+export function dimenticaIstruzioni(db: Db): void {
+  cache.delete(db)
+}
+
 function prepara(db: Db, sql: string): Istruzione {
   let m = cache.get(db)
   if (!m) {

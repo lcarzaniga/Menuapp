@@ -284,11 +284,12 @@ describe('migrazione 0010', () => {
       esegui(db, "INSERT INTO eventi (id, nome, data, tipo, adulti, bambini, coefficiente_bambini, creato_il, aggiornato_il, proprietario_id) VALUES ('e1', 'Pasqua', '2026-04-05', 'pranzo', 12, 3, 0.5, 1, 1, 'utente-amministratore')")
       esegui(db, "INSERT INTO cose_da_portare (id, evento_id, nome, incaricato, quantita_numero, unita, creato_il, aggiornato_il) VALUES ('c1', 'e1', 'Vino', 'Zio Marco', 4, 'bottiglie', 1, 1)")
       esegui(db, "INSERT INTO snapshot_eventi (id, evento_id, stato, versione_formato, contenuto, creato_il, superato_il) VALUES ('s1', 'e1', 'superato', 1, '{\"x\":1}', 1, 2)")
-      const prima = JSON.stringify([tutti(db, 'SELECT * FROM cose_da_portare'), tutti(db, 'SELECT * FROM snapshot_eventi')])
+      const prima = [tutti(db, 'SELECT * FROM cose_da_portare'), tutti(db, 'SELECT * FROM snapshot_eventi')]
       await applicaMigrazioni(db, { cartellaBackup: null })
       expect(leggiEvento(db, 'e1')).toMatchObject({ adulti: 12, bambini: 3, copertiAutomatici: false, copertiManuali: { adulti: 12, bambini: 3 }, maxAccompagnatori: null })
       expect(uno(db, 'SELECT count(*) AS n FROM partecipanti')).toEqual({ n: 0 })
-      expect(JSON.stringify([tutti(db, 'SELECT * FROM cose_da_portare'), tutti(db, 'SELECT * FROM snapshot_eventi')])).toBe(prima)
+      // Le colonne di allora restano com'erano (le migrazioni successive ne aggiungono altre).
+      expect([tutti(db, 'SELECT * FROM cose_da_portare'), tutti(db, 'SELECT * FROM snapshot_eventi')]).toMatchObject(prima)
       expect(uno(db, 'SELECT count(*) AS n FROM pragma_foreign_key_check')).toEqual({ n: 0 })
       chiudiDatabase(db)
     } finally {
