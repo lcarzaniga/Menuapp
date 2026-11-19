@@ -1,0 +1,226 @@
+/*
+ * Segnaposto stampati (SPEC §42). Misure solo in mm e pt, come il menù: la dimensione del testo
+ * dell'app non cambia la stampa. Le zone della faccia hanno altezze fisse (ZONE in
+ * FogliSegnaposto.tsx): il nome non si sovrappone mai a ornamenti ed evento.
+ */
+
+.sp-foglio {
+  display: block;
+}
+.sp-posto {
+  position: absolute;
+}
+.sp-cartoncino {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+.sp-retro {
+  width: 90mm;
+  height: 50mm;
+  transform: rotate(180deg);
+}
+
+.sp-faccia {
+  --carta-menu: #ffffff;
+  --inchiostro-tenue: color-mix(in srgb, var(--inchiostro) 58%, white);
+  position: relative;
+  box-sizing: border-box;
+  width: 90mm;
+  height: 50mm;
+  padding: 5mm 7mm;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--carta-menu);
+  color: var(--inchiostro);
+  font-family: var(--f-testo);
+  text-align: center;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.sp-faccia *,
+.sp-faccia *::before,
+.sp-faccia *::after {
+  box-sizing: border-box;
+}
+.sp-faccia p {
+  margin: 0;
+}
+.sp-faccia svg {
+  display: block;
+}
+
+.sp-zona-ornamento {
+  height: 7mm;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sp-zona-nome {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+.sp-zona-evento {
+  height: 6mm;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sp-nome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  font-family: var(--f-titoli);
+  font-weight: 600;
+  line-height: 1.12;
+  color: var(--accento);
+  overflow-wrap: anywhere;
+}
+.sp-nome span {
+  display: block;
+  max-width: 100%;
+}
+.sp-faccia[data-titoli-corsivi] .sp-nome {
+  font-weight: 400;
+  line-height: 1.18;
+  word-spacing: 0.14em;
+}
+.sp-evento {
+  font-family: var(--f-etichette);
+  font-size: 6.5pt;
+  letter-spacing: 0.24em;
+  padding-left: 0.24em;
+  text-transform: uppercase;
+  color: var(--secondario);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.sp-faccia[data-titoli-corsivi] .sp-evento {
+  font-size: 9pt;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+/* ── Cornici e ornamenti per modello ───────────────────────── */
+
+.sp-cornice {
+  position: absolute;
+  inset: 2.6mm;
+  pointer-events: none;
+}
+.sp-faccia[data-modello='elegante'] .sp-cornice {
+  border: 0.8pt solid var(--accento);
+}
+.sp-cornice-interna {
+  position: absolute;
+  inset: 0.9mm;
+  border: 0.3pt solid var(--secondario);
+}
+.sp-fregio {
+  width: 24mm;
+  height: auto;
+}
+.sp-faccia[data-modello='elegante'] .sp-nome {
+  color: var(--accento);
+}
+
+.sp-faccia[data-modello='minimal'] {
+  font-family: var(--f-testo);
+}
+.sp-barra {
+  display: block;
+  width: 10mm;
+  border-top: 1pt solid var(--accento);
+}
+.sp-faccia[data-modello='minimal'] .sp-nome {
+  font-weight: 300;
+  color: var(--inchiostro);
+  letter-spacing: -0.005em;
+}
+.sp-faccia[data-modello='minimal'][data-titoli-corsivi] .sp-nome {
+  font-weight: 400;
+}
+.sp-faccia[data-modello='minimal'] .sp-evento {
+  color: var(--inchiostro-tenue);
+}
+
+.sp-faccia[data-modello='rustico'] .sp-cornice {
+  border: 0.6pt solid var(--secondario);
+  border-radius: 1mm;
+}
+.sp-ghirlanda .orn-ramo {
+  width: 13mm;
+  height: auto;
+}
+.sp-faccia[data-modello='rustico'] .sp-nome {
+  color: var(--inchiostro);
+}
+.sp-faccia[data-modello='rustico'] .sp-evento {
+  color: var(--accento);
+}
+
+.sp-faccia[data-modello='festivo'] .sp-zona-ornamento {
+  /* Festone sul bordo alto, a tutta larghezza: stessa altezza totale delle altre zone. */
+  margin: -5mm -7mm 0;
+  height: 12mm;
+  align-items: flex-start;
+}
+.sp-festone {
+  width: 90mm;
+  height: 7mm;
+}
+
+.sp-faccia[data-modello='natale'] .sp-cornice {
+  border: 0.6pt solid var(--accento);
+}
+.sp-agrifoglio {
+  width: 13mm;
+  height: auto;
+}
+.sp-angolo {
+  position: absolute;
+  width: 2.6mm;
+  height: 2.6mm;
+}
+.sp-angolo.basso-sx {
+  left: 1.6mm;
+  bottom: 1.6mm;
+}
+.sp-angolo.basso-dx {
+  right: 1.6mm;
+  bottom: 1.6mm;
+}
+
+/* ── Piega e taglio ────────────────────────────────────────── */
+
+/* Piega discreta: due tacche sui bordi, a metà altezza del cavalletto. */
+.sp-piega {
+  position: absolute;
+  top: 50mm;
+  width: 4mm;
+  border-top: 0.35pt solid #9a9a9a;
+}
+.sp-piega.sx {
+  left: 0;
+}
+.sp-piega.dx {
+  right: 0;
+}
+.sp-taglio {
+  position: absolute;
+  inset: 0;
+  border: 0.3pt dashed #a8a8a8;
+  pointer-events: none;
+}

@@ -150,7 +150,7 @@ const SCELTE = [
   { id: 'partecipanti', etichetta: 'Partecipanti', dettaglio: 'tutti in attesa, da riconfermare; i coperti si copiano sempre come numeri' },
   { id: 'incarichi', etichetta: 'Chi porta cosa', dettaglio: 'piatti affidati e cose da portare, da riassegnare: nessuno è già d\'accordo' },
   { id: 'piano', etichetta: 'Piano delle attività', dettaglio: 'spostato sulla nuova data, tutto da fare' },
-  { id: 'stampa', etichetta: 'Impostazioni di stampa', dettaglio: 'modello e note del menù stampato' },
+  { id: 'stampa', etichetta: 'Impostazioni di stampa', dettaglio: 'menù stampato e segnaposto, con i loro nomi' },
 ] as const
 
 const ESITO: Record<AnteprimaDuplica['portate'][number]['voci'][number]['ricetta'], string | null> = {

@@ -37,8 +37,10 @@ export function salvaStileStampa(db: Db, eventoId: string, dati: SalvaStileStamp
     richiediModificabile(leggiEvento(db, eventoId))
     // Titolo vuoto = nome dell'evento.
     const titolo = dati.opzioni.titolo?.trim() || null
-    const testo = JSON.stringify({ ...dati.opzioni, titolo })
     const esiste = repo.leggiStile(db, eventoId)
+    // I segnaposto (SPEC §42) stanno nella stessa riga: il menù non li tocca.
+    const segnaposto = esiste ? (JSON.parse(esiste.opzioni) as { segnaposto?: unknown }).segnaposto : undefined
+    const testo = JSON.stringify({ ...dati.opzioni, titolo, ...(segnaposto === undefined ? {} : { segnaposto }) })
     if (dati.versione === 0 && !esiste) repo.inserisciStile(db, eventoId, testo, adesso)
     else if (repo.aggiornaStile(db, eventoId, dati.versione, testo, adesso) !== 1) throw conflittoVersione(stileVivo(db, eventoId))
     incrementaRevisione(db)

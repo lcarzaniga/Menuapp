@@ -225,6 +225,7 @@ Da 768 px: barra laterale con le stesse voci. Il contenuto dell'evento usa sched
 | `#/eventi/:id/spesa` | Evento — Spesa | Lista per reparto, filtri, manuali, sezioni *Da verificare* e *Non più necessari* |
 | `#/eventi/:id/piano` | Evento — Piano | Attività per giorno, checklist |
 | `#/eventi/:id/stampa` | Stampa menù | Designer: modelli, opzioni, anteprima, stampa/PDF (F8) |
+| `#/eventi/:id/segnaposto` | Stampa segnaposto | Nomi, formato, nome dell'evento, stile; anteprima e stampa A4 (§42) |
 | `#/eventi/:id/voci/:voceId/cucina` | Vista cucina | Ricetta alle porzioni della voce |
 | `#/famiglia` | Famiglia | Famiglia attiva: bacheca, «I più apprezzati», membri e inviti (§20, §21); senza Famiglie: crea o entra con un invito |
 | `#/unisciti/:token` | Invito a una Famiglia | Anteprima e «Entra nella Famiglia» (§21.1) |
@@ -2938,6 +2939,60 @@ autorizzati propongono miglioramenti, il proprietario controlla la versione uffi
   `server/api/autorizzazione.test.ts`, `test/cloudflare` (foto proposte in R2), e2e
   `collaborazione.spec.ts`.
 
+## 42. Segnaposto (8.1)
+
+Segnaposto nominativi da stampare con la stessa grafica del menù dell'evento (F8). Nessuna
+migrazione: stanno nella riga dello stile di stampa dell'evento (`stili_stampa.opzioni`, chiave
+`segnaposto`).
+
+### 42.1 Accesso e formati
+- «Stampa segnaposto» nella panoramica dell'evento (`#/eventi/:id/segnaposto`); dalla stampa del
+  menù si passa ai segnaposto e ritorno con un collegamento nell'intestazione.
+- **A cavalletto**: cartoncino 90 × 100 mm, due facce da 90 × 50 con la piega a metà, 4 per foglio.
+  La faccia posteriore è capovolta (ruotata di 180°), così dopo la piega si legge dritta dall'altro
+  lato; «Nome anche sul retro» (predefinito sì), altrimenti il retro resta bianco. Piega discreta:
+  due tacche sui bordi.
+- **Piatto**: 90 × 50 mm, una faccia, 10 per foglio.
+- Foglio A4 verticale, `@page { size: A4 portrait; margin: 0 }`: cartoncini accostati (bordo comune
+  per il taglio) e centrati, almeno 10 mm dal bordo (15 mm nei casi attuali). Fogli in base al numero
+  di cartoncini: mai uno a cavallo di due pagine. Linee di taglio facoltative (tratteggio grigio).
+
+### 42.2 Nomi
+- Il modello dei partecipanti è nominativo (§24): finché i segnaposto non sono salvati si propongono
+  titolari e accompagnatori con nome, confermati e in attesa (non gli assenti; gli accompagnatori
+  anonimi sono solo numeri). Dal primo salvataggio l'elenco è indipendente: i partecipanti non
+  cambiano mai da qui, e un partecipante nuovo non entra da sé.
+- Aggiunta (anche un elenco incollato, un nome per riga), modifica, rimozione, selezione da stampare,
+  riordino (su/giù), copie per nome (1–20). Doppioni evitati confrontando senza maiuscole, accenti e
+  spazi doppi: «Aggiungi dai partecipanti» aggiunge solo chi manca. Limiti: 200 nomi da 60 caratteri.
+- Dimensione del nome **calcolata, non misurata** (`misuraNome`, `src/domain/segnaposto.ts`), dalla
+  lunghezza e dalla larghezza media della combinazione tipografica: anteprima e stampa coincidono.
+  Corpo massimo 30 pt; su due righe bilanciate (a capo fra le parole) se su una scenderebbe sotto i
+  16 pt o se su due viene almeno il 30% più grande; minimo 11 pt.
+
+### 42.3 Nome dell'evento e stile
+- «Mostra nome dell'evento» (predefinito no): propone il nome dell'evento, sostituibile con un testo
+  libero (80 caratteri); più piccolo, sotto il nome, su tutti i segnaposto.
+- Zone fisse della faccia (margini 5/7 mm, ornamento 7 mm, evento 6 mm): il nome ha lo spazio che
+  resta e non si sovrappone a ornamenti ed evento.
+- **Stile**: `null` = come il menù (modello, palette, caratteri, decorazioni; segue i cambi del
+  menù); «Personalizzato» = uno stile proprio dei segnaposto, che non tocca il menù. Composizione
+  per modello: Elegante con doppia cornice e fregio; Minimal con barretta e nome leggero; Rustico con
+  cornice arrotondata e rametti d'ulivo; Festivo con il festone in alto; Natale con agrifoglio,
+  cornice e stelline.
+
+### 42.4 Dati, API, sincronizzazione
+- `GET /eventi/:id/segnaposto` (lettura): opzioni salvate o proposte, `salvati`, `nomiPartecipanti`,
+  `stileMenu`, versione della riga. `PUT` (modifica) con `{ opzioni, versione }`; 409 con lo stato
+  attuale. Contratto `src/contratto/segnaposto.ts`; valori non più ammessi tornano ai predefiniti
+  campo per campo (`segnapostoDaSalvati`).
+- Menù e segnaposto condividono riga e versione: ciascun salvataggio conserva la parte dell'altro.
+  Salvataggio automatico come il menù; un salvataggio dell'uno aggiorna la lettura dell'altro.
+- Evento archiviato: i segnaposto fotografati nello snapshot, in sola lettura (si possono stampare).
+  Duplicazione con «Impostazioni di stampa»: copiati con i nomi. Backup, esportazione e ripristino:
+  inclusi con la riga (`stili_stampa`), su Debian e su Cloudflare.
+- Stampa: scala 100% (non «Adatta alla pagina»), A4 verticale; i consigli sono nella pagina.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -2965,6 +3020,7 @@ autorizzati propongono miglioramenti, il proprietario controlla la versione uffi
 | 17/11/2026 | 6.3.1 — Partecipanti in una tabella compatta: nome e risposta in consultazione, risposte, accompagnatori e rimozioni solo in «Modifica elenco» (§29.2). Nessuna modifica a dati o API |
 | 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |
 | 19/11/2026 | 8.0 — **Collaborazione sulle ricette** (§41): proposte di modifica con approvazione per singola modifica, conflitti e dipendenze, foto proposte, cronologia con ripristino, trasferimento della proprietà e riassegnazione amministrativa con accettazione |
+| 19/11/2026 | 8.1 — **Segnaposto** (§42): cavalletto e piatto su A4, nomi dai partecipanti o a mano con copie e ordine, nome dell'evento facoltativo, stile del menù o proprio; nella riga dello stile di stampa, senza migrazione |
 | 19/11/2026 | 7.9 — **Memoria di famiglia** (§40): storia della ricetta pubblicabile, ricordi ed esperienze dei familiari con foto, privati anche nelle ricette pubbliche, non copiati; modello pronto per un archivio di famiglia |
 | 19/11/2026 | 7.8 — **Chi porta cosa flessibile** (§39): piatti a scelta «da definire» con quanti contributi, precisabili senza perdere l'incarico; menù e Chi porta stesso record |
 | 19/11/2026 | 7.7 — **Regia della cucina** (§38): vista del piano per il giorno dell'evento, colonne per fase, filtri, attrezzature dal testo delle ricette, testo grande, schermo acceso, «Prepara il piano dai piatti» |

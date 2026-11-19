@@ -644,3 +644,27 @@ Stato: **sviluppato, testato, su TEST** (`20261119-1546-1806441`, poi con la cor
   vecchio dopo un cambio); il test confronta le colonne di allora (`toMatchObject`). Nessun effetto
   sull'app in uso: su Debian le migrazioni avvengono all'avvio e il ripristino usa una connessione
   separata; il Durable Object non tiene istruzioni preparate.
+
+## Segnaposto (19/11/2026, ramo `segnaposto`, nessuna migrazione)
+
+Stato: **sviluppato e testato automaticamente**; non su TEST (serve l'autorizzazione di Loris);
+non collaudato; non in PRODUZIONE.
+
+- Funzione: «Stampa segnaposto» dalla panoramica dell'evento e dalla stampa del menù; cavalletto
+  (4 per A4, retro capovolto, piega con due tacche) o piatto (10 per A4); nomi proposti dai
+  partecipanti (confermati e in attesa) o scritti a mano, copie, ordine, selezione, senza doppioni;
+  nome dell'evento facoltativo; stile del menù o proprio; linee di taglio. SPEC §42.
+- Dati: chiave `segnaposto` nel JSON di `stili_stampa.opzioni` (stessa versione del menù, ciascuno
+  conserva la parte dell'altro); rotte `GET|PUT /eventi/:id/segnaposto`. Archivio, duplicazione,
+  esportazione e ripristino li portano già con la riga.
+- Codice: `src/domain/segnaposto.ts` (nomi, impaginazione, dimensione dei nomi),
+  `src/contratto/segnaposto.ts`, `server/servizi/segnaposto.ts`, `FogliSegnaposto.tsx` +
+  `segnaposto.css`, `PaginaSegnaposto.tsx`; controlli comuni della stampa in `controlli.tsx`,
+  salvataggio automatico reso generico (`useStile.ts`).
+- Test: logica (nomi, doppioni, copie, riordino, fogli, dimensione dei nomi), rendering (due facce,
+  retro vuoto, taglio, più fogli, accenti, modelli), server su due motori (proposta, indipendenza,
+  menù e segnaposto senza toccarsi, 409, validazione, archivio, duplicazione, ripristino), e2e su
+  telefono e desktop (a mano, dai partecipanti, stile proprio, ritorno al menù) e stampa reale in PDF
+  per i cinque modelli nei due formati con controllo che nessun nome esca dalla sua zona.
+  Verifica visiva dei PDF (`test-results/segnaposto/*.pdf`). `npm run check` 826 test, e2e 57,
+  Worker 9: verdi.

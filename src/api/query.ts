@@ -7,6 +7,7 @@ import type { Menu, RiepilogoEvento } from '@/contratto/eventi.ts'
 import type { DettaglioPiatto, Preferenze, RiepilogoPiatto } from '@/contratto/ricettario.ts'
 import type { InfoRiapertura, Snapshot } from '@/contratto/archivio.ts'
 import type { RispostaSpesa } from '@/contratto/spesa.ts'
+import type { Segnaposto } from '@/contratto/segnaposto.ts'
 import type { StileStampa } from '@/contratto/stampa.ts'
 import type { Attivita, Evento, Impostazioni, Ingrediente, Reparto, StatoEvento } from '@/domain/tipi.ts'
 import { api } from './client'
@@ -30,6 +31,7 @@ export const chiaviEventi = {
   evento: (id: string) => ['evento', id] as const,
   menu: (id: string) => ['menu', id] as const,
   stampa: (id: string) => ['stampa', id] as const,
+  segnaposto: (id: string) => ['segnaposto', id] as const,
 }
 
 /** Eventi visibili; con `gruppo` (Famiglia attiva) quelli della Famiglia più i personali. */
@@ -42,6 +44,8 @@ export const useEvento = (id: string) => useQuery({ queryKey: chiaviEventi.event
 export const useMenu = (id: string) => useQuery({ queryKey: chiaviEventi.menu(id), queryFn: () => api.leggi<Menu>(`/eventi/${id}/menu`) })
 export const useStileStampa = (id: string) =>
   useQuery({ queryKey: chiaviEventi.stampa(id), queryFn: () => api.leggi<StileStampa>(`/eventi/${id}/stampa`) })
+export const useSegnaposto = (id: string) =>
+  useQuery({ queryKey: chiaviEventi.segnaposto(id), queryFn: () => api.leggi<Segnaposto>(`/eventi/${id}/segnaposto`) })
 
 // ── Ricettario e catalogo ───────────────────────────────────
 export const chiaviRicettario = {

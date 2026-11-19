@@ -1,6 +1,6 @@
 // Evento — Riepilogo: a che punto siamo, dati, ricorrenza ed edizioni, condivisione; le azioni
 // di gestione nel menù «Azioni», ciascuna solo per chi può usarla (SPEC §5, F9, §31.2).
-import { Archive, CalendarCheck, Copy, MoreHorizontal, Pencil, Printer, RotateCcw, Trash2, Users } from 'lucide-react'
+import { Archive, CalendarCheck, Copy, IdCard, MoreHorizontal, Pencil, Printer, RotateCcw, Trash2, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { api } from '@/api/client'
@@ -87,6 +87,11 @@ export function PaginaPanoramica() {
           <Button variante="contorno" misura="piccolo" asChild>
             <Link to={`/eventi/${e.id}/stampa`}>
               <Printer /> Stampa menù
+            </Link>
+          </Button>
+          <Button variante="contorno" misura="piccolo" asChild>
+            <Link to={`/eventi/${e.id}/segnaposto`}>
+              <IdCard /> Stampa segnaposto
             </Link>
           </Button>
           <span className="flex-1" />

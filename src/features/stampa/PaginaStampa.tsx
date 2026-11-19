@@ -1,12 +1,12 @@
 // Designer del menù da tavola: modello, testi, colori, caratteri, formato; anteprima fedele,
 // stampa o PDF dal browser. Lo stile si salva per evento sul server (SPEC F8).
-import { ArrowLeft, Check, CloudOff, Loader2, Maximize2, Minus, Plus, Printer, RotateCcw, X } from 'lucide-react'
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowLeft, Check, IdCard, Maximize2, Minus, Plus, Printer, RotateCcw, X } from 'lucide-react'
+import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useMenu, useStileStampa } from '@/api/query'
 import { Caricamento } from '@/components/Pagina'
 import { Button } from '@/components/ui/button'
-import { Casella, Input, Textarea } from '@/components/ui/campi'
+import { Input, Textarea } from '@/components/ui/campi'
 import { usePuoScrivere } from '@/connessione/stato'
 import type { Menu } from '@/contratto/eventi.ts'
 import {
@@ -24,9 +24,10 @@ import {
 } from '@/domain/stampa.ts'
 import { cn } from '@/lib/utils'
 import { caricaTuttiICaratteri, FAMIGLIE } from './caratteri'
+import { Interruttore, Scelta, Sezione, StatoStile, useLarghezza } from './controlli'
 import { FogliMenu, type Impaginazione, PaginaMenu, tuttoInUnaPagina, useImpaginazione } from './FogliMenu'
 import { type ContenutoStampa, contenutoDa, geometria, PX_PER_MM } from './impaginazione'
-import { type StatoSalvataggio, useStile } from './useStile'
+import { useStile } from './useStile'
 
 const FORMATI: { id: FormatoStampa; nome: string; descrizione: string }[] = [
   { id: 'A4', nome: 'A4', descrizione: 'Un menù per foglio' },
@@ -93,6 +94,11 @@ function Designer({ menu, stile }: { menu: Menu; stile: NonNullable<ReturnType<t
         </div>
         <Button variante="contorno" misura="icona" aria-label="Ingrandisci l'anteprima" title="Ingrandisci l'anteprima" onClick={() => setIngrandita(true)}>
           <Maximize2 />
+        </Button>
+        <Button variante="contorno" asChild className="shrink-0">
+          <Link to={`/eventi/${evento.id}/segnaposto`} aria-label="Stampa segnaposto" title="Stampa segnaposto">
+            <IdCard /> <span className="hidden sm:inline">Segnaposto</span>
+          </Link>
         </Button>
         <Button onClick={() => void stampa()} className="shrink-0">
           <Printer /> <span className="hidden sm:inline">Stampa / Salva PDF</span>
@@ -235,21 +241,6 @@ function Designer({ menu, stile }: { menu: Menu; stile: NonNullable<ReturnType<t
 
 // ── Anteprima ───────────────────────────────────────────────
 
-function useLarghezza<T extends HTMLElement>() {
-  const ref = useRef<T>(null)
-  const [larghezza, setLarghezza] = useState(0)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const aggiorna = () => setLarghezza(el.clientWidth)
-    aggiorna()
-    const ro = new ResizeObserver(aggiorna)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-  return { ref, larghezza }
-}
-
 function FogliScalati({ contenuto, opzioni, impaginazione, scala }: { contenuto: ContenutoStampa; opzioni: OpzioniStampa; impaginazione: Impaginazione; scala: number }) {
   const g = geometria(opzioni.formato)
   const w = g.foglio.larghezza * PX_PER_MM
@@ -334,34 +325,6 @@ function AnteprimaIngrandita(props: { contenuto: ContenutoStampa; opzioni: Opzio
 
 // ── Controlli ───────────────────────────────────────────────
 
-function Sezione({ titolo, children, className }: { titolo: string; children: ReactNode; className?: string }) {
-  return (
-    <section aria-label={titolo} className={cn('flex flex-col gap-3 rounded-2xl border border-bordo/70 bg-carta p-4 shadow-carta', className)}>
-      <h2 className="titolo text-lg font-semibold">{titolo}</h2>
-      {children}
-    </section>
-  )
-}
-
-function Scelta({ attiva, disabled, onClick, children, verticale }: { attiva: boolean; disabled: boolean; onClick: () => void; children: ReactNode; verticale?: boolean }) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={attiva}
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        'flex min-h-11 items-center gap-2.5 rounded-xl border px-3 py-2 text-left text-sm transition-colors disabled:opacity-60',
-        verticale && 'flex-col justify-center gap-1 px-2',
-        attiva ? 'border-primario bg-primario-tenue/60 ring-1 ring-primario' : 'border-bordo bg-carta hover:bg-tenue',
-      )}
-    >
-      {children}
-    </button>
-  )
-}
-
 function Miniatura({ attiva, disabled, onClick, nome, descrizione, children }: { attiva: boolean; disabled: boolean; onClick: () => void; nome: string; descrizione: string; children: ReactNode }) {
   const { ref, larghezza } = useLarghezza<HTMLSpanElement>()
   const scala = larghezza / (210 * PX_PER_MM)
@@ -391,18 +354,6 @@ function Miniatura({ attiva, disabled, onClick, nome, descrizione, children }: {
   )
 }
 
-function Interruttore({ etichetta, aiuto, checked, disabled, onChange }: { etichetta: string; aiuto?: string; checked: boolean; disabled: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label className="flex items-start gap-3 py-0.5 text-sm">
-      <Casella className="mt-0.5" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
-      <span className="flex flex-col">
-        <span className="font-medium">{etichetta}</span>
-        {aiuto ? <span className="text-[0.8125rem] text-testo-tenue">{aiuto}</span> : null}
-      </span>
-    </label>
-  )
-}
-
 function IconaFormato({ formato }: { formato: FormatoStampa }) {
   const base = 'fill-carta stroke-current'
   return (
@@ -416,28 +367,6 @@ function IconaFormato({ formato }: { formato: FormatoStampa }) {
         </>
       ) : null}
     </svg>
-  )
-}
-
-function StatoStile({ stato, modificabile, archiviato, onRiprova }: { stato: StatoSalvataggio; modificabile: boolean; archiviato: boolean; onRiprova: () => void }) {
-  if (archiviato) return <span>sola lettura</span>
-  if (!modificabile) return <span>sola lettura (server non raggiungibile)</span>
-  if (stato === 'errore')
-    return (
-      <button type="button" className="inline-flex items-center gap-1 text-pericolo underline" onClick={onRiprova}>
-        <CloudOff className="size-3.5" /> non salvato, riprova
-      </button>
-    )
-  if (stato === 'salvato')
-    return (
-      <span className="inline-flex items-center gap-1" aria-live="polite">
-        <Check className="size-3.5" /> stile salvato
-      </span>
-    )
-  return (
-    <span className="inline-flex items-center gap-1" aria-live="polite">
-      <Loader2 className="size-3.5 animate-spin" /> salvataggio…
-    </span>
   )
 }
 
