@@ -462,7 +462,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
 - Prossimi passi: inviti a Raffa e Palli e ricollegamento di Lucia su `app.…`; dismissione di
   Debian e Funnel su conferma di Loris.
 
-## Ambienti TEST e PRODUZIONE; «A che punto siamo?» e il menù (19/11/2026, ramo `riepilogo-menu`)
+## Ambienti TEST e PRODUZIONE; «A che punto siamo?» e il menù (19/11/2026, in produzione: TEST `20261119-0922-1f0eff1`, Cloudflare `20261119-0925-1f0eff1`)
 
 - Ambienti (docs/RILASCI.md): **TEST** = Debian, solo dal tailnet (`…ts.net:9870`); **PRODUZIONE** =
   Cloudflare (`app.ricettedifamiglia.online`). Dati separati, nessun trasferimento fra ambienti.
@@ -470,7 +470,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   (sola lettura): il Worker `menuapp` non ha build automatiche da GitHub (solo `pole2-landing` le ha).
 - Funnel: `scripts/disattiva-funnel.sh` (da lanciare da Loris) spegne solo la 443 pubblica verso
   127.0.0.1:9873, dopo aver controllato che sia quella di Menù & Co.; verifica che i serve 9870 e
-  8443 e Tailscale restino invariati e che TEST risponda. Ancora attivo finché Loris non lo lancia.
+  8443 e Tailscale restino invariati e che TEST risponda. Spento da Loris il 19/11.
   Dalla LAN senza Tailscale (`:9880`, HTTP) TEST non dà dati: serve Tailscale.
 - Riepilogo: prima il menù contava solo se vuoto; con un piatto qualsiasi spariva e l'evento poteva
   risultare «Tutto pronto». Ora: vuoto → «Menù ancora vuoto»; portate senza piatti → «Menù in
@@ -478,3 +478,7 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   portata con almeno un piatto → «Menù completato» fra le cose a posto. Nessun minimo, nessun segno
   manuale né migrazione: le portate dell'evento dicono cosa si vuole servire (SPEC §26).
   `GET /eventi/:id/riepilogo` → `menu.portateVuote`. Test: unitari, server (due motori), e2e.
+- Primo ciclo TEST → PRODUZIONE (19/11): rilascio su TEST da Loris, prova funzionale e conferma;
+  rilascio Cloudflare (versione `8325776a`) solo dopo, con lo stesso commit. Verificato: salute ok,
+  401 senza sessione, file dell'app uguali alla build, dominio principale ancora sul sito. Nessun
+  dato trasferito fra gli ambienti; schema invariato (15).
