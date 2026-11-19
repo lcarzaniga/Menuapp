@@ -536,9 +536,13 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   «da risolvere» solo se qualcosa è andato storto (responsabile assente, attività in ritardo,
   quantità da verificare); menù vuoto, coperti mancanti e cose senza nessuno diventano «aperti».
 
-## Fase 2 del piano — Riuso degli eventi (19/11/2026, ramo `riuso-eventi`, schema 18)
+## Fase 2 del piano — Riuso degli eventi (19/11/2026, su TEST `20261119-1302-878b0a0`, schema 18)
 
 - Estesa «Duplica evento»: scelte (menù, partecipanti, chi porta cosa, piano, stampa), anteprima
   senza scritture (`anteprima: true`), incarichi da riassegnare con promemoria (`incarico_precedente`,
   verificato alla lettura: le condivisioni non si copiano), «Affida a …» in Chi porta. Decisione
   sulle ricette estratta in `esitoRicetta` (anteprima e collegamento usano la stessa). SPEC §25.
+- Osservazioni di Loris su TEST: l'anteprima mostrava solo le scelte con qualcosa da copiare
+  (sembrava che le altre non funzionassero) → ogni scelta spuntata ha la sua riga, anche vuota;
+  la barra di scorrimento usciva dal bordo arrotondato → in tutte le finestre scorre solo il
+  contenuto, titolo e pulsanti restano fermi (`src/components/ui/dialog.tsx`).

@@ -139,7 +139,7 @@ export function DuplicaEvento({ evento: e, onChiudi }: { evento: Evento; onChiud
             <SelettoreRicorrenza id="dup-ricorrenza" valore={sceltaRicorrenza} onCambia={setRicorrenza} famiglia={ricorrenze.data ?? []} />
           </Campo>
         ) : null}
-        <AnteprimaDuplicazione a={a} caricamento={anteprima.isFetching} />
+        <AnteprimaDuplicazione a={a} copia={copia} caricamento={anteprima.isFetching} />
       </div>
     </Finestra>
   )
@@ -163,7 +163,8 @@ const ESITO: Record<AnteprimaDuplica['portate'][number]['voci'][number]['ricetta
 }
 
 /** Cosa verrà creato (D8): si controlla prima di confermare; dopo, il nuovo evento si modifica come ogni altro. */
-function AnteprimaDuplicazione({ a, caricamento }: { a: AnteprimaDuplica | undefined; caricamento: boolean }) {
+/** Ogni scelta spuntata ha la sua riga, anche quando non c'è nulla da copiare. */
+function AnteprimaDuplicazione({ a, copia, caricamento }: { a: AnteprimaDuplica | undefined; copia: Record<(typeof SCELTE)[number]['id'], boolean>; caricamento: boolean }) {
   if (!a) return <p className="text-sm text-testo-tenue">{caricamento ? 'Preparo l\'anteprima…' : ''}</p>
   const voci = a.portate.flatMap((p) => p.voci)
   const particolari = voci.filter((v) => ESITO[v.ricetta])
@@ -175,17 +176,26 @@ function AnteprimaDuplicazione({ a, caricamento }: { a: AnteprimaDuplica | undef
       <p className="font-semibold">Verrà creato</p>
       <ul className="flex flex-col gap-1.5 text-testo-tenue">
         <li>
-          <span className="text-testo">Menù:</span> {voci.length ? `${voci.length} ${voci.length === 1 ? 'piatto' : 'piatti'}` : 'nessun piatto'} in {a.portate.length} portate
+          <span className="text-testo">Menù:</span> {copia.menu ? `${voci.length ? `${voci.length} ${voci.length === 1 ? 'piatto' : 'piatti'}` : 'nessun piatto'} in ${a.portate.length} portate` : `solo le ${a.portate.length} portate, senza piatti`}
           {particolari.map((v) => (
             <span key={v.nome} className="block text-xs">
               «{v.nome}»: {ESITO[v.ricetta]}
             </span>
           ))}
         </li>
-        {a.partecipanti ? <li><span className="text-testo">Partecipanti:</span> {a.partecipanti}, tutti in attesa</li> : null}
+        {copia.partecipanti ? (
+          <li>
+            <span className="text-testo">Partecipanti:</span> {a.partecipanti ? `${a.partecipanti}, tutti in attesa` : 'nessuno da copiare'}
+          </li>
+        ) : null}
+        {copia.incarichi && a.incarichiDisponibili && !a.incarichi.length ? (
+          <li>
+            <span className="text-testo">Chi porta cosa:</span> niente da riassegnare
+          </li>
+        ) : null}
         {a.incarichi.length ? (
           <li>
-            <span className="text-testo">Da riassegnare:</span>
+            <span className="text-testo">Chi porta cosa, da riassegnare:</span>
             {incarichi.primi.map((x) => (
               <span key={x.nome} className="block text-xs">
                 {x.nome}
@@ -193,6 +203,11 @@ function AnteprimaDuplicazione({ a, caricamento }: { a: AnteprimaDuplica | undef
               </span>
             ))}
             {incarichi.altri > 0 ? <span className="block text-xs">e altri {incarichi.altri}</span> : null}
+          </li>
+        ) : null}
+        {copia.piano && !a.attivita.length ? (
+          <li>
+            <span className="text-testo">Piano:</span> nessuna attività da copiare
           </li>
         ) : null}
         {a.attivita.length ? (
@@ -207,7 +222,11 @@ function AnteprimaDuplicazione({ a, caricamento }: { a: AnteprimaDuplica | undef
             {attivita.altri > 0 ? <span className="block text-xs">e altre {attivita.altri}</span> : null}
           </li>
         ) : null}
-        {a.stampa ? <li><span className="text-testo">Stampa:</span> stesse impostazioni</li> : null}
+        {copia.stampa ? (
+          <li>
+            <span className="text-testo">Stampa:</span> {a.stampa ? 'stesse impostazioni' : 'nessuna impostazione salvata, quelle predefinite'}
+          </li>
+        ) : null}
       </ul>
       {a.avvisi.map((x) => (
         <p key={x} className="text-xs text-avviso">

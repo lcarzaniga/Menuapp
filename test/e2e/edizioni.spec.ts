@@ -42,10 +42,13 @@ test('duplica Natale come nuova edizione, con i partecipanti da riconfermare', a
   // Si sceglie cosa copiare e l'anteprima mostra cosa verrà creato (SPEC §25).
   const anteprima = dialogo.getByTestId('anteprima-duplica')
   await expect(anteprima).toContainText('Menù: 2 piatti')
+  // Ogni scelta ha la sua riga, anche vuota: qui il piano non ha attività.
+  await expect(anteprima).toContainText('Piano: nessuna attività da copiare')
   await expect(anteprima).toContainText('Mai copiati: conferme, voti')
   await dialogo.getByRole('checkbox', { name: /^Partecipanti/ }).check()
   await expect(anteprima).toContainText('Partecipanti: 1, tutti in attesa')
   await dialogo.getByRole('checkbox', { name: /^Chi porta cosa/ }).check()
+  await expect(anteprima).toContainText('Chi porta cosa, da riassegnare:')
   await expect(anteprima).toContainText('Vino — l\'ultima volta: Zia Rosa')
   await foto(page, '01-duplica')
   await dialogo.getByRole('button', { name: 'Duplica' }).click()
