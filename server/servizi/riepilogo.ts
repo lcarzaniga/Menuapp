@@ -20,7 +20,7 @@ export function riepilogo(db: Db, u: UtenteCorrente, eventoId: string, adesso = 
     const righe = repoPart.partecipantiEvento(db, eventoId)
     const c = contaPresenze(righe.map(repoPart.presenza))
     const base = {
-      menu: { voci: repo.vociMenu(db, eventoId) },
+      menu: { voci: repo.vociMenu(db, eventoId), portateVuote: repo.portateVuote(db, eventoId) },
       coperti: { equivalenti: copertiEquivalenti(e), adulti: e.adulti, bambini: e.bambini, automatici: e.copertiAutomatici },
       partecipanti: righe.length
         ? { confermati: c.adulti.confermati + c.bambini.confermati, inAttesa: c.adulti.inAttesa + c.bambini.inAttesa, assenti: c.adulti.assenti + c.bambini.assenti }

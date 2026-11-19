@@ -1,5 +1,8 @@
 # Operazioni — Ricette di famiglia & Co. (menuapp)
 
+Il server Debian è l'ambiente **TEST** (solo tailnet); la produzione è su Cloudflare
+(docs/CLOUDFLARE.md). Procedura di rilascio: docs/RILASCI.md.
+
 ## Servizi
 
 | Unità (systemd utente) | Ruolo |
@@ -100,7 +103,9 @@ Attivazione (dopo autorizzazione, con il rilascio multiutente già attivo):
 3. Verifica da un telefono fuori dal tailnet: la pagina «Dispositivo non autorizzato».
 
 Coesiste con i serve già attivi (9870 e 8443, solo tailnet): Funnel usa solo la 443.
-Spegnimento: `tailscale funnel --https=443 off` (l'app resta raggiungibile via Tailscale).
+Spegnimento: `scripts/disattiva-funnel.sh` (controlla che la 443 sia quella di Menù & Co., esegue
+`tailscale funnel --https=443 off` e verifica che il resto non cambi; l'app resta raggiungibile via
+Tailscale).
 Mai `tailscale funnel reset` / `tailscale serve reset`: cancellano anche gli altri serve.
 
 ## Dominio proprio (`ricettedifamiglia.online`)

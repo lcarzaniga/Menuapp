@@ -35,18 +35,22 @@ verità) e `docs/AVANZAMENTO.md` (stato del lavoro) prima di cambiare qualcosa.
 - Prima di ogni commit: `npm run check`; per le interfacce anche `npm run test:e2e`.
 - Mai ascoltare su `0.0.0.0` (il server non ha firewall); mai `tailscale funnel`.
 
-## Produzione (SPEC §14, docs/OPERAZIONI.md)
+## Ambienti (docs/RILASCI.md)
 
-- Servizio utente `menuapp.service` su 127.0.0.1:9870 + `tailscale serve --https=9870`;
-  timer `menuapp-backup.timer` (03:45). Dati in `dati/` (fuori da Git).
-- Rilasci con `scripts/rilascia.sh` in `rilasci/<id>`, collegamento `rilasci/attuale`.
+- **TEST**: server Debian. Servizio utente `menuapp.service` su 127.0.0.1:9870 + `tailscale serve
+  --https=9870` (solo tailnet); timer `menuapp-backup.timer` (03:45). Dati in `dati/` (fuori da Git).
+  Rilasci con `scripts/rilascia.sh` in `rilasci/<id>`, collegamento `rilasci/attuale` (docs/OPERAZIONI.md).
+- **PRODUZIONE**: Cloudflare, `https://app.ricettedifamiglia.online` (docs/CLOUDFLARE.md), con
+  `scripts/cloudflare/rilascia.sh` solo dopo la prova su TEST e la conferma di Loris.
+- Dati separati: un rilascio non porta mai dati da un ambiente all'altro.
 
 ## Regole operative
 
 - Niente push, merge su `main`, rilasci, modifiche a servizi systemd o a Tailscale,
   operazioni su dati di produzione senza autorizzazione esplicita di Loris.
 - Rilasci: il lavoro resta su un ramo; a Loris si indica il comando `! scripts/rilascia.sh <ramo>`
-  (merge in main, controlli, push, migrazioni, rilascio). Lanciarlo è la sua autorizzazione: non
-  chiedere un «autorizzo» separato e non fare merge o push da soli.
+  (TEST: merge in main, controlli, push, migrazioni, rilascio). Lanciarlo è la sua autorizzazione:
+  non chiedere un «autorizzo» separato e non fare merge o push da soli. PRODUZIONE
+  (`! scripts/cloudflare/rilascia.sh`) solo dopo la sua conferma della prova su TEST.
 - Non toccare altri progetti o servizi del server (dailyMeals, sharedKidsCalendar, Apache…).
 - Aggiorna `docs/AVANZAMENTO.md` a ogni attività significativa.

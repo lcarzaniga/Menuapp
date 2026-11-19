@@ -100,4 +100,19 @@ test('a che punto siamo: indicatori aggiornati e collegamenti alle sezioni', asy
   await page.goBack()
   await sospese.getByRole('link', { name: /1 in attesa di conferma/ }).click()
   await expect(page).toHaveURL(/\/eventi\/ed-riep\/partecipanti$/)
+
+  // Un piatto: il menù è in preparazione finché restano portate senza piatti.
+  const ev = await apiLeggi<{ portate: { id: string; nome: string }[]; versione: number } & Record<string, unknown>>(request, '/eventi/ed-riep')
+  expect((await apiScrivi(request, 'post', '/eventi/ed-riep/voci', { voci: [{ id: 'ed-riep-v1', portataId: ev.portate[0]!.id, nome: 'Tartine' }] })).stato).toBeLessThan(300)
+  await page.goto('/#/eventi/ed-riep')
+  await page.reload()
+  await expect(sospese.getByRole('link', { name: /Menù in preparazione/ })).toContainText('ancora senza piatti')
+  // Tolte le portate che non servono, il menù è completato e passa fra le cose a posto.
+  expect((await apiScrivi(request, 'put', '/eventi/ed-riep', { ...ev, portate: [ev.portate[0]], versione: ev.versione })).stato).toBe(200)
+  await page.reload()
+  const aPosto = page.getByRole('list', { name: 'Già a posto' })
+  await expect(aPosto).toContainText('Menù completato')
+  await expect(sospese).not.toContainText('Menù')
+  await aPosto.getByRole('link', { name: /Menù completato/ }).click()
+  await expect(page).toHaveURL(/\/eventi\/ed-riep\/menu$/)
 })

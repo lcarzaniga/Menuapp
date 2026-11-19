@@ -2172,6 +2172,11 @@ richiesta. Ogni indicatore apre la sua sezione; quelli delle funzioni non usate 
 
 - Sempre: coperti e modalità. Con l'elenco: confermati e in attesa. Ordine e «Tutto pronto»:
   §29.3.
+- Menù: «Menù ancora vuoto» senza piatti e «Menù in preparazione» con portate ancora senza piatti
+  (elencate, con il suggerimento di togliere quelle che non servono) sono cose da completare;
+  «Menù completato» (con il numero di piatti) fra le cose a posto quando ogni portata dell'evento ha
+  almeno un piatto. Nessun numero minimo di portate e nessun segno manuale: le portate dell'evento
+  dicono cosa si vuole servire (§7.8).
 - «Chi porta», solo se usato (un piatto affidato o una cosa da portare): cose da portare senza
   nessuno e incarichi di chi non partecipa (attenzione), incarichi da completare, piatti non
   affidati (solo informazione: li può preparare chi organizza).
@@ -2418,7 +2423,7 @@ Impostazioni ── Personali: Account, Notifiche, Aspetto │ Ricettario e spes
 ### 31.2 Evento
 
 - **Riepilogo**: «A che punto siamo?» distingue problemi, cose da completare (anche «Menù ancora
-  vuoto» e «Coperti non indicati»), parti facoltative non usate («Non ancora usati»: elenco dei
+  vuoto», «Menù in preparazione» e «Coperti non indicati»), parti facoltative non usate («Non ancora usati»: elenco dei
   partecipanti, chi porta, piano) e cose a posto; «Tutto pronto» solo senza cose in sospeso. Poi
   le informazioni (tipo, coperti una volta sola, menù, note), l'archivio, Ricorrenza ed edizioni
   con «Confronta», la condivisione.

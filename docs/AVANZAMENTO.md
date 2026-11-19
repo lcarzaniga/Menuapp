@@ -456,5 +456,25 @@ Rifiniture concordate con Loris dopo l'uso reale; collaudo manuale (`docs/collau
   avevano effetto finché non ripartiva; ora il codice arriva dal Worker (intestazione interna, mai dal
   browser). Da rilasciare: `scripts/rilascia.sh dopo-migrazione`, poi `scripts/cloudflare/rilascia.sh`
   (senza `--transizione`: il dominio principale è già del sito).
+- Rilasciato da Loris il 18/11 sera: Debian `20261118-1709-c75e999`, Worker (deploy 16:12 UTC).
+  Verificato il 19/11 in sola lettura: salute di `app.…` ok, console «non attiva» con un codice di
+  prova, dominio principale ancora «Sito in costruzione», salute di Debian ok.
 - Prossimi passi: inviti a Raffa e Palli e ricollegamento di Lucia su `app.…`; dismissione di
   Debian e Funnel su conferma di Loris.
+
+## Ambienti TEST e PRODUZIONE; «A che punto siamo?» e il menù (19/11/2026, ramo `riepilogo-menu`)
+
+- Ambienti (docs/RILASCI.md): **TEST** = Debian, solo dal tailnet (`…ts.net:9870`); **PRODUZIONE** =
+  Cloudflare (`app.ricettedifamiglia.online`). Dati separati, nessun trasferimento fra ambienti.
+  `scripts/cloudflare/rilascia.sh` rifiuta un commit diverso da quello attivo su TEST. Verificato
+  (sola lettura): il Worker `menuapp` non ha build automatiche da GitHub (solo `pole2-landing` le ha).
+- Funnel: `scripts/disattiva-funnel.sh` (da lanciare da Loris) spegne solo la 443 pubblica verso
+  127.0.0.1:9873, dopo aver controllato che sia quella di Menù & Co.; verifica che i serve 9870 e
+  8443 e Tailscale restino invariati e che TEST risponda. Ancora attivo finché Loris non lo lancia.
+  Dalla LAN senza Tailscale (`:9880`, HTTP) TEST non dà dati: serve Tailscale.
+- Riepilogo: prima il menù contava solo se vuoto; con un piatto qualsiasi spariva e l'evento poteva
+  risultare «Tutto pronto». Ora: vuoto → «Menù ancora vuoto»; portate senza piatti → «Menù in
+  preparazione» (da fare, elenca le portate, suggerisce di togliere quelle che non servono); ogni
+  portata con almeno un piatto → «Menù completato» fra le cose a posto. Nessun minimo, nessun segno
+  manuale né migrazione: le portate dell'evento dicono cosa si vuole servire (SPEC §26).
+  `GET /eventi/:id/riepilogo` → `menu.portateVuote`. Test: unitari, server (due motori), e2e.

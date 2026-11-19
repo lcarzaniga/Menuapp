@@ -30,7 +30,7 @@ afterEach(() => t.chiudi())
 describe('a che punto siamo', () => {
   it('evento semplice: solo i coperti; piatti preparati da chi organizza non sono un allarme', async () => {
     expect(await riepilogo()).toEqual({
-      menu: { voci: 0 },
+      menu: { voci: 0, portateVuote: ['Antipasti', 'Primi', 'Secondi', 'Contorni', 'Dolci', 'Frutta e caffè', 'Bevande'] },
       coperti: { equivalenti: 7, adulti: 6, bambini: 2, automatici: false },
       partecipanti: null,
       incarichi: null,
@@ -41,8 +41,12 @@ describe('a che punto siamo', () => {
       archiviato: false,
     })
     await ok(t.scrivi('POST', `${P}/eventi/ev/voci`, { voci: [{ id: 'v1', portataId: portate[1]!.id, nome: 'Risotto' }, { id: 'v2', portataId: portate[2]!.id, nome: 'Arrosto' }] }))
-    // Il menù non è più vuoto: due piatti (SPEC §31.2).
-    expect(await riepilogo()).toMatchObject({ menu: { voci: 2 }, incarichi: null })
+    // Il menù non è più vuoto ma è in preparazione: restano portate senza piatti (SPEC §26).
+    expect(await riepilogo()).toMatchObject({ menu: { voci: 2, portateVuote: ['Antipasti', 'Contorni', 'Dolci', 'Frutta e caffè', 'Bevande'] }, incarichi: null })
+    // Le portate che non servono si tolgono: con ogni portata riempita il menù è completato.
+    const e = corpo(await t.leggi(`${P}/eventi/ev`))
+    await ok(t.scrivi('PUT', `${P}/eventi/ev`, { ...e, portate: [portate[1], portate[2]], versione: e.versione }))
+    expect((await riepilogo()).menu).toEqual({ voci: 2, portateVuote: [] })
     // Chi non vede l'evento non ne vede il riepilogo.
     expect((await estraneo.leggi(`${P}/eventi/ev/riepilogo`)).statusCode).toBe(404)
   })

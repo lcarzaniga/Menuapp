@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Rilascio manuale dell'installazione Cloudflare (SPEC §32.7, docs/CLOUDFLARE.md).
+# Rilascio in PRODUZIONE: installazione Cloudflare (SPEC §32.7, procedura in docs/RILASCI.md).
 # Uso: scripts/cloudflare/rilascia.sh [--senza-prove] [--transizione]
-# Rilascia il commit attuale di main (già pubblicato su GitHub da scripts/rilascia.sh): controlli,
+# Rilascia il commit attuale di main (già pubblicato su GitHub da scripts/rilascia.sh) solo se è
+# quello attivo su TEST (Debian), dove Loris l'ha provato: controlli,
 # prove sul Worker in locale, build, `wrangler deploy`, verifica su app.ricettedifamiglia.online.
 # --transizione: l'app risponde anche sul dominio principale (dove c'era prima), finché i
 # dispositivi non sono collegati al nuovo indirizzo; poi un rilascio normale lo toglie (SPEC §34).
@@ -34,6 +35,11 @@ set +a
 [[ "$(git branch --show-current)" == main ]] || errore "Si rilascia da main"
 git fetch -q origin main || errore "GitHub non raggiungibile"
 [[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/main)" ]] || errore "main non coincide con origin/main: rilascia prima con scripts/rilascia.sh"
+# In produzione va solo ciò che è stato provato su TEST: il rilascio attivo su Debian è questo commit.
+in_test=$(readlink "$RILASCI/attuale" 2>/dev/null || true)
+in_test=${in_test##*-}
+[[ -n "$in_test" && "$(git rev-parse HEAD)" == "$in_test"* ]] || errore "Su TEST è attivo ${in_test:-nessun rilascio}, non $(git rev-parse --short HEAD): rilascia e prova prima su TEST (scripts/rilascia.sh)"
+ok "Commit $(git rev-parse --short HEAD) già attivo su TEST"
 
 info "Controlli (lint, tipi, test, build)…"
 npm run check >/dev/null || errore "npm run check non è verde"

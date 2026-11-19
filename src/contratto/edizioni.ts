@@ -66,8 +66,11 @@ export const SchemaAssociaRicorrenza = z.union([z.object({ ricorrenza: SchemaSce
 // Ogni parte è null quando la funzione non è usata nell'evento: niente indicatori vuoti.
 
 export const SchemaRiepilogoEvento = z.object({
-  /** Piatti nel menù: zero è una cosa da fare, non «tutto pronto» (SPEC §31.2). */
-  menu: z.object({ voci: z.number().int() }),
+  /**
+   * Piatti nel menù e portate ancora senza piatti (SPEC §26): vuoto o con portate scoperte è da
+   * completare; completo quando ogni portata dell'evento ha almeno un piatto.
+   */
+  menu: z.object({ voci: z.number().int(), portateVuote: z.array(z.string()) }),
   coperti: z.object({ equivalenti: z.number(), adulti: z.number().int(), bambini: z.number().int(), automatici: z.boolean() }),
   partecipanti: z.object({ confermati: z.number().int(), inAttesa: z.number().int(), assenti: z.number().int() }).nullable(),
   incarichi: z

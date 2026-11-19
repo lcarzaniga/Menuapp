@@ -30,8 +30,15 @@ export const inSospeso = (x: Indicatore) => x.livello === 'attenzione' || x.live
 /** Indicatori dal più urgente: problemi, cose in sospeso (prima le conferme mancanti), note, cose a posto. */
 export function indicatori(r: RiepilogoOrganizzativo): Indicatore[] {
   const lista: Indicatore[] = []
-  // Dati essenziali mancanti: senza menù o senza coperti l'evento non è pronto (SPEC §31.2).
-  if (!r.archiviato && r.menu.voci === 0) lista.push({ testo: 'Menù ancora vuoto', dettaglio: 'aggiungi i piatti per avere porzioni e spesa', livello: 'da_fare', a: 'menu' })
+  // Menù (SPEC §26): vuoto o con portate senza piatti è da completare; completato quando ogni
+  // portata dell'evento ha almeno un piatto. Nessun minimo: le portate che non servono si tolgono.
+  if (!r.archiviato) {
+    const m = r.menu
+    if (m.voci === 0) lista.push({ testo: 'Menù ancora vuoto', dettaglio: 'aggiungi i piatti per avere porzioni e spesa', livello: 'da_fare', a: 'menu' })
+    else if (m.portateVuote.length) {
+      lista.push({ testo: 'Menù in preparazione', dettaglio: `ancora senza piatti: ${m.portateVuote.join(', ')} · se non servono, toglile dalle portate`, livello: 'da_fare', a: 'menu' })
+    } else lista.push({ testo: 'Menù completato', dettaglio: plurale(m.voci, 'piatto', 'piatti'), livello: 'ok', a: 'menu' })
+  }
   if (r.partecipanti) {
     const p = r.partecipanti
     const altri = [plurale(p.confermati, 'confermato', 'confermati'), p.assenti ? `${p.assenti} non ${p.assenti === 1 ? 'partecipa' : 'partecipano'}` : ''].filter(Boolean).join(', ')

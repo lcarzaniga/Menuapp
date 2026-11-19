@@ -24,6 +24,14 @@ export const attivita = (db: Db, eventoId: string, oggi: string) =>
 
 export const vociMenu = (db: Db, eventoId: string) => conta(db, 'SELECT count(*) AS n FROM voci_menu WHERE evento_id = ?', eventoId)
 
+/** Portate dell'evento ancora senza piatti, nell'ordine del menù. */
+export const portateVuote = (db: Db, eventoId: string) =>
+  tutti<{ nome: string }>(
+    db,
+    'SELECT p.nome FROM portate_evento p WHERE p.evento_id = ? AND NOT EXISTS (SELECT 1 FROM voci_menu v WHERE v.portata_id = p.id) ORDER BY p.ordine, p.nome',
+    eventoId,
+  ).map((r) => r.nome)
+
 // ── «Per te» (SPEC §31.3): ciò che riguarda l'utente fra tutti gli eventi in corso ──────────
 
 export interface RigaIncaricoMio {

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rilascio in produzione (SPEC §14.4).
+# Rilascio sull'ambiente TEST (server Debian, SPEC §14.4; procedura in docs/RILASCI.md).
 # Uso: scripts/rilascia.sh [ramo] [--senza-riavvio] [--consenti-ramo] [--senza-push]
 # Con un ramo: lo unisce in main (solo avanzamento), esegue i controlli, pubblica main su
 # GitHub e rilascia. Lanciarlo è l'autorizzazione a merge, push, migrazioni e rilascio.
