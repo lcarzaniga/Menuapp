@@ -74,7 +74,7 @@ function Guscio({ nome }: { nome: string }) {
           non fanno saltare la pagina (SPEC §29.7). */}
       <ScrollRestoration getKey={(l) => l.pathname} />
       <BannerConnessione onRiprova={() => void controllaRevisione(client)} />
-      <nav aria-label="Sezioni" className="non-stampare fixed inset-y-0 left-0 z-30 hidden w-56 flex-col gap-1 border-r border-bordo/70 bg-carta/90 p-3 backdrop-blur md:flex">
+      <nav aria-label="Sezioni" className="tovaglia non-stampare fixed inset-y-0 left-0 z-30 hidden w-56 flex-col gap-1 border-r border-bordo/70 p-3 md:flex">
         <div className="mb-6 flex flex-col items-center gap-1 px-3 pt-3 text-center">
           <Tavola className="h-16 w-auto" />
           {/* Il marchio resta nei colori del logo (terracotta), non in quello delle azioni. */}
@@ -86,8 +86,10 @@ function Guscio({ nome }: { nome: string }) {
           <NavLink
             key={s.a}
             to={s.a}
-            className={cn('flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium hover:bg-tenue', s.attiva(pathname) && 'bg-primario-tenue text-primario-forte')}
+            className={cn('relative flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium hover:bg-tenue', s.attiva(pathname) && 'bg-primario-tenue text-primario-forte')}
           >
+            {/* Voce attiva: una lineetta in oro antico, dettaglio editoriale. */}
+            {s.attiva(pathname) ? <span className="absolute inset-y-2.5 left-0 w-0.5 rounded-full bg-oro" aria-hidden /> : null}
             <s.icona className="size-5" /> {s.etichetta}
             {s.a === '/notifiche' ? <Contatore n={nonLette} className="ml-auto" /> : null}
           </NavLink>
@@ -98,7 +100,6 @@ function Guscio({ nome }: { nome: string }) {
         >
           <CircleUserRound className="size-5" /> <span className="truncate">{nome}</span>
         </NavLink>
-        <div className="tovaglia pointer-events-none absolute inset-x-0 bottom-0 h-2" aria-hidden />
       </nav>
       <main>
         {/* Su telefono, chi ha più Famiglie vede in cima quella attiva e la cambia da lì: solo nelle
@@ -112,15 +113,16 @@ function Guscio({ nome }: { nome: string }) {
       </main>
       <nav
         aria-label="Sezioni"
-        className="non-stampare fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-bordo bg-carta/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        className="tovaglia non-stampare fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-bordo pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         {SEZIONI.map((s) => (
           <NavLink
             key={s.a}
             to={s.a}
             aria-label={s.a === '/notifiche' && nonLette ? `Notifiche, ${nonLette} da leggere` : undefined}
-            className={cn('relative flex h-16 min-w-0 flex-col items-center justify-center gap-0.5 font-medium text-testo-tenue', s.attiva(pathname) && 'text-primario')}
+            className={cn('relative flex h-16 min-w-0 flex-col items-center justify-center gap-0.5 font-medium text-testo-tenue', s.attiva(pathname) && 'text-primario-forte')}
           >
+            {s.attiva(pathname) ? <span className="absolute left-1/2 top-0 h-0.5 w-6 -translate-x-1/2 rounded-full bg-oro" aria-hidden /> : null}
             <s.icona className="size-6" />
             {s.a === '/notifiche' ? <Contatore n={nonLette} className="absolute left-1/2 top-2 ml-1.5" /> : null}
             {/* Etichette a 11 px anche con il testo ingrandito: le icone crescono, le parole restano intere

@@ -8,15 +8,16 @@
 
 :root {
   /*
-   * Palette ottanio (novembre 2026). L'ottanio è la famiglia del «fare»: azioni (primario), testo e stati
-   * attivi sui fondi chiari (primario-forte), selezioni e badge (primario-tenue). Avorio e sabbia sono
-   * la carta dell'app; oro antico e terracotta (accento-caldo) solo decoro. Testi in bruno caldo.
+   * Palette ottanio (novembre 2026): fondo ottanio chiarissimo, superfici secondarie ottanio pallido,
+   * schede avorio; azioni in ottanio (primario), testo e stati attivi in ottanio profondo
+   * (primario-forte), selezioni e badge in chiarissimo (primario-tenue). Bordi sabbia; oro antico e
+   * terracotta (accento-caldo) solo decoro. Testi in bruno caldo.
    */
-  --sfondo: #f7f3ea; /* avorio caldo */
+  --sfondo: #e2f0ed; /* ottanio chiarissimo: il fondo dell'app */
   --testo: #2b211b;
-  --carta: #fffdf9;
-  --tenue: #efe6da; /* sabbia chiara */
-  --testo-tenue: #6e6057;
+  --carta: #fffdf9; /* avorio: schede e superfici di lettura */
+  --tenue: #d2e7e4; /* ottanio pallido: superfici secondarie */
+  --testo-tenue: #5f5a51; /* 5,3:1 anche sull'ottanio pallido */
   --bordo: #e6d6c2; /* sabbia */
   --primario: #0d7074; /* ottanio principale: 5,9:1 col bianco, 4,7:1 sulla sabbia chiara */
   --primario-testo: #ffffff;
@@ -35,30 +36,30 @@
   --info: #2f5a9e;
   --info-tenue: #e2ebf9;
   --anello: #0d7074;
-  --ombra: 0 1px 2px rgb(70 45 25 / 0.04), 0 3px 12px rgb(68 42 26 / 0.055);
+  --ombra: 0 1px 2px rgb(11 79 84 / 0.06), 0 3px 12px rgb(11 79 84 / 0.08);
   /* Fughe delle piastrelle in ottanio molto tenue, solo sullo sfondo dell'app. */
-  --fuga: rgb(13 112 116 / 0.05); /* ottanio, molto tenue */
+  --fuga: rgb(11 79 84 / 0.045); /* ottanio profondo, molto tenue sul fondo chiarissimo */
   color-scheme: light;
 }
 
 .dark {
-  /* Superfici calde invariate; accenti nell'ottanio morbido. Le superfici restano più chiare dello sfondo. */
-  --sfondo: #201b19;
-  --testo: #f7eee5;
-  --carta: #2c2521;
-  --tenue: #372e29;
-  --testo-tenue: #bca99c; /* 6,7:1 sulla carta: secondario ma distinto dal testo */
-  --bordo: #55453b;
+  /* Fondi petrolio molto scuri, testo chiaro caldo, accenti nell'ottanio morbido. Le superfici restano più chiare dello sfondo. */
+  --sfondo: #142a2b;
+  --testo: #f4ece1;
+  --carta: #203637;
+  --tenue: #294344;
+  --testo-tenue: #c3b8a9; /* 6,5:1 sulla carta: secondario ma distinto dal testo */
+  --bordo: #3d5759;
   --primario: #72b5b5; /* ottanio morbido: 6,5:1 sulla carta */
   --primario-testo: #0b2629;
-  --primario-tenue: #163c3d;
+  --primario-tenue: #16403f;
   --primario-forte: #a6dad7;
   --accento-caldo: #e8a184;
   --salvia: #9fb592;
   --salvia-tenue: #364633;
   --oro: #c4a66a;
   --successo: #a3c96a;
-  --successo-tenue: #2a3a17;
+  --successo-tenue: #24361a;
   --avviso: #f0b54a;
   --avviso-tenue: #3f3015;
   --pericolo: #f2786b;
@@ -67,7 +68,7 @@
   --info-tenue: #1d2c47;
   --anello: #72b5b5;
   --ombra: 0 1px 2px rgb(0 0 0 / 0.25), 0 3px 12px rgb(0 0 0 / 0.13);
-  --fuga: rgb(114 181 181 / 0.025);
+  --fuga: rgb(114 181 181 / 0.035);
   color-scheme: dark;
 }
 
@@ -162,6 +163,11 @@
   * {
     @apply border-bordo;
   }
+  /* Le sottolineature dei link in oro antico: il testo resta nel suo colore leggibile. */
+  a {
+    text-decoration-color: color-mix(in srgb, var(--oro) 85%, transparent);
+    text-underline-offset: 0.2em;
+  }
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-anello;
   }
@@ -207,13 +213,14 @@
 }
 
 /*
- * Tovaglia a quadretti: firma decorativa, usata con parsimonia (solo in fondo alla barra laterale del
- * desktop), in terracotta. Due righe incrociate semitrasparenti: dove si sovrappongono il quadretto è più scuro.
+ * Tovaglia a quadretti classica nelle tonalità dell'ottanio, sullo sfondo delle barre di navigazione
+ * (laterale sul desktop, in basso sul telefono). Due bande incrociate all'8% sulla carta: dove si
+ * sovrappongono il quadretto è più scuro. Le etichette restano leggibili anche lì (≥ 4,5:1).
  */
 @utility tovaglia {
+  background-color: var(--carta);
   background-image:
-    linear-gradient(90deg, color-mix(in srgb, var(--accento-caldo) 45%, transparent) 50%, transparent 50%),
-    linear-gradient(color-mix(in srgb, var(--accento-caldo) 45%, transparent) 50%, transparent 50%);
-  background-size: 10px 10px;
-  opacity: 0.45;
+    linear-gradient(90deg, color-mix(in srgb, var(--primario) 8%, transparent) 50%, transparent 50%),
+    linear-gradient(color-mix(in srgb, var(--primario) 8%, transparent) 50%, transparent 50%);
+  background-size: 18px 18px;
 }

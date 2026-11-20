@@ -13,7 +13,8 @@ export function BloccoData({ data, evidenza = false, className }: { data: DataIS
       aria-label={dataLunga(data)}
       className={cn(
         'flex w-[min(3.75rem,72px)] shrink-0 flex-col items-center justify-center rounded-xl border py-1.5 text-center uppercase leading-none',
-        evidenza ? 'border-transparent bg-primario text-primario-testo' : 'border-bordo bg-sfondo text-testo',
+        // In evidenza: pieno nel colore principale, con un filo d'oro antico all'interno.
+        evidenza ? 'border-transparent bg-primario text-primario-testo ring-1 ring-inset ring-oro/70 ring-offset-0 shadow-[inset_0_0_0_3px_var(--primario)]' : 'border-bordo bg-sfondo text-testo',
         className,
       )}
     >

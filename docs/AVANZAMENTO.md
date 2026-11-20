@@ -809,3 +809,19 @@ Stato: **sviluppato e testato automaticamente**; non su TEST (in attesa dell'OK 
   contorno ottanio (la prima versione era troppo pallida).
 - Test dei contrasti esteso (tutte le coppie della distribuzione, focus, icone in oro, distinzione delle
   tinte verde/ottanio). Revisione visiva su un campione chiaro e scuro; 54 riferimenti aggiornati.
+
+### Palette ottanio, correzione (20/11/2026, ramo `palette-ottanio`)
+
+- Richiesta di Loris: meno avorio, identità ottanio anche nelle superfici. Tema chiaro: fondo ottanio
+  chiarissimo `#E2F0ED`, superfici secondarie ottanio pallido `#D2E7E4`, schede avorio `#FFFDF9`, testo
+  secondario `#5F5A51`, ombre velate di ottanio, fughe in ottanio profondo al 4,5%. Tema scuro: fondi
+  petrolio (`#142A2B`, schede `#203637`, superfici secondarie `#294344`), testo chiaro caldo `#F4ECE1`,
+  selezioni `#16403F`.
+- Oro antico come rifinitura (mai per i testi): filetto sotto i titoli delle pagine, filo d'oro nel
+  blocco data del prossimo evento, lineetta sulla voce attiva della navigazione, bordo dei pulsanti a
+  contorno, contorno del badge «Tra N giorni», sottolineatura dei link.
+- Tovaglia a quadretti classica in ottanio (utilità `tovaglia`, bande all'8%) sotto la barra laterale
+  del desktop e la barra in basso del telefono; tolta la fascia terracotta. Voce attiva della barra in
+  basso in ottanio profondo. Test dei contrasti esteso al quadretto più scuro.
+- Revisione su campione (Eventi e dettaglio evento, chiaro e scuro); riferimenti aggiornati.
+  `npm run check` 877, e2e 57, confronti visivi verdi.

@@ -10,10 +10,10 @@ export const varianteBottone = cva(
       variante: {
         primario: 'bg-primario text-primario-testo hover:bg-primario-forte active:bg-primario-forte',
         secondario: 'bg-tenue text-testo hover:bg-bordo/70',
-        contorno: 'border border-bordo bg-carta hover:bg-tenue',
+        contorno: 'border border-oro/60 bg-carta hover:bg-tenue',
         fantasma: 'hover:bg-tenue',
         pericolo: 'bg-pericolo text-white hover:brightness-110',
-        collegamento: 'text-primario underline-offset-4 hover:underline px-0',
+        collegamento: 'text-primario underline decoration-oro/70 underline-offset-4 hover:decoration-oro px-0',
       },
       misura: {
         normale: 'h-11 px-4',

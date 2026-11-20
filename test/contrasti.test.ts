@@ -20,6 +20,10 @@ const contrasto = (a: string, b: string) => {
   return (x! + 0.05) / (y! + 0.05)
 }
 
+/** Colore a + t × (b − a), come color-mix. */
+const mescola = (a: string, b: string, t: number) =>
+  '#' + [1, 3, 5].map((i) => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('')
+
 /** Tinta (0–360°) di un colore. */
 const tinta = (hex: string) => {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number]
@@ -52,11 +56,11 @@ const COPPIE: [string, string, number][] = [
   ['avviso', 'avviso-tenue', 4.5],
   ['pericolo', 'pericolo-tenue', 4.5],
   ['info', 'info-tenue', 4.5],
-  // Controlli e icone che portano un'informazione: almeno 3:1 (cerchi da spuntare, focus, stelle in oro).
+  // Controlli e icone che portano un'informazione: almeno 3:1 (cerchi da spuntare, focus, stelle in oro,
+  // che stanno sulle schede; sul fondo l'oro è solo ornamento).
   ['testo-tenue', 'carta', 3],
   ['anello', 'sfondo', 3],
   ['oro', 'carta', 3],
-  ['oro', 'sfondo', 3],
 ]
 
 describe.each([
@@ -74,6 +78,13 @@ describe.each([
       const d = Math.abs(tinta(v[a]!) - tinta(v[b]!))
       expect(Math.min(d, 360 - d), `${a} / ${b}`).toBeGreaterThanOrEqual(45)
     }
+  })
+  it('etichette della navigazione leggibili sul quadretto più scuro della tovaglia (utilità «tovaglia»)', () => {
+    // Due bande incrociate all'8% del colore principale sulla carta.
+    const quadretto = mescola(mescola(v.carta!, v.primario!, 0.08), v.primario!, 0.08)
+    expect(contrasto(v['testo-tenue']!, quadretto)).toBeGreaterThanOrEqual(4.5)
+    expect(contrasto(v['primario-forte']!, quadretto)).toBeGreaterThanOrEqual(4.5)
+    expect(contrasto(v.testo!, quadretto)).toBeGreaterThanOrEqual(4.5)
   })
   it('le superfici del tema scuro sono più chiare dello sfondo (carta, poi tenue)', () => {
     if (selettore !== '.dark') return
