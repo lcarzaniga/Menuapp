@@ -833,3 +833,14 @@ Stato: **sviluppato e testato automaticamente**; non su TEST (in attesa dell'OK 
   chiaro per gli altri (`--oro-tenue`); badge «Tra N giorni» in oro scuro (`--oro-forte`) su oro chiaro
   con contorno oro antico. Tre variabili nuove, contrasti verificati nel test (testi piccoli ≥ 4,5:1,
   numero grande in terracotta ≥ 3:1 sull'oro intenso del chiaro).
+
+### Colori più intensi (20/11/2026, ramo `colori-intensi`)
+
+- Richiesta di Loris: tema più scuro e colorato, mantenendo la leggibilità. Chiaro: fondo `#C3DFD9`,
+  superfici secondarie `#B5D6D0`, ottanio `#0A6064` e profondo `#0A464A`, testo secondario `#4D4843`,
+  tovaglia al 13%, oro delle date `#EEDCB4` / `#D8B977` con oro scuro `#5A4318`. Scuro: fondo `#09292A`,
+  schede `#123D3E`, superfici `#1A4C4D`, ottanio morbido `#86CECC`, selezioni `#0F5759`, oro delle date
+  `#45361B` / `#634C22`. Intensità della tovaglia in una variabile (`--tovaglia`) per tema; test dei
+  contrasti aggiornato (quadretto più scuro calcolato con l'intensità di ciascun tema).
+- `npm run check` 885, e2e 57, confronti visivi verdi; revisione su campione (eventi, ricetta, bacheca,
+  vista cucina; chiaro e scuro).

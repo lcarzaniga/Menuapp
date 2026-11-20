@@ -86,8 +86,10 @@ describe.each([
     }
   })
   it('etichette della navigazione leggibili sul quadretto più scuro della tovaglia (utilità «tovaglia»)', () => {
-    // Due bande incrociate all'8% del colore principale sulla carta.
-    const quadretto = mescola(mescola(v.carta!, v.primario!, 0.08), v.primario!, 0.08)
+    // Due bande incrociate del colore principale sulla carta, all'intensità di --tovaglia.
+    const blocco = css.slice(css.indexOf(`${selettore} {`))
+    const t = Number(/--tovaglia:\s*([\d.]+)%/.exec(blocco)![1]) / 100
+    const quadretto = mescola(mescola(v.carta!, v.primario!, t), v.primario!, t)
     expect(contrasto(v['testo-tenue']!, quadretto)).toBeGreaterThanOrEqual(4.5)
     expect(contrasto(v['primario-forte']!, quadretto)).toBeGreaterThanOrEqual(4.5)
     expect(contrasto(v.testo!, quadretto)).toBeGreaterThanOrEqual(4.5)

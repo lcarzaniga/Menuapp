@@ -13,23 +13,23 @@
    * (primario-forte), selezioni e badge in chiarissimo (primario-tenue). Bordi sabbia; oro antico e
    * terracotta (accento-caldo) solo decoro. Testi in bruno caldo.
    */
-  --sfondo: #e2f0ed; /* ottanio chiarissimo: il fondo dell'app */
+  --sfondo: #c3dfd9; /* ottanio chiaro: il fondo dell'app */
   --testo: #2b211b;
   --carta: #fffdf9; /* avorio: schede e superfici di lettura */
-  --tenue: #d2e7e4; /* ottanio pallido: superfici secondarie */
-  --testo-tenue: #5f5a51; /* 5,3:1 anche sull'ottanio pallido */
+  --tenue: #b5d6d0; /* ottanio pallido: superfici secondarie (ottanio dei link ≥ 4,5:1) */
+  --testo-tenue: #4d4843; /* ≥ 5,8:1 anche sull'ottanio pallido */
   --bordo: #e6d6c2; /* sabbia */
-  --primario: #0d7074; /* ottanio principale: 5,9:1 col bianco, 4,7:1 sulla sabbia chiara */
+  --primario: #0a6064; /* ottanio principale: 7,3:1 col bianco, ≥ 4,7:1 sui fondi ottanio */
   --primario-testo: #ffffff;
   --primario-tenue: #e2f0ed; /* ottanio chiarissimo */
-  --primario-forte: #0b4f54; /* ottanio profondo: 7,9:1 sul chiarissimo */
+  --primario-forte: #0a464a; /* ottanio profondo: 7,9:1 sul chiarissimo */
   --accento-caldo: #a5412a; /* terracotta: illustrazioni e fascia a quadretti */
   --salvia: #5f7556;
   --salvia-tenue: #e3eadc;
   --oro: #a38548; /* oro antico, appena più profondo del riferimento: 3:1 per le icone (stelle, trofeo) */
-  --oro-tenue: #f6edd8; /* fondo oro chiaro: conto alla rovescia e blocchi data degli eventi */
-  --oro-medio: #e6d2a3; /* fondo oro intenso: blocco data del prossimo evento */
-  --oro-forte: #6b5322; /* testo oro scuro: ≥ 4,5:1 sui due fondi oro */
+  --oro-tenue: #eedcb4; /* fondo oro chiaro: conto alla rovescia e blocchi data degli eventi */
+  --oro-medio: #d8b977; /* fondo oro intenso: blocco data del prossimo evento */
+  --oro-forte: #5a4318; /* testo oro scuro: ≥ 4,5:1 sui due fondi oro */
   --successo: #3f6b1f; /* verde funzionale, verso il giallo per distinguersi dall'ottanio: 5,4:1 */
   --successo-tenue: #e8f0d6;
   --avviso: #95600a;
@@ -38,7 +38,8 @@
   --pericolo-tenue: #fde4e1;
   --info: #2f5a9e;
   --info-tenue: #e2ebf9;
-  --anello: #0d7074;
+  --anello: #0a6064;
+  --tovaglia: 13%; /* intensità delle bande della tovaglia nelle barre di navigazione */
   --ombra: 0 1px 2px rgb(11 79 84 / 0.06), 0 3px 12px rgb(11 79 84 / 0.08);
   /* Fughe delle piastrelle in ottanio molto tenue, solo sullo sfondo dell'app. */
   --fuga: rgb(11 79 84 / 0.045); /* ottanio profondo, molto tenue sul fondo chiarissimo */
@@ -47,23 +48,23 @@
 
 .dark {
   /* Fondi petrolio molto scuri, testo chiaro caldo, accenti nell'ottanio morbido. Le superfici restano più chiare dello sfondo. */
-  --sfondo: #142a2b;
+  --sfondo: #09292a;
   --testo: #f4ece1;
-  --carta: #203637;
-  --tenue: #294344;
-  --testo-tenue: #c3b8a9; /* 6,5:1 sulla carta: secondario ma distinto dal testo */
-  --bordo: #3d5759;
-  --primario: #72b5b5; /* ottanio morbido: 6,5:1 sulla carta */
-  --primario-testo: #0b2629;
-  --primario-tenue: #16403f;
-  --primario-forte: #a6dad7;
+  --carta: #123d3e;
+  --tenue: #1a4c4d;
+  --testo-tenue: #cfc6b8; /* 7,0:1 sulla carta: secondario ma distinto dal testo */
+  --bordo: #335b5c;
+  --primario: #86cecc; /* ottanio morbido: 6,6:1 sulla carta */
+  --primario-testo: #0a2527;
+  --primario-tenue: #0f5759;
+  --primario-forte: #b0e2df;
   --accento-caldo: #e8a184;
   --salvia: #9fb592;
   --salvia-tenue: #364633;
   --oro: #c4a66a;
-  --oro-tenue: #352d1d;
-  --oro-medio: #4a3c20;
-  --oro-forte: #e6cf96;
+  --oro-tenue: #45361b;
+  --oro-medio: #634c22;
+  --oro-forte: #ead69f;
   --successo: #a3c96a;
   --successo-tenue: #24361a;
   --avviso: #f0b54a;
@@ -72,7 +73,8 @@
   --pericolo-tenue: #4a201c;
   --info: #86aef0;
   --info-tenue: #1d2c47;
-  --anello: #72b5b5;
+  --anello: #86cecc;
+  --tovaglia: 10%;
   --ombra: 0 1px 2px rgb(0 0 0 / 0.25), 0 3px 12px rgb(0 0 0 / 0.13);
   --fuga: rgb(114 181 181 / 0.035);
   color-scheme: dark;
@@ -223,13 +225,13 @@
 
 /*
  * Tovaglia a quadretti classica nelle tonalità dell'ottanio, sullo sfondo delle barre di navigazione
- * (laterale sul desktop, in basso sul telefono). Due bande incrociate all'8% sulla carta: dove si
+ * (laterale sul desktop, in basso sul telefono). Due bande incrociate (--tovaglia) sulla carta: dove si
  * sovrappongono il quadretto è più scuro. Le etichette restano leggibili anche lì (≥ 4,5:1).
  */
 @utility tovaglia {
   background-color: var(--carta);
   background-image:
-    linear-gradient(90deg, color-mix(in srgb, var(--primario) 8%, transparent) 50%, transparent 50%),
-    linear-gradient(color-mix(in srgb, var(--primario) 8%, transparent) 50%, transparent 50%);
+    linear-gradient(90deg, color-mix(in srgb, var(--primario) var(--tovaglia), transparent) 50%, transparent 50%),
+    linear-gradient(color-mix(in srgb, var(--primario) var(--tovaglia), transparent) 50%, transparent 50%);
   background-size: 18px 18px;
 }
