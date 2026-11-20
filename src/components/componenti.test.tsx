@@ -14,16 +14,17 @@ describe('blocco data', () => {
     expect(t.getAttribute('datetime')).toBe('2026-12-24')
     expect(t.getAttribute('aria-label')).toBe('giovedì 24 dicembre 2026')
     expect(t.textContent).toBe('gio24dic')
-    expect(t.className).toContain('bg-primario')
-    expect(render(<BloccoData data="2026-12-25" />).container.querySelector('time')!.className).toContain('bg-sfondo')
+    expect(t.className).toContain('bg-oro-medio')
+    expect(t.querySelector('.text-accento-caldo')!.textContent).toBe('24')
+    expect(render(<BloccoData data="2026-12-25" />).container.querySelector('time')!.className).toContain('bg-oro-tenue')
     expect(render(<BloccoData data="non una data" />).container.innerHTML).toBe('')
   })
 })
 
 describe('badge del conto alla rovescia', () => {
-  it('ottanio chiarissimo con testo in ottanio profondo', () => {
+  it('nelle tonalità dell\'oro', () => {
     const { container } = render(<Badge variante="tempo">tra 35 giorni</Badge>)
-    expect(container.firstElementChild!.className).toContain('bg-primario-tenue')
-    expect(container.firstElementChild!.className).toContain('text-primario-forte')
+    expect(container.firstElementChild!.className).toContain('bg-oro-tenue')
+    expect(container.firstElementChild!.className).toContain('text-oro-forte')
   })
 })

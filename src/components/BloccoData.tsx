@@ -1,6 +1,6 @@
 // Blocco data degli eventi (restyling 2026): giorno della settimana, numero e mese, in rem perché
 // segua la dimensione del testo, con un tetto perché a 360 px e testo grande lasci spazio al titolo.
-// «evidenza» per il prossimo evento: pieno nel colore principale.
+// Terracotta su oro: «evidenza» (prossimo evento) con l'oro più intenso.
 import { cn } from '@/lib/utils'
 import { type DataISO, dataLunga, partiData } from '@/domain/tempo.ts'
 
@@ -13,18 +13,19 @@ export function BloccoData({ data, evidenza = false, className }: { data: DataIS
       aria-label={dataLunga(data)}
       className={cn(
         'flex w-[min(3.75rem,72px)] shrink-0 flex-col items-center justify-center rounded-xl border py-1.5 text-center uppercase leading-none',
-        // In evidenza: pieno nel colore principale, con un filo d'oro antico all'interno.
-        evidenza ? 'border-transparent bg-primario text-primario-testo ring-1 ring-inset ring-oro/70 ring-offset-0 shadow-[inset_0_0_0_3px_var(--primario)]' : 'border-bordo bg-sfondo text-testo',
+        // Tonalità dell'oro: più intensa per il prossimo evento, chiara per gli altri.
+        evidenza ? 'border-oro bg-oro-medio' : 'border-oro/50 bg-oro-tenue',
         className,
       )}
     >
-      <span className="text-[min(0.6875rem,13px)] font-medium tracking-wider" aria-hidden>
+      {/* Giorno e mese in oro scuro (testo piccolo, ≥ 4,5:1); il numero in terracotta. */}
+      <span className="text-[min(0.6875rem,13px)] font-medium tracking-wider text-oro-forte" aria-hidden>
         {p.giorno}
       </span>
-      <span className="titolo my-0.5 text-[min(1.75rem,34px)] font-semibold leading-none tabular-nums" aria-hidden>
+      <span className="titolo my-0.5 text-[min(1.75rem,34px)] font-semibold leading-none tabular-nums text-accento-caldo" aria-hidden>
         {p.numero}
       </span>
-      <span className="text-[min(0.6875rem,13px)] font-medium tracking-wider" aria-hidden>
+      <span className="text-[min(0.6875rem,13px)] font-medium tracking-wider text-oro-forte" aria-hidden>
         {p.mese}
       </span>
     </time>

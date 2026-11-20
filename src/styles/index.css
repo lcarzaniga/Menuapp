@@ -27,6 +27,9 @@
   --salvia: #5f7556;
   --salvia-tenue: #e3eadc;
   --oro: #a38548; /* oro antico, appena più profondo del riferimento: 3:1 per le icone (stelle, trofeo) */
+  --oro-tenue: #f6edd8; /* fondo oro chiaro: conto alla rovescia e blocchi data degli eventi */
+  --oro-medio: #e6d2a3; /* fondo oro intenso: blocco data del prossimo evento */
+  --oro-forte: #6b5322; /* testo oro scuro: ≥ 4,5:1 sui due fondi oro */
   --successo: #3f6b1f; /* verde funzionale, verso il giallo per distinguersi dall'ottanio: 5,4:1 */
   --successo-tenue: #e8f0d6;
   --avviso: #95600a;
@@ -58,6 +61,9 @@
   --salvia: #9fb592;
   --salvia-tenue: #364633;
   --oro: #c4a66a;
+  --oro-tenue: #352d1d;
+  --oro-medio: #4a3c20;
+  --oro-forte: #e6cf96;
   --successo: #a3c96a;
   --successo-tenue: #24361a;
   --avviso: #f0b54a;
@@ -96,6 +102,9 @@
   --color-salvia: var(--salvia);
   --color-salvia-tenue: var(--salvia-tenue);
   --color-oro: var(--oro);
+  --color-oro-tenue: var(--oro-tenue);
+  --color-oro-medio: var(--oro-medio);
+  --color-oro-forte: var(--oro-forte);
   --shadow-carta: var(--ombra);
   --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-serif: 'Fraunces Variable', 'Iowan Old Style', Palatino, Georgia, serif;

@@ -825,3 +825,11 @@ Stato: **sviluppato e testato automaticamente**; non su TEST (in attesa dell'OK 
   basso in ottanio profondo. Test dei contrasti esteso al quadretto più scuro.
 - Revisione su campione (Eventi e dettaglio evento, chiaro e scuro); riferimenti aggiornati.
   `npm run check` 877, e2e 57, confronti visivi verdi.
+
+### Pagina Eventi in oro (20/11/2026, ramo `eventi-oro`)
+
+- Richiesta di Loris: date e giorni mancanti nelle tonalità dell'oro. Blocchi data con il numero in
+  terracotta e giorno e mese in oro scuro, su fondo oro: intenso per il prossimo evento (`--oro-medio`),
+  chiaro per gli altri (`--oro-tenue`); badge «Tra N giorni» in oro scuro (`--oro-forte`) su oro chiaro
+  con contorno oro antico. Tre variabili nuove, contrasti verificati nel test (testi piccoli ≥ 4,5:1,
+  numero grande in terracotta ≥ 3:1 sull'oro intenso del chiaro).

@@ -52,6 +52,12 @@ const COPPIE: [string, string, number][] = [
   ['primario-forte', 'primario-tenue', 4.5],
   // Marchio in terracotta (testo grande, ma lo si tiene ai testi normali).
   ['accento-caldo', 'carta', 4.5],
+  // Pagina Eventi: conto alla rovescia e scritte dei blocchi data in oro scuro sui fondi oro; numero del
+  // giorno in terracotta (testo grande: 3:1 sull'oro intenso del prossimo evento).
+  ['oro-forte', 'oro-tenue', 4.5],
+  ['oro-forte', 'oro-medio', 4.5],
+  ['accento-caldo', 'oro-tenue', 4.5],
+  ['accento-caldo', 'oro-medio', 3],
   ['successo', 'successo-tenue', 4.5],
   ['avviso', 'avviso-tenue', 4.5],
   ['pericolo', 'pericolo-tenue', 4.5],
