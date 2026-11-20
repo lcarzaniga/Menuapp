@@ -97,6 +97,7 @@ function Guscio({ nome }: { nome: string }) {
         >
           <CircleUserRound className="size-5" /> <span className="truncate">{nome}</span>
         </NavLink>
+        <div className="tovaglia pointer-events-none absolute inset-x-0 bottom-0 h-2" aria-hidden />
       </nav>
       <main>
         {/* Su telefono, chi ha più Famiglie vede in cima quella attiva e la cambia da lì: solo nelle

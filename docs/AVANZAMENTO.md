@@ -781,3 +781,12 @@ Stato: **sviluppato e testato automaticamente**; nessun cambiamento visibile; no
 - Differenze riviste: solo le 6 schermate della vista cucina; riferimenti aggiornati. Nella suite e2e
   della fase 4 un test del ricettario (filtro per portata) era fallito una volta; isolato passa tre
   volte su tre e nella suite della fase 5 è verde: instabilità occasionale, da tenere d'occhio.
+
+### Fase 6 — Barra laterale desktop (ramo `restyling`)
+
+- Fascia a quadretti (tovaglia) alta 8 px in fondo alla barra laterale del desktop: utilità `tovaglia`
+  in `index.css` (due righe incrociate nel colore principale, semitrasparenti), decorativa, non in
+  stampa né sul telefono. Fughe delle piastrelle invariate (intensità approvata da Loris).
+- Differenze riviste: solo le 18 schermate desktop; riferimenti aggiornati.
+
+Ciclo B (fasi 3–6): sviluppato e testato automaticamente; non su TEST (in attesa dell'OK di Loris).

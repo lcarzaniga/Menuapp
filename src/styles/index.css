@@ -197,3 +197,15 @@
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--oro), transparent);
 }
+
+/*
+ * Tovaglia a quadretti: firma decorativa, usata con parsimonia (solo in fondo alla barra laterale del
+ * desktop). Due righe incrociate semitrasparenti: dove si sovrappongono il quadretto è più scuro.
+ */
+@utility tovaglia {
+  background-image:
+    linear-gradient(90deg, color-mix(in srgb, var(--primario) 45%, transparent) 50%, transparent 50%),
+    linear-gradient(color-mix(in srgb, var(--primario) 45%, transparent) 50%, transparent 50%);
+  background-size: 10px 10px;
+  opacity: 0.45;
+}
