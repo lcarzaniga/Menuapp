@@ -42,7 +42,7 @@ export function Schede({ schede, etichetta, className }: { schede: Scheda[]; eti
 export function Segmenti({ voci, etichetta, className }: { voci: Scheda[]; etichetta: string; className?: string }) {
   const { pathname } = useLocation()
   return (
-    <nav aria-label={etichetta} className={cn('flex rounded-xl bg-tenue p-1', className)}>
+    <nav aria-label={etichetta} className={cn('flex rounded-xl bg-tenue p-1 dark:bg-sfondo', className)}>
       {voci.map((s) => {
         const attiva = s.attiva(pathname)
         return (
@@ -51,7 +51,12 @@ export function Segmenti({ voci, etichetta, className }: { voci: Scheda[]; etich
             to={s.a}
             replace
             aria-current={attiva ? 'page' : undefined}
-            className={cn('flex min-h-9 flex-1 items-center justify-center rounded-lg px-2 text-sm font-medium text-testo-tenue', attiva && 'bg-carta text-testo shadow-sm')}
+            // Selezionato chiaro con ombra (nel tema scuro la superficie più chiara). Con il testo grande va a
+            // capo, con un tetto di 16 px perché ogni parola stia nella sua colonna anche a 360 px.
+            className={cn(
+              'flex min-h-9 min-w-0 flex-1 items-center justify-center rounded-lg px-2 py-1 text-center text-[min(0.875rem,16px)] leading-tight font-medium text-testo-tenue',
+              attiva && 'bg-carta font-semibold text-testo shadow-carta dark:bg-tenue',
+            )}
           >
             {s.etichetta}
           </Link>

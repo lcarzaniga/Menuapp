@@ -11,6 +11,8 @@ const varianteBadge = cva('inline-flex items-center gap-1 rounded-full px-2 py-0
       avviso: 'bg-avviso-tenue text-avviso',
       pericolo: 'bg-pericolo-tenue text-pericolo',
       info: 'bg-info-tenue text-info',
+      /** Conto alla rovescia di un evento («tra 35 giorni»). */
+      tempo: 'bg-salvia-tenue text-salvia-testo font-semibold',
     },
   },
   defaultVariants: { variante: 'neutro' },

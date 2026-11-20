@@ -4,7 +4,8 @@
 //
 // Stabilità: dati creati qui sempre uguali, orologio del browser fisso (i «tra N giorni» non cambiano
 // col passare dei giorni), caratteri caricati prima dello scatto, animazioni e transizioni spente,
-// foto disegnate dal test, immagini caricate subito, service worker e notifiche a comparsa esclusi;
+// foto disegnate dal test, immagini caricate subito, service worker e notifiche a comparsa esclusi,
+// schermo sempre acceso concesso subito;
 // le date scritte dal server con l'ora reale (creazione dei messaggi, accessi) riscritte con un
 // istante fisso nelle risposte dell'API.
 import { type APIRequestContext, type Browser, type BrowserContextOptions, devices, expect, type Locator, type Page, test } from '@playwright/test'
@@ -187,7 +188,7 @@ const SCHERMATE: Schermata[] = [
   },
   { nome: 'ricetta-con-foto', url: (d) => `/#/ricettario/${d.conFoto}`, pronta: (p) => p.getByRole('heading', { name: 'Conchiglioni melanzane e pesce spada' }) },
   { nome: 'ricetta-senza-foto', url: (d) => `/#/ricettario/${d.senzaFoto}`, pronta: (p) => p.getByRole('heading', { name: 'Tiramisù della tradizione' }) },
-  { nome: 'cucina', url: (d) => `/#/ricettario/${d.conFoto}/cucina`, pronta: (p) => p.getByText('Il pesce spada si può sostituire').first() },
+  { nome: 'cucina', url: (d) => `/#/ricettario/${d.conFoto}/cucina`, pronta: (p) => p.getByText('Schermo sempre acceso') },
   { nome: 'famiglia', url: () => '/#/famiglia', pronta: (p) => p.getByRole('heading', { name: 'Famiglia', exact: true }).first() },
   { nome: 'impostazioni', url: () => '/#/impostazioni', pronta: (p) => p.getByRole('heading', { name: 'Impostazioni', exact: true }).first() },
 ]
@@ -196,11 +197,13 @@ const SCHERMATE: Schermata[] = [
  * Niente transizioni né cursore lampeggiante; barre di scorrimento nascoste (variano col sistema);
  * notifiche a comparsa nascoste (passeggere, compaiono in momenti diversi). Sul telefono la barra in
  * basso va in fondo alla pagina (fissa, nelle schermate intere coprirebbe il contenuto a metà) e lo
- * sfondo dell'app copre tutta la pagina (fisso, coprirebbe solo la prima schermata).
+ * sfondo dell'app copre tutta la pagina (fisso, coprirebbe solo la prima schermata). Le foto si
+ * ridimensionano senza filtro: Chrome a volte usa quello rapido, a volte quello di qualità.
  */
 const STILE_STABILE = `*, *::before, *::after { transition: none !important; animation: none !important; caret-color: transparent !important; scroll-behavior: auto !important; }
 html { scrollbar-width: none; } ::-webkit-scrollbar { display: none; }
 [data-sonner-toaster] { display: none !important; }
+img { image-rendering: pixelated !important; }
 body { position: relative; }
 body::before { position: absolute !important; }
 nav[aria-label="Sezioni"][class*="bottom-0"] { position: absolute !important; }`
@@ -221,6 +224,10 @@ async function apri(browser: Browser, c: Configurazione): Promise<Page> {
     ([tema, testo]) => {
       localStorage.setItem('menuapp.tema', tema)
       localStorage.setItem('menuapp.testo', testo)
+      // Schermo sempre acceso (vista cucina): nel browser automatico la richiesta si risolve o viene
+      // revocata in momenti diversi; qui è concessa subito e non revocata, come su un telefono vero.
+      const blocco = { released: false, type: 'screen', release: async () => undefined, addEventListener: () => undefined, removeEventListener: () => undefined }
+      Object.defineProperty(navigator, 'wakeLock', { configurable: true, value: { request: async () => blocco } })
     },
     [c.tema, c.testo],
   )
@@ -270,3 +277,55 @@ for (const c of CONFIGURAZIONI) {
     await page.context().close()
   })
 }
+
+// Barra in basso del telefono com'è davvero (senza gli adattamenti degli scatti): durante lo
+// scorrimento resta sul bordo dello schermo, non copre la fine della pagina, etichette intere e
+// separate anche a 360 px con il testo al 150%.
+test('barra in basso durante lo scorrimento', async ({ browser }) => {
+  for (const c of [CONFIGURAZIONI[0]!, CONFIGURAZIONI[3]!]) {
+    const page = await apri(browser, c)
+    for (const [url, pronta] of [['/#/', 'Vigilia di Natale 2030'], [`/#/ricettario/${dati.conFoto}`, 'Gestione della ricetta']] as const) {
+      await page.goto(url)
+      // Pagina caricata per intero prima di scorrere.
+      await expect(page.getByText(pronta).first()).toBeVisible()
+      await page.waitForLoadState('networkidle')
+      const barra = page.getByRole('navigation', { name: 'Sezioni' }).filter({ visible: true })
+      await expect(barra).toBeVisible()
+      for (const posizione of ['meta', 'fondo'] as const) {
+        await page.evaluate((p) => window.scrollTo(0, p === 'fondo' ? document.documentElement.scrollHeight : document.documentElement.scrollHeight / 2), posizione)
+        await page.waitForTimeout(100)
+        const m = await barra.evaluate((nav) => {
+          const r = nav.getBoundingClientRect()
+          // Il testo di ogni voce, misurato direttamente (qualunque sia il markup): dentro la sua colonna e
+          // non tagliato dal contenitore.
+          const etichette = [...nav.querySelectorAll('a')].map((a) => {
+            const camminatore = document.createTreeWalker(a, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.textContent!.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) })
+            let nodo = camminatore.nextNode()
+            while (nodo && /^\d+$/.test(nodo.textContent!.trim())) nodo = camminatore.nextNode() // il contatore delle notifiche
+            const intervallo = document.createRange()
+            intervallo.selectNodeContents(nodo!)
+            const r = intervallo.getBoundingClientRect()
+            const colonna = a.getBoundingClientRect()
+            const contenitore = nodo!.parentElement!
+            return { testo: nodo!.textContent, r, intera: r.left >= colonna.left - 0.5 && r.right <= colonna.right + 0.5 && contenitore.scrollWidth <= contenitore.clientWidth + 0.5 }
+          })
+          const main = document.querySelector('main')!
+          // L'ultimo contenuto visibile (testi, immagini, icone, controlli; non i contenitori, che hanno
+          // il margine per la barra): in fondo alla pagina deve finire sopra la barra.
+          const contenuti = [...main.querySelectorAll('*')].filter((e) => {
+            const r = e.getBoundingClientRect()
+            if (r.height === 0 || getComputedStyle(e).visibility === 'hidden') return false
+            return /^(IMG|svg|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(e.tagName) || [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent!.trim())
+          })
+          const ultimo = contenuti.map((e) => e.getBoundingClientRect().bottom).reduce((a, b) => Math.max(a, b), 0)
+          return { basso: r.bottom, alto: r.top, altezzaFinestra: innerHeight, etichette, ultimo }
+        })
+        expect(Math.abs(m.basso - m.altezzaFinestra), `${c.nome} ${url} ${posizione}: barra sul bordo`).toBeLessThanOrEqual(1)
+        for (const e of m.etichette) expect(e.intera, `${c.nome}: «${e.testo}» intera`).toBe(true)
+        for (let i = 1; i < m.etichette.length; i++) expect(m.etichette[i]!.r.left, `${c.nome}: etichette separate`).toBeGreaterThanOrEqual(m.etichette[i - 1]!.r.right)
+        if (posizione === 'fondo') expect(m.ultimo, `${c.nome} ${url}: fine pagina sopra la barra`).toBeLessThanOrEqual(m.alto + 1)
+      }
+    }
+    await page.context().close()
+  }
+})

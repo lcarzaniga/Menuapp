@@ -82,6 +82,14 @@ export function dataLunga(data: DataISO): string {
   return `${GIORNI[d.getUTCDay()]} ${d.getUTCDate()} ${MESI[d.getUTCMonth()]} ${d.getUTCFullYear()}`
 }
 
+/** Per il blocco data: { giorno: «gio», numero: 24, mese: «dic» }; null se la data non è valida. */
+export function partiData(data: DataISO): { giorno: string; numero: number; mese: string } | null {
+  const m = RE_DATA.exec(data)
+  if (!m) return null
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])))
+  return { giorno: GIORNI[d.getUTCDay()]!.slice(0, 3), numero: d.getUTCDate(), mese: MESI[d.getUTCMonth()]!.slice(0, 3) }
+}
+
 /** «25/12» */
 export function dataBreve(data: DataISO): string {
   const m = RE_DATA.exec(data)

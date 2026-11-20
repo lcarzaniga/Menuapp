@@ -117,11 +117,13 @@ function Guscio({ nome }: { nome: string }) {
             key={s.a}
             to={s.a}
             aria-label={s.a === '/notifiche' && nonLette ? `Notifiche, ${nonLette} da leggere` : undefined}
-            className={cn('relative flex h-16 flex-col items-center justify-center gap-0.5 text-[0.6875rem] font-medium text-testo-tenue', s.attiva(pathname) && 'text-primario')}
+            className={cn('relative flex h-16 min-w-0 flex-col items-center justify-center gap-0.5 font-medium text-testo-tenue', s.attiva(pathname) && 'text-primario')}
           >
             <s.icona className="size-6" />
             {s.a === '/notifiche' ? <Contatore n={nonLette} className="absolute left-1/2 top-2 ml-1.5" /> : null}
-            {s.etichetta}
+            {/* Etichette a 11 px anche con il testo ingrandito: le icone crescono, le parole restano intere
+                («Impostazioni» sta in 1/5 di un telefono da 360 px). Misura fissa voluta, eccezione ai rem. */}
+            <span className="max-w-full truncate text-[11px] leading-tight tracking-tight">{s.etichetta}</span>
           </NavLink>
         ))}
       </nav>

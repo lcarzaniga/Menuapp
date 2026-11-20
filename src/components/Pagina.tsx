@@ -26,13 +26,14 @@ export function Pagina({
   }, [titolo])
   return (
     <div className={cn('mx-auto w-full px-4 pb-28 pt-4 md:pb-12', larga ? 'max-w-5xl' : 'max-w-3xl', className)}>
-      <header className="non-stampare mb-4 flex items-start gap-2">
+      {/* Con poco spazio (telefono stretto, testo grande) le azioni vanno a capo invece di coprire il titolo. */}
+      <header className="non-stampare mb-4 flex flex-wrap items-start gap-2">
         {indietro ? <PulsanteIndietro a={indietro} /> : null}
-        <div className="min-w-0 flex-1">
-          <h1 className="titolo text-[1.75rem] font-semibold leading-tight">{titolo}</h1>
+        <div className="min-w-0 flex-[1_1_12rem]">
+          <h1 className="titolo text-[1.75rem] font-semibold leading-tight break-words">{titolo}</h1>
           {sottotitolo ? <div className="mt-0.5 text-sm text-testo-tenue">{sottotitolo}</div> : null}
         </div>
-        {azioni ? <div className="flex shrink-0 items-center gap-1">{azioni}</div> : null}
+        {azioni ? <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-1">{azioni}</div> : null}
       </header>
       {children}
     </div>

@@ -718,3 +718,26 @@ Stato: **sviluppato e testato automaticamente**; nessun cambiamento visibile; no
   scuro), confronto di tutte le schermate in ogni esecuzione. Differenze della fase 1 riviste: tutte e
   54 le schermate cambiano per ombra, fughe e tema scuro, nessuna differenza di impaginazione;
   riferimenti aggiornati. Negli scatti lo sfondo fisso copre tutta la pagina (adattamento solo di test).
+
+### Fase 2 — Componenti condivisi (ramo `restyling`)
+
+- Segmenti (`Navigazione.tsx`): selezionato chiaro con l'ombra nuova e in grassetto (nel tema scuro
+  sulla superficie più chiara, barra sullo sfondo); con il testo grande va a capo, con un tetto di
+  16 px perché ogni parola stia nella sua colonna anche a 360 px.
+- Badge: variante `tempo` (fondo salvia, `--salvia-testo`) per il conto alla rovescia.
+- Nuovo `components/BloccoData.tsx` (giorno, numero, mese; in rem; `evidenza` per il prossimo evento;
+  data completa per i lettori di schermo) e `partiData` in `domain/tempo.ts`. Si usano nella fase 3.
+- Intestazione delle pagine (`Pagina.tsx`): le azioni vanno a capo invece di coprire il titolo (a
+  360 px con testo al 150% «Eventi» era coperto da «Duplica» e «Nuovo»).
+- Barra in basso (`Layout.tsx`): etichette a 11 px anche con il testo ingrandito (le icone crescono),
+  intere e separate a 360 px con testo al 150% (prima «Ricettario» e «Impostazioni» si sovrapponevano).
+- Test: `components/componenti.test.tsx` (blocco data, badge); nei confronti visivi la verifica della
+  barra com'è davvero durante lo scorrimento (sul bordo dello schermo, fine pagina non coperta,
+  etichette intere e separate), che fallisce con la barra di prima.
+- Stabilità dei confronti: due cause di differenze occasionali trovate ripetendo le esecuzioni e
+  rimosse solo negli scatti (schermo sempre acceso concesso subito; foto ridimensionate senza filtro,
+  perché Chrome alterna filtro rapido e di qualità). Dieci esecuzioni consecutive identiche.
+- Differenze riviste: tutte le schermate del telefono (barra in basso), la pagina eventi su desktop
+  (segmenti), gli eventi a 150% (intestazione e segmenti). Riferimenti aggiornati.
+- Da fare nella fase 3 (pagina eventi, non componenti condivisi): nomi degli eventi successivi
+  troncati e «0 piatti» sul bordo della scheda a 360 px con testo al 150%.
