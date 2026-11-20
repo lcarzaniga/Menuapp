@@ -1,5 +1,5 @@
 // «Importa ricetta»: file (pacchetto, JSON, testo) o testo incollato, anteprima, importazione.
-import { AlertTriangle, FileUp, ImageIcon } from 'lucide-react'
+import { AlertTriangle, FileDown, FileUp, ImageIcon } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
@@ -13,6 +13,7 @@ import { Finestra } from '@/components/ui/dialog'
 import { usePuoScrivere } from '@/connessione/stato'
 import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 import { indicizzaCatalogo } from '@/domain/parser/analizza.ts'
+import { NOME_TEMPLATE_RICETTA, TEMPLATE_RICETTA } from '@/domain/ricetta/formato.ts'
 import { formattaCoperti } from '@/domain/porzioni.ts'
 import { riduciFoto } from '@/lib/immagini'
 import { useQueryClient } from '@tanstack/react-query'
@@ -133,6 +134,7 @@ export function ImportaRicetta({ aperta, onCambia }: { aperta: boolean; onCambia
           <Button variante="contorno" misura="grande" onClick={() => fileRef.current?.click()}>
             <FileUp /> Scegli un file
           </Button>
+          <ScaricaTemplate />
           <input
             ref={fileRef}
             type="file"
@@ -211,3 +213,23 @@ export function ImportaRicetta({ aperta, onCambia }: { aperta: boolean; onCambia
     </Finestra>
   )
 }
+
+/**
+ * Modello Markdown da compilare: un collegamento con «download» a un indirizzo data: in UTF-8, che
+ * funziona anche sul telefono (nessun intermediario, nessun permesso).
+ */
+export const URL_TEMPLATE_RICETTA = `data:text/markdown;charset=utf-8,${encodeURIComponent(TEMPLATE_RICETTA)}`
+
+export function ScaricaTemplate() {
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm">
+      <Button asChild variante="fantasma" misura="piccolo">
+        <a href={URL_TEMPLATE_RICETTA} download={NOME_TEMPLATE_RICETTA}>
+          <FileDown /> Scarica template .md
+        </a>
+      </Button>
+      <span className="text-testo-tenue">Compila il modello e importalo qui</span>
+    </div>
+  )
+}
+

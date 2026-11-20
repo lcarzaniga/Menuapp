@@ -844,3 +844,14 @@ Stato: **sviluppato e testato automaticamente**; non su TEST (in attesa dell'OK 
   contrasti aggiornato (quadretto più scuro calcolato con l'intensità di ciascun tema).
 - `npm run check` 885, e2e 57, confronti visivi verdi; revisione su campione (eventi, ricetta, bacheca,
   vista cucina; chiaro e scuro).
+
+## Template Markdown della ricetta (20/11/2026, ramo `template-ricetta-md`)
+
+Stato: **sviluppato e testato automaticamente**; non su TEST (serve l'OK di Loris).
+
+- Ricettario → Importa: «Scarica template .md» accanto a «Scegli un file», con «Compila il modello e
+  importalo qui». Scarica `ricetta-template.md` (UTF-8, collegamento con `download` a un indirizzo
+  `data:`, funziona anche sul telefono). Contenuto nel formato §3 di docs/FORMATO-RICETTA.md con valori
+  d'esempio, importabile così com'è; parser e formato invariati.
+- Test: `src/features/ricettario/template.test.tsx` (file del collegamento → parser → contratto
+  dell'API), e2e in `importa-ricette.spec.ts` (telefono e desktop: scarica, compila, ricarica, importa).

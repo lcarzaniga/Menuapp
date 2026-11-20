@@ -141,6 +141,9 @@ Regole:
 ## 4. Importazione nell'app
 
 1. *Ricettario → Importa*: si sceglie un file oppure si incolla il testo.
+   *Scarica template .md* salva `ricetta-template.md` (UTF-8): un modello nel formato del §3 con
+   valori d'esempio da sostituire, importabile così com'è (`TEMPLATE_RICETTA` in
+   `src/domain/ricetta/formato.ts`).
 2. Anteprima: dati del piatto, ingredienti con il badge **Certo** / **Da verificare** (come
    nell'editor), passaggi, foto.
 3. Le foto mantengono didascalia, principale e passaggio; un `passo` che non esiste nel

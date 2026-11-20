@@ -203,6 +203,37 @@ export function daTesto(testo: string): RicettaFormato {
   return r
 }
 
+/**
+ * Modello da compilare (Ricettario → Importa → «Scarica template .md»), nel formato del §3 di
+ * docs/FORMATO-RICETTA.md. Solo campi riconosciuti, con valori d'esempio da sostituire: così com'è si
+ * importa già (niente commenti, che nell'intestazione finirebbero tra le note).
+ */
+export const NOME_TEMPLATE_RICETTA = 'ricetta-template.md'
+export const TEMPLATE_RICETTA = `# Nome della ricetta
+
+Portata: Primi
+Porzioni: 4
+Preparazione: 20 min
+Cottura: 15 min
+Riposo: 10 min
+Attrezzature: pentola, padella
+Fonte: nonna Maria
+
+## Ingredienti
+- 320 g di spaghetti
+- 2 spicchi di aglio
+- olio extravergine d'oliva q.b.
+- sale q.b.
+
+## Procedimento
+1. Descrivi il primo passaggio.
+2. Descrivi il secondo passaggio.
+3. Descrivi l'ultimo passaggio e come servire.
+
+## Note
+Consigli, varianti e come conservarla.
+`
+
 /** Ricetta → testo scritto a mano (per l'esportazione leggibile e i test di andata e ritorno). */
 export function aTesto(r: RicettaFormato): string {
   const righe = [`# ${r.nome}`, '']

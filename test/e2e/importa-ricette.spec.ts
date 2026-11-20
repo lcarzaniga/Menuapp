@@ -1,5 +1,5 @@
 // Importazione ricette (docs/FORMATO-RICETTA.md): testo a mano, pacchetto con foto, foto dalla scheda.
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { expect, type Page, test } from '@playwright/test'
 import { strToU8, zipSync } from 'fflate'
 
@@ -36,6 +36,28 @@ test('import da testo scritto a mano', async ({ page }, info) => {
   await expect(page.getByRole('heading', { name: 'Crostata di marmellata' })).toBeVisible()
   await expect(page.getByText('per 8 porzioni')).toBeVisible()
   await expect(page.getByText('1 da verificare')).toBeVisible()
+})
+
+test('template Markdown: scaricato dal browser, compilato e importato senza trasformazioni', async ({ page }, info) => {
+  await page.goto('/#/ricettario')
+  await page.getByRole('button', { name: 'Importa' }).click()
+  await expect(page.getByText('Compila il modello e importalo qui')).toBeVisible()
+  const [scaricamento] = await Promise.all([page.waitForEvent('download'), page.getByRole('link', { name: 'Scarica template .md' }).click()])
+  expect(scaricamento.suggestedFilename()).toBe('ricetta-template.md')
+  mkdirSync('test-results/import', { recursive: true })
+  const percorso = `test-results/import/template-${info.project.name}.md`
+  await scaricamento.saveAs(percorso)
+  const testo = readFileSync(percorso, 'utf8')
+  expect(testo).toContain('## Ingredienti')
+  // Compilato sostituendo i segnaposto, poi ricaricato come file.
+  writeFileSync(percorso, testo.replace('Nome della ricetta', `Pasta aglio e olio ${info.project.name}`))
+  await page.locator('input[type=file]').setInputFiles(percorso)
+  const finestra = page.getByRole('dialog')
+  await expect(finestra.getByText('4 ingredienti')).toBeVisible()
+  await expect(finestra.getByText('3 passaggi')).toBeVisible()
+  await finestra.getByRole('button', { name: 'Importa la ricetta' }).click()
+  await expect(page.getByRole('heading', { name: `Pasta aglio e olio ${info.project.name}` })).toBeVisible()
+  await expect(page.getByText('per 4 porzioni')).toBeVisible()
 })
 
 test('import di un pacchetto con foto, foto aggiunta dalla scheda, esportazione', async ({ page }, info) => {
