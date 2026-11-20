@@ -24,8 +24,10 @@ export default defineConfig({
   timeout: 120_000,
   expect: {
     timeout: 15_000,
-    // Stesso Chrome e stessi caratteri: si chiede l'identità, con la sola tolleranza dell'antialiasing.
-    toHaveScreenshot: { animations: 'disabled', caret: 'hide', scale: 'css', maxDiffPixels: 0 },
+    // Stesso Chrome e stessi caratteri: nessun pixel diverso. La soglia 0,01 ignora le differenze di 1–2
+    // unità dell'antialiasing e rileva i cambi di colore da circa 3 unità in su (quella predefinita, 0,2,
+    // non vedrebbe un cambio di tema scuro).
+    toHaveScreenshot: { animations: 'disabled', caret: 'hide', scale: 'css', maxDiffPixels: 0, threshold: 0.01 },
   },
   reporter: [['list']],
   use: { baseURL: ORIGINE, channel: 'chrome', locale: 'it-IT', timezoneId: 'Europe/Rome', trace: 'retain-on-failure' },

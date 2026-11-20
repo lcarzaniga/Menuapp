@@ -262,7 +262,8 @@ for (const c of CONFIGURAZIONI) {
     for (const s of SCHERMATE) {
       await page.goto(s.url(dati))
       await attendi(page, s)
-      await expect(page, `${s.nome} · ${c.nome}`).toHaveScreenshot(`${s.nome}--${c.nome}.png`, { fullPage: true, mask: s.maschere?.(page) ?? [] })
+      // Confronto «morbido»: si registrano tutte le schermate diverse, il test fallisce comunque.
+      await expect.soft(page, `${s.nome} · ${c.nome}`).toHaveScreenshot(`${s.nome}--${c.nome}.png`, { fullPage: true, mask: s.maschere?.(page) ?? [] })
     }
     await page.context().close()
   })
