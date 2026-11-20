@@ -74,7 +74,7 @@ export function VistaCucina({ piatto, porzioniIniziali, indietro, sottotitolo }:
           ) : (
             <span className="text-sm text-avviso">Il piatto non ha porzioni base: quantità della ricetta, non scalate.</span>
           )}
-          <span className={cn('ml-auto flex items-center gap-1 text-xs', schermo ? 'text-successo' : 'text-testo-tenue')}>
+          <span className={cn('ml-auto flex items-center gap-1 rounded-full px-2 py-0.5 text-xs', schermo ? 'bg-salvia-tenue font-medium text-salvia-testo' : 'text-testo-tenue')}>
             <SunMedium className="size-4" /> {schermo ? 'Schermo sempre acceso' : 'Schermo normale'}
           </span>
         </div>
@@ -89,21 +89,25 @@ export function VistaCucina({ piatto, porzioniIniziali, indietro, sottotitolo }:
           {piatto.ingredienti.length === 0 ? (
             <p className="text-testo-tenue">Nessun ingrediente nella ricetta.</p>
           ) : (
-            <ul className="flex flex-col gap-1">
+            <ul className="flex flex-col divide-y divide-bordo/70 border-y border-bordo/70">
               {piatto.ingredienti.map((i) => {
                 const fatto = spunte.has(i.id)
                 return (
                   <li key={i.id}>
-                    <button type="button" onClick={() => cambia(i.id)} className={cn('flex min-h-14 w-full items-center gap-3 rounded-xl px-3 text-left', fatto ? 'bg-successo-tenue/60 text-testo-tenue line-through' : 'bg-carta')}>
-                      <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-full border-2', fatto ? 'border-successo bg-successo text-white' : 'border-bordo')}>
+                    <button type="button" onClick={() => cambia(i.id)} className={cn('flex min-h-14 w-full items-center gap-3 rounded-lg px-2 py-2 text-left', fatto && 'bg-successo-tenue/60 text-testo-tenue line-through')}>
+                      <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-full border-2', fatto ? 'border-successo bg-successo text-white' : 'border-testo-tenue')}>
                         {fatto ? <Check className="size-4" /> : null}
                       </span>
-                      <span className="w-28 shrink-0 font-semibold tabular-nums">{quantitaCucina(i, fattore)}</span>
-                      <span className="flex-1 leading-snug">
-                        {i.nome}
-                        {i.nota ? <span className="text-testo-tenue">, {i.nota}</span> : null}
-                        {i.facoltativo ? <span className="text-testo-tenue"> (facoltativo)</span> : null}
-                        {i.statoParsing === 'da_verificare' ? <span className="block text-xs text-avviso">da verificare: «{i.testoOriginale}»</span> : null}
+                      {/* Quantità in colonna a sinistra; se lo spazio non basta (telefono stretto, testo grande)
+                          il nome va sotto la quantità invece di spezzare le parole. */}
+                      <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                        <span className="min-w-24 font-semibold whitespace-nowrap tabular-nums">{quantitaCucina(i, fattore)}</span>
+                        <span className="min-w-[min(9rem,100%)] flex-1 leading-snug break-words">
+                          {i.nome}
+                          {i.nota ? <span className="text-testo-tenue">, {i.nota}</span> : null}
+                          {i.facoltativo ? <span className="text-testo-tenue"> (facoltativo)</span> : null}
+                          {i.statoParsing === 'da_verificare' ? <span className="block text-xs text-avviso">da verificare: «{i.testoOriginale}»</span> : null}
+                        </span>
                       </span>
                     </button>
                   </li>
@@ -116,14 +120,15 @@ export function VistaCucina({ piatto, porzioniIniziali, indietro, sottotitolo }:
         {piatto.procedimento.length ? (
           <section>
             <h2 className="mb-2 font-serif text-xl font-semibold text-primario">Procedimento</h2>
-            <ol className="flex flex-col gap-2">
+            <ol className="flex flex-col divide-y divide-bordo/70 border-y border-bordo/70">
               {piatto.procedimento.map((p, k) => {
                 const id = `passo-${k}`
                 const fatto = spunte.has(id)
                 return (
                   <li key={id}>
-                    <button type="button" onClick={() => cambia(id)} className={cn('flex w-full gap-3 rounded-xl p-3 text-left leading-relaxed', fatto ? 'bg-successo-tenue/60 text-testo-tenue' : 'bg-carta')}>
-                      <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-full font-semibold', fatto ? 'bg-successo text-white' : 'bg-primario-tenue text-primario')}>
+                    {/* Testo grande per leggerlo da lontano; tutta la riga si tocca per spuntarla. */}
+                    <button type="button" onClick={() => cambia(id)} className={cn('flex w-full gap-3 rounded-lg px-2 py-3 text-left text-[1.25rem] leading-relaxed', fatto && 'bg-successo-tenue/60 text-testo-tenue')}>
+                      <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-full text-base font-semibold', fatto ? 'bg-successo text-white' : 'border-2 border-testo-tenue text-testo')}>
                         {fatto ? <Check className="size-4" /> : k + 1}
                       </span>
                       <span className="min-w-0 flex-1 pt-0.5">

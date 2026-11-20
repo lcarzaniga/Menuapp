@@ -766,3 +766,18 @@ Stato: **sviluppato e testato automaticamente**; nessun cambiamento visibile; no
 - Sui telefoni, con nomi lunghi, «Modifica» va su una riga sua sotto il titolo (intestazione della
   fase 2): il titolo non si comprime.
 - Differenze riviste: solo le 12 schermate delle ricette (con e senza foto); riferimenti aggiornati.
+
+### Fase 5 — Vista cucina (ramo `restyling`)
+
+- `VistaCucina.tsx`, solo aspetto: passaggi a 1,25 rem con numeri in cerchi a bordo pieno, righe
+  separate da filetti invece che riquadri, cerchi da spuntare con bordo a 3:1 o più (prima 1,3:1),
+  verde per il completato come prima, «Schermo sempre acceso» a chip salvia. Invariati: spunte di
+  ingredienti e passaggi, porzioni, schermo acceso, foto principale e dei passaggi, avviso sulle dosi,
+  note.
+- Quantità nella colonna a sinistra; se lo spazio non basta (360 px con testo al 150%) il nome va sotto
+  la quantità. Corregge un difetto che c'era già: a quella dimensione la pagina era più larga dello
+  schermo (438 px) e scorreva in orizzontale.
+- Confronti visivi: nuovo controllo che nessuna pagina sia più larga dello schermo.
+- Differenze riviste: solo le 6 schermate della vista cucina; riferimenti aggiornati. Nella suite e2e
+  della fase 4 un test del ricettario (filtro per portata) era fallito una volta; isolato passa tre
+  volte su tre e nella suite della fase 5 è verde: instabilità occasionale, da tenere d'occhio.

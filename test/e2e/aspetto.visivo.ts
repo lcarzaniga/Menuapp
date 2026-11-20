@@ -271,6 +271,8 @@ for (const c of CONFIGURAZIONI) {
     for (const s of SCHERMATE) {
       await page.goto(s.url(dati))
       await attendi(page, s)
+      // Mai uno scorrimento orizzontale della pagina.
+      expect.soft(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${s.nome} · ${c.nome}: pagina più larga dello schermo`).toBeLessThanOrEqual(0)
       // Confronto «morbido»: si registrano tutte le schermate diverse, il test fallisce comunque.
       await expect.soft(page, `${s.nome} · ${c.nome}`).toHaveScreenshot(`${s.nome}--${c.nome}.png`, { fullPage: true, mask: s.maschere?.(page) ?? [] })
     }
