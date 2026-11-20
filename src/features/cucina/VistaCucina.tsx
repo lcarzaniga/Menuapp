@@ -74,7 +74,7 @@ export function VistaCucina({ piatto, porzioniIniziali, indietro, sottotitolo }:
           ) : (
             <span className="text-sm text-avviso">Il piatto non ha porzioni base: quantità della ricetta, non scalate.</span>
           )}
-          <span className={cn('ml-auto flex items-center gap-1 rounded-full px-2 py-0.5 text-xs', schermo ? 'bg-salvia-tenue font-medium text-salvia-testo' : 'text-testo-tenue')}>
+          <span className={cn('ml-auto flex items-center gap-1 rounded-full px-2 py-0.5 text-xs', schermo ? 'bg-successo-tenue font-medium text-successo' : 'text-testo-tenue')}>
             <SunMedium className="size-4" /> {schermo ? 'Schermo sempre acceso' : 'Schermo normale'}
           </span>
         </div>

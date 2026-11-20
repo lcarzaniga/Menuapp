@@ -35,7 +35,7 @@ function Cornice({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-dvh items-center justify-center px-4 py-10">
       <main className="w-full max-w-md rounded-3xl border border-bordo/70 bg-carta p-6 text-center shadow-carta sm:p-8">
         <Tavola className="mx-auto mb-2 h-16 w-auto" />
-        <p className="titolo text-2xl font-semibold text-primario">Ricette di famiglia &amp; Co.</p>
+        <p className="titolo text-2xl font-semibold text-accento-caldo">Ricette di famiglia &amp; Co.</p>
         <span className="filetto mx-auto mb-5 mt-1 block w-24" />
         {children}
       </main>

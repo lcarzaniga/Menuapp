@@ -59,7 +59,7 @@ export default defineConfig({
         lang: 'it',
         start_url: '/',
         scope: '/',
-        theme_color: '#b5482c',
+        theme_color: '#0d7074',
         background_color: '#fbf7f2',
         display: 'standalone',
         icons: [

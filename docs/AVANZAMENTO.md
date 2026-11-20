@@ -790,3 +790,22 @@ Stato: **sviluppato e testato automaticamente**; nessun cambiamento visibile; no
 - Differenze riviste: solo le 18 schermate desktop; riferimenti aggiornati.
 
 Ciclo B (fasi 3–6): sviluppato e testato automaticamente; non su TEST (in attesa dell'OK di Loris).
+
+## Palette ottanio (20/11/2026, ramo `palette-ottanio`)
+
+Stato: **sviluppato e testato automaticamente**; non su TEST (in attesa dell'OK di Loris).
+
+- Distribuzione approvata da Loris: testi in bruno caldo; ottanio principale `#0D7074` per le azioni,
+  ottanio profondo `#0B4F54` (`--primario-forte`, nuova) per testo e stati attivi sui fondi chiari e per
+  il pulsante premuto, ottanio chiarissimo `#E2F0ED` per badge e selezioni, ottanio morbido `#72B5B5`
+  come principale del tema scuro; avorio caldo `#F7F3EA` e sabbia `#E6D6C2` per fondo e bordi; oro
+  antico solo decorativo; terracotta (`--accento-caldo`, nuova) per illustrazioni, fascia a quadretti e
+  marchio; verde funzionale spostato verso il giallo (`#3F6B1F`) per distinguersi dall'ottanio;
+  `--salvia-testo` tolta (il conto alla rovescia passa all'ottanio). Fughe delle piastrelle in ottanio
+  molto tenue (richiesta di Loris). Logo, icone PWA e palette di stampa invariati; barra del browser in
+  ottanio.
+- Differenze dalla proposta: oro antico `#A38548` invece di `#B59657` (stelle e trofeo sono icone
+  informative: servono 3:1); marchio rimasto terracotta; badge «Tra N giorni» con testo a 14 px e
+  contorno ottanio (la prima versione era troppo pallida).
+- Test dei contrasti esteso (tutte le coppie della distribuzione, focus, icone in oro, distinzione delle
+  tinte verde/ottanio). Revisione visiva su un campione chiaro e scuro; 54 riferimenti aggiornati.

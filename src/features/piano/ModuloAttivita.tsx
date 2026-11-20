@@ -77,7 +77,7 @@ export function ModuloAttivita({
             <button
               key={s.etichetta}
               type="button"
-              className={cn('rounded-full border border-bordo px-3 py-1.5 text-sm', d.data === s.data && d.ora === s.ora && 'border-primario bg-primario-tenue text-primario')}
+              className={cn('rounded-full border border-bordo px-3 py-1.5 text-sm', d.data === s.data && d.ora === s.ora && 'border-primario bg-primario-tenue text-primario-forte')}
               onClick={() => setD({ ...d, data: s.data, ora: s.ora })}
             >
               {s.etichetta}

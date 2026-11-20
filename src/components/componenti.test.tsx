@@ -21,9 +21,9 @@ describe('blocco data', () => {
 })
 
 describe('badge del conto alla rovescia', () => {
-  it('fondo salvia e testo scuro dedicato', () => {
+  it('ottanio chiarissimo con testo in ottanio profondo', () => {
     const { container } = render(<Badge variante="tempo">tra 35 giorni</Badge>)
-    expect(container.firstElementChild!.className).toContain('bg-salvia-tenue')
-    expect(container.firstElementChild!.className).toContain('text-salvia-testo')
+    expect(container.firstElementChild!.className).toContain('bg-primario-tenue')
+    expect(container.firstElementChild!.className).toContain('text-primario-forte')
   })
 })

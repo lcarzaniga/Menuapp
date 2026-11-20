@@ -97,7 +97,8 @@ function Prossimo({ e }: { e: RiepilogoEvento }) {
           </p>
           {/* L'illustrazione sta nella riga del conto alla rovescia: il titolo ha tutta la larghezza. */}
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Badge variante="tempo" className="text-[0.8125rem]">
+            {/* Il conto alla rovescia in evidenza: più grande degli altri badge, con il contorno ottanio. */}
+            <Badge variante="tempo" className="px-2.5 py-1 text-sm">
               {quanto}
             </Badge>
             <BadgeCondiviso e={e} />

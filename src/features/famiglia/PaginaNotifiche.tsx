@@ -109,7 +109,7 @@ function SchedaNotifica({ x, onApri }: { x: Notifica; onApri: (x: Notifica, coll
   return (
     <div data-testid="notifica" className={cn('rounded-2xl border shadow-carta', x.letta ? 'border-bordo/60 bg-carta/70' : 'border-primario/40 bg-carta')}>
       <button type="button" onClick={() => void onApri(x)} className="flex w-full items-start gap-3 rounded-2xl p-3 text-left hover:bg-tenue/60">
-        <span className={cn('relative mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full', x.letta ? 'bg-tenue text-testo-tenue' : 'bg-primario-tenue text-primario')}>
+        <span className={cn('relative mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full', x.letta ? 'bg-tenue text-testo-tenue' : 'bg-primario-tenue text-primario-forte')}>
           <Icona className="size-4" aria-hidden />
           {x.letta ? null : <span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-carta bg-primario" />}
         </span>

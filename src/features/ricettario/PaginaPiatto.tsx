@@ -169,7 +169,7 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
             <ol className="flex flex-col gap-3">
               {p.procedimento.map((passo, k) => (
                 <li key={k} className="flex gap-3 text-[0.9375rem] leading-relaxed">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primario-tenue text-sm font-semibold text-primario">{k + 1}</span>
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primario-tenue text-sm font-semibold text-primario-forte">{k + 1}</span>
                   <div className="min-w-0 flex-1 pt-0.5">
                     <span className="whitespace-pre-line">{passo}</span>
                     <FotoPasso piattoId={p.id} foto={p.foto} passo={k} nome={p.nome} procedimento={p.procedimento} modificabile={puoScrivere} />

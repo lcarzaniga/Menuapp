@@ -7,7 +7,8 @@ type Props = SVGProps<SVGSVGElement> & { titolo?: string }
 
 const T = { stroke: 'var(--testo)', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, fill: 'none' }
 const tenue = 'var(--primario-tenue)'
-const primario = 'var(--primario)'
+// Dettagli caldi (bacche, candeline, pomodori): terracotta, non il colore delle azioni.
+const primario = 'var(--accento-caldo)'
 const salvia = 'var(--salvia)'
 const salviaTenue = 'var(--salvia-tenue)'
 const oro = 'var(--oro)'

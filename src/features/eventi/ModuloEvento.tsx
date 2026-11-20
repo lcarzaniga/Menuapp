@@ -156,7 +156,7 @@ export function ModuloEvento({
           </Select>
         </Campo>
       </div>
-      <p className="rounded-xl bg-primario-tenue px-3 py-2 text-sm text-primario">
+      <p className="rounded-xl bg-primario-tenue px-3 py-2 text-sm text-primario-forte">
         <strong>{formattaCoperti(coperti)} coperti equivalenti</strong> — le porzioni del menù seguono questo numero, salvo quelle indicate a mano.
       </p>
       <Campo etichetta="Note" htmlFor="ev-note">

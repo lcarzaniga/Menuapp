@@ -77,7 +77,8 @@ function Guscio({ nome }: { nome: string }) {
       <nav aria-label="Sezioni" className="non-stampare fixed inset-y-0 left-0 z-30 hidden w-56 flex-col gap-1 border-r border-bordo/70 bg-carta/90 p-3 backdrop-blur md:flex">
         <div className="mb-6 flex flex-col items-center gap-1 px-3 pt-3 text-center">
           <Tavola className="h-16 w-auto" />
-          <span className="titolo text-center text-2xl font-semibold leading-tight text-primario">Ricette di famiglia &amp; Co.</span>
+          {/* Il marchio resta nei colori del logo (terracotta), non in quello delle azioni. */}
+          <span className="titolo text-center text-2xl font-semibold leading-tight text-accento-caldo">Ricette di famiglia &amp; Co.</span>
           <span className="filetto mt-1 w-24" />
         </div>
         <SelettoreFamiglia className="mb-3" />
@@ -85,7 +86,7 @@ function Guscio({ nome }: { nome: string }) {
           <NavLink
             key={s.a}
             to={s.a}
-            className={cn('flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium hover:bg-tenue', s.attiva(pathname) && 'bg-primario-tenue text-primario')}
+            className={cn('flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium hover:bg-tenue', s.attiva(pathname) && 'bg-primario-tenue text-primario-forte')}
           >
             <s.icona className="size-5" /> {s.etichetta}
             {s.a === '/notifiche' ? <Contatore n={nonLette} className="ml-auto" /> : null}
@@ -93,7 +94,7 @@ function Guscio({ nome }: { nome: string }) {
         ))}
         <NavLink
           to="/account"
-          className={cn('mt-auto flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium hover:bg-tenue', pathname.startsWith('/account') && 'bg-primario-tenue text-primario')}
+          className={cn('mt-auto flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium hover:bg-tenue', pathname.startsWith('/account') && 'bg-primario-tenue text-primario-forte')}
         >
           <CircleUserRound className="size-5" /> <span className="truncate">{nome}</span>
         </NavLink>

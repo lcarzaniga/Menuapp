@@ -129,7 +129,7 @@ function Composizione({ ambito, portate, segnaposto }: { ambito: AmbitoBacheca; 
             type="button"
             aria-pressed={modo === m}
             onClick={() => setModo(m)}
-            className={cn('flex h-8 items-center gap-1.5 rounded-full border px-3 text-[0.8125rem] font-medium', modo === m ? 'border-primario bg-primario-tenue text-primario' : 'border-bordo hover:bg-tenue')}
+            className={cn('flex h-8 items-center gap-1.5 rounded-full border px-3 text-[0.8125rem] font-medium', modo === m ? 'border-primario bg-primario-tenue text-primario-forte' : 'border-bordo hover:bg-tenue')}
           >
             <Icona className="size-3.5" /> {nome}
           </button>
@@ -265,7 +265,7 @@ function Composizione({ ambito, portate, segnaposto }: { ambito: AmbitoBacheca; 
 
 function Iniziale({ nome }: { nome: string }) {
   return (
-    <span aria-hidden className="titolo flex size-9 shrink-0 items-center justify-center rounded-full bg-primario-tenue text-base font-semibold text-primario">
+    <span aria-hidden className="titolo flex size-9 shrink-0 items-center justify-center rounded-full bg-primario-tenue text-base font-semibold text-primario-forte">
       {nome.slice(0, 1).toUpperCase()}
     </span>
   )

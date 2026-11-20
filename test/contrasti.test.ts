@@ -20,6 +20,16 @@ const contrasto = (a: string, b: string) => {
   return (x! + 0.05) / (y! + 0.05)
 }
 
+/** Tinta (0–360°) di un colore. */
+const tinta = (hex: string) => {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number]
+  const max = Math.max(r, g, b)
+  const d = max - Math.min(r, g, b)
+  if (d === 0) return 0
+  const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+  return (h * 60 + 360) % 360
+}
+
 /** [testo, fondo, minimo] */
 const COPPIE: [string, string, number][] = [
   ['testo', 'sfondo', 4.5],
@@ -28,16 +38,25 @@ const COPPIE: [string, string, number][] = [
   ['testo-tenue', 'sfondo', 4.5],
   ['testo-tenue', 'carta', 4.5],
   ['testo-tenue', 'tenue', 4.5],
+  // Ottanio: azioni (pulsanti, link), testo e stati attivi sui fondi chiari, pulsante premuto.
   ['primario-testo', 'primario', 4.5],
+  ['primario-testo', 'primario-forte', 4.5],
+  ['primario', 'sfondo', 4.5],
   ['primario', 'carta', 4.5],
+  ['primario', 'tenue', 4.5],
   ['primario', 'primario-tenue', 4.5],
-  ['salvia-testo', 'salvia-tenue', 4.5],
+  ['primario-forte', 'primario-tenue', 4.5],
+  // Marchio in terracotta (testo grande, ma lo si tiene ai testi normali).
+  ['accento-caldo', 'carta', 4.5],
   ['successo', 'successo-tenue', 4.5],
   ['avviso', 'avviso-tenue', 4.5],
   ['pericolo', 'pericolo-tenue', 4.5],
   ['info', 'info-tenue', 4.5],
-  // Bordi dei controlli disegnati con il testo secondario (cerchi da spuntare).
+  // Controlli e icone che portano un'informazione: almeno 3:1 (cerchi da spuntare, focus, stelle in oro).
   ['testo-tenue', 'carta', 3],
+  ['anello', 'sfondo', 3],
+  ['oro', 'carta', 3],
+  ['oro', 'sfondo', 3],
 ]
 
 describe.each([
@@ -49,6 +68,12 @@ describe.each([
     expect(v[testo], testo).toBeDefined()
     expect(v[fondo], fondo).toBeDefined()
     expect(contrasto(v[testo]!, v[fondo]!)).toBeGreaterThanOrEqual(minimo)
+  })
+  it('il verde del completato si distingue dall\'ottanio (tinte ad almeno 45°)', () => {
+    for (const [a, b] of [['successo', 'primario'], ['successo-tenue', 'primario-tenue']] as const) {
+      const d = Math.abs(tinta(v[a]!) - tinta(v[b]!))
+      expect(Math.min(d, 360 - d), `${a} / ${b}`).toBeGreaterThanOrEqual(45)
+    }
   })
   it('le superfici del tema scuro sono più chiare dello sfondo (carta, poi tenue)', () => {
     if (selettore !== '.dark') return

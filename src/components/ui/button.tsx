@@ -8,7 +8,7 @@ export const varianteBottone = cva(
   {
     variants: {
       variante: {
-        primario: 'bg-primario text-primario-testo hover:brightness-110 active:brightness-95',
+        primario: 'bg-primario text-primario-testo hover:bg-primario-forte active:bg-primario-forte',
         secondario: 'bg-tenue text-testo hover:bg-bordo/70',
         contorno: 'border border-bordo bg-carta hover:bg-tenue',
         fantasma: 'hover:bg-tenue',
