@@ -11,7 +11,6 @@ import { Caricamento, Pagina, Vuoto } from '@/components/Pagina'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Campo, Casella, Input, Select, Textarea } from '@/components/ui/campi'
-import { Card, CardContent } from '@/components/ui/card'
 import { Conferma } from '@/components/ui/dialog'
 import { SolaLettura, usePuoScrivere } from '@/connessione/stato'
 import { CopiaInFamiglia, CopiaRicetta, FamigliaOrigineRicetta, ProvenienzaRicetta, VisibilitaRicetta } from '@/features/accesso/CondivisioneRicetta'
@@ -114,8 +113,9 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
         </>
       }
     >
+      {/* Ordine (restyling 2026): foto, dati essenziali, «Vista cucina»; poi collaborazione e contenuto,
+          con le sezioni separate da filetti invece che chiuse in riquadri. */}
       <div className="flex flex-col gap-4">
-        <BarraCollaborazione piatto={p} onProponi={onModifica} />
         <GalleriaFoto piattoId={p.id} foto={p.foto} nome={p.nome} procedimento={p.procedimento} />
         <div className="flex flex-wrap gap-2 text-sm">
           <Badge variante={p.porzioniBase ? 'primario' : 'avviso'}>
@@ -132,22 +132,23 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
             <AlertTriangle className="mt-0.5 size-4 shrink-0" /> Senza porzioni base le quantità non si possono scalare: nella spesa compariranno da verificare.
           </p>
         ) : null}
-        <Button asChild misura="grande" variante="secondario">
+        <Button asChild misura="grande">
           <Link to={`/ricettario/${p.id}/cucina`}>
             <ChefHat /> Vista cucina
           </Link>
         </Button>
+        <BarraCollaborazione piatto={p} onProponi={onModifica} />
 
-        <section>
+        <section className="border-t border-bordo/70 pt-4">
           <h2 className="mb-2 font-serif text-lg font-semibold text-primario">Ingredienti</h2>
           {p.ingredienti.length === 0 ? (
             <p className="text-sm text-testo-tenue">Nessun ingrediente. Tocca «Modifica» per incollarli.</p>
           ) : (
             <>
               {daVerificare ? <p className="mb-2 text-sm text-avviso">{daVerificare} da verificare</p> : null}
-              <ul className="flex flex-col divide-y divide-bordo rounded-xl border border-bordo bg-carta">
+              <ul className="flex flex-col divide-y divide-bordo/70">
                 {p.ingredienti.map((i: IngredientePiatto) => (
-                  <li key={i.id} className="flex items-baseline gap-3 px-3 py-2 text-sm">
+                  <li key={i.id} className="flex items-baseline gap-3 py-2 text-[0.9375rem]">
                     <span className="w-24 shrink-0 font-semibold tabular-nums">{testoQuantita(i)}</span>
                     <span className="flex-1">
                       {i.nome}
@@ -163,7 +164,7 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
         </section>
 
         {p.procedimento.length ? (
-          <section>
+          <section className="border-t border-bordo/70 pt-4">
             <h2 className="mb-2 font-serif text-lg font-semibold text-primario">Procedimento</h2>
             <ol className="flex flex-col gap-3">
               {p.procedimento.map((passo, k) => (
@@ -188,12 +189,10 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
           </section>
         ) : null}
         {p.note || p.fonte ? (
-          <Card>
-            <CardContent className="pt-4 text-sm">
-              {p.note ? <p className="whitespace-pre-line">{p.note}</p> : null}
-              {p.fonte ? <p className="mt-2 text-testo-tenue">Fonte: {p.fonte}</p> : null}
-            </CardContent>
-          </Card>
+          <section className="border-t border-bordo/70 pt-4 text-[0.9375rem]">
+            {p.note ? <p className="whitespace-pre-line">{p.note}</p> : null}
+            {p.fonte ? <p className="mt-2 text-sm text-testo-tenue">Fonte: {p.fonte}</p> : null}
+          </section>
         ) : null}
 
         {p.usatoIn.length ? (

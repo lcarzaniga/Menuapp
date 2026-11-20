@@ -756,3 +756,13 @@ Stato: **sviluppato e testato automaticamente**; nessun cambiamento visibile; no
   lasci spazio al titolo.
 - e2e: `riorganizzazione.spec.ts` riconosceva le schede dalla parola «coperti»; ora da «N piatti».
 - Differenze riviste: solo le 6 schermate della pagina eventi; riferimenti aggiornati.
+
+### Fase 4 — Ricetta (ramo `restyling`)
+
+- `PaginaPiatto.tsx`: foto (o «Aggiungi foto» se manca), porzioni e tempi, «Vista cucina» come
+  pulsante principale a tutta larghezza, poi la barra della collaborazione; ingredienti, procedimento e
+  note separati da filetti invece che chiusi in riquadri; testo degli ingredienti a 15 px. Memoria di
+  famiglia, «Usato in» e gestione della ricetta invariati.
+- Sui telefoni, con nomi lunghi, «Modifica» va su una riga sua sotto il titolo (intestazione della
+  fase 2): il titolo non si comprime.
+- Differenze riviste: solo le 12 schermate delle ricette (con e senza foto); riferimenti aggiornati.
