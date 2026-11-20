@@ -124,7 +124,7 @@ test('navigazione riorganizzata, Famiglie, schede, duplicazione e permessi', asy
   await expect(anna.page.getByRole('region', { name: 'Prossimo evento' }).getByTestId('evento-condiviso')).toHaveText('di Loris · sola lettura')
   await expect(anna.page.getByRole('region', { name: 'Condivisi con me' })).toHaveCount(0)
   // Le schede dell'elenco (fuori da «Per te»): sotto il prossimo, la copia di Ornella, senza badge.
-  const schede = anna.page.locator('a[href^="#/eventi/"]').filter({ hasText: /coperti/ }).filter({ hasText: 'Pranzo della domenica' })
+  const schede = anna.page.locator('a[href^="#/eventi/"]').filter({ hasText: /\d+ piatt[oi]/ }).filter({ hasText: 'Pranzo della domenica' })
   await expect(schede).toHaveCount(1)
   await expect(schede.getByTestId('evento-condiviso')).toHaveCount(0)
   await anna.page.getByRole('region', { name: 'Per te' }).getByRole('link', { name: /Porti Vino/ }).click()

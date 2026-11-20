@@ -741,3 +741,18 @@ Stato: **sviluppato e testato automaticamente**; nessun cambiamento visibile; no
   (segmenti), gli eventi a 150% (intestazione e segmenti). Riferimenti aggiornati.
 - Da fare nella fase 3 (pagina eventi, non componenti condivisi): nomi degli eventi successivi
   troncati e «0 piatti» sul bordo della scheda a 360 px con testo al 150%.
+
+### Fase 3 — Eventi (ramo `restyling`)
+
+- Prossimo evento (`PaginaEventi.tsx`): blocco data in evidenza, titolo a tutta larghezza, «ore · N
+  persone», badge del conto alla rovescia (Oggi, Domani, Tra N giorni), illustrazione piccola nella
+  stessa riga, azioni invariate (Menù, Persone, Prepara).
+- Altri eventi: blocco data al posto della miniatura, nome intero (non più troncato), ora, persone e
+  piatti che non si spezzano, «tra N giorni» in testo piccolo; badge di stato e di condivisione invariati.
+- «N persone» = adulti + bambini effettivi (con i coperti automatici, i confermati), già presenti nel
+  riepilogo: nessuna modifica a contratto o server; i coperti equivalenti restano nei calcoli e
+  nelle altre schermate.
+- Blocco data con tetti in px (72 px di larghezza, numero a 34 px) perché a 360 px con testo al 150%
+  lasci spazio al titolo.
+- e2e: `riorganizzazione.spec.ts` riconosceva le schede dalla parola «coperti»; ora da «N piatti».
+- Differenze riviste: solo le 6 schermate della pagina eventi; riferimenti aggiornati.

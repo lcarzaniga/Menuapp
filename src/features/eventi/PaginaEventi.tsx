@@ -10,14 +10,14 @@ import { Campo, Select } from '@/components/ui/campi'
 import { Finestra } from '@/components/ui/dialog'
 import type { Evento, StatoEvento } from '@/domain/tipi.ts'
 import { DuplicaEvento } from './Edizioni'
+import { BloccoData } from '@/components/BloccoData'
 import { IllustrazioneEvento } from '@/components/Illustrazioni'
 import { Caricamento, Pagina, Vuoto } from '@/components/Pagina'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { RiepilogoEvento } from '@/contratto/eventi.ts'
-import { formattaCoperti } from '@/domain/porzioni.ts'
 import { daConcludere } from '@/domain/regole/evento.ts'
-import { dataBreve, dataLunga, differenzaGiorni, oggiISO } from '@/domain/tempo.ts'
+import { dataBreve, differenzaGiorni, oggiISO } from '@/domain/tempo.ts'
 import { plurale } from '@/lib/formato'
 import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 
@@ -30,35 +30,40 @@ function quando(data: string): string {
   return ''
 }
 
+/** «14 persone» (adulti e bambini; con i coperti automatici, i confermati). Vuoto se non indicate. */
+function persone(e: RiepilogoEvento): string {
+  const n = e.adulti + e.bambini
+  return n > 0 ? plurale(n, 'persona', 'persone') : ''
+}
+
 export function SchedaEvento({ e }: { e: RiepilogoEvento }) {
   const tra = quando(e.data)
+  const chi = persone(e)
   return (
-    <Link to={`/eventi/${e.id}`} className="group flex items-center gap-4 rounded-2xl border border-bordo/70 bg-carta p-3 pr-4 shadow-carta transition-colors hover:bg-tenue/50">
-      <div className="flex size-20 shrink-0 items-center justify-center rounded-xl bg-tenue/70">
-        <IllustrazioneEvento evento={e} className="h-16 w-auto" />
-      </div>
+    <Link to={`/eventi/${e.id}`} className="group flex items-center gap-3 rounded-2xl border border-bordo/70 bg-carta p-3 shadow-carta transition-colors hover:bg-tenue/50">
+      <BloccoData data={e.data} />
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="titolo truncate text-lg font-semibold">{e.nome}</h2>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <h2 className="titolo min-w-0 text-lg font-semibold leading-snug break-words">{e.nome}</h2>
           {e.stato === 'concluso' ? <Badge>Concluso</Badge> : null}
           {e.stato === 'archiviato' ? <Badge variante="info">Archiviato</Badge> : null}
           {daConcludere(e, oggiISO()) ? <Badge variante="avviso">Da concludere</Badge> : null}
           <BadgeCondiviso e={e} />
         </div>
-        <p className="mt-0.5 text-sm first-letter:uppercase">
-          {dataLunga(e.data)}
-          {e.oraServizio ? ` · ${e.oraServizio}` : ''} {tra && tra !== 'passato' ? <span className="text-primario">· {tra}</span> : null}
-        </p>
-        <p className="mt-1 flex items-center gap-3 text-[0.8125rem] text-testo-tenue">
-          <span className="flex items-center gap-1">
-            <Users className="size-3.5" /> {formattaCoperti(e.copertiEquivalenti)} coperti
+        <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.8125rem] text-testo-tenue">
+          {e.oraServizio ? <span className="whitespace-nowrap">ore {e.oraServizio}</span> : null}
+          {chi ? (
+            <span className="flex items-center gap-1 whitespace-nowrap">
+              <Users className="size-3.5" aria-hidden /> {chi}
+            </span>
+          ) : null}
+          <span className="flex items-center gap-1 whitespace-nowrap">
+            <UtensilsCrossed className="size-3.5" aria-hidden /> {plurale(e.numeroVoci, 'piatto', 'piatti')}
           </span>
-          <span className="flex items-center gap-1">
-            <UtensilsCrossed className="size-3.5" /> {plurale(e.numeroVoci, 'piatto', 'piatti')}
-          </span>
         </p>
+        {tra && tra !== 'passato' ? <p className="mt-0.5 text-xs text-testo-tenue">{tra}</p> : null}
       </div>
-      <ChevronRight className="size-5 shrink-0 text-testo-tenue transition-transform group-hover:translate-x-0.5" />
+      <ChevronRight className="size-5 shrink-0 text-testo-tenue transition-transform group-hover:translate-x-0.5" aria-hidden />
     </Link>
   )
 }
@@ -74,26 +79,31 @@ function BadgeCondiviso({ e }: { e: RiepilogoEvento }) {
   )
 }
 
-/** L'evento più vicino, in evidenza: illustrazione, conto alla rovescia, scorciatoie. */
+/** L'evento più vicino, in evidenza: blocco data, conto alla rovescia, illustrazione piccola, scorciatoie. */
 function Prossimo({ e }: { e: RiepilogoEvento }) {
   const giorni = differenzaGiorni(oggiISO(), e.data)
   const quanto = giorni === 0 ? 'Oggi' : giorni === 1 ? 'Domani' : giorni > 1 ? `Tra ${giorni} giorni` : 'Passato'
+  const chi = persone(e)
   return (
-    <section aria-label="Prossimo evento" className="relative overflow-hidden rounded-3xl border border-bordo/70 bg-carta shadow-carta">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_100%_at_100%_0%,var(--primario-tenue),transparent_70%)] opacity-80" />
-      <div className="relative grid items-center gap-2 p-5 sm:grid-cols-[1fr_auto] sm:p-7">
-        <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-oro">
-            {quanto} <BadgeCondiviso e={e} />
-          </p>
-          <Link to={`/eventi/${e.id}`} className="titolo mt-1 block text-[2rem] font-semibold leading-tight hover:text-primario sm:text-[2.5rem]">
+    <section aria-label="Prossimo evento" className="rounded-3xl border border-bordo/70 bg-carta p-4 shadow-carta sm:p-5">
+      <div className="flex gap-3 sm:gap-4">
+        <BloccoData data={e.data} evidenza className="self-start" />
+        <div className="min-w-0 flex-1">
+          <Link to={`/eventi/${e.id}`} className="titolo block text-[1.625rem] font-semibold leading-tight break-words hover:text-primario sm:text-[2rem]">
             {e.nome}
           </Link>
-          <p className="mt-1 text-testo-tenue first-letter:uppercase">
-            {dataLunga(e.data)}
-            {e.oraServizio ? ` · ore ${e.oraServizio}` : ''} · {formattaCoperti(e.copertiEquivalenti)} coperti
+          <p className="mt-1 text-sm text-testo-tenue">
+            {[e.oraServizio ? `ore ${e.oraServizio}` : '', chi].filter(Boolean).join(' · ')}
           </p>
-          <div className="mt-4 flex flex-wrap gap-2">
+          {/* L'illustrazione sta nella riga del conto alla rovescia: il titolo ha tutta la larghezza. */}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Badge variante="tempo" className="text-[0.8125rem]">
+              {quanto}
+            </Badge>
+            <BadgeCondiviso e={e} />
+            <IllustrazioneEvento evento={e} className="ml-auto h-10 w-auto shrink-0 sm:h-14" />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
             <Button asChild>
               <Link to={`/eventi/${e.id}/menu`}>
                 <ChefHat /> Menù
@@ -111,7 +121,6 @@ function Prossimo({ e }: { e: RiepilogoEvento }) {
             </Button>
           </div>
         </div>
-        <IllustrazioneEvento evento={e} className="order-first mx-auto h-36 w-auto sm:order-none sm:h-48" />
       </div>
     </section>
   )
