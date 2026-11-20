@@ -702,3 +702,19 @@ Stato: **sviluppato e testato automaticamente**; nessun cambiamento visibile; no
 - Difetti già presenti, visibili nelle schermate (da correggere nelle fasi 2–3): a 360 px con testo al
   150% il titolo «Eventi» è coperto dai pulsanti, i nomi degli eventi successivi sono troncati, le
   etichette della barra in basso si sovrappongono.
+
+### Fase 1 — Token (ramo `restyling`)
+
+- `src/styles/index.css`: ombra più leggera nei due temi; nuove variabili `--salvia-testo` (testo sul
+  fondo salvia, per il conto alla rovescia) e `--fuga` (griglia delle piastrelle); sfondo dell'app
+  (luci calde e fughe da 3 rem) su un livello fisso `body::before`, senza `background-attachment:
+  fixed`, nascosto in stampa. Tema chiaro invariato nei colori.
+- Tema scuro più caldo: sfondo `#201b19`, carta `#2c2521`, tenue `#372e29`, testo `#f7eee5`, testo
+  secondario `#bca99c`, bordo `#55453b`, primario `#e8a184` con testo `#281c18`, fondi tenui del
+  primario e della salvia riallineati (le superfici restano più chiare dello sfondo).
+- `test/contrasti.test.ts`: contrasti dei due temi letti dal CSS (testi ≥ 4,5:1, bordi dei controlli
+  ≥ 3:1) e ordine delle superfici scure.
+- Confronti visivi: soglia per pixel portata a 0,01 (la predefinita non vedeva il cambio del tema
+  scuro), confronto di tutte le schermate in ogni esecuzione. Differenze della fase 1 riviste: tutte e
+  54 le schermate cambiano per ombra, fughe e tema scuro, nessuna differenza di impaginazione;
+  riferimenti aggiornati. Negli scatti lo sfondo fisso copre tutta la pagina (adattamento solo di test).

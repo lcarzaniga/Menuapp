@@ -18,6 +18,7 @@
   --primario-tenue: #f5dfd5;
   --salvia: #5f7556;
   --salvia-tenue: #e3eadc;
+  --salvia-testo: #29462d; /* testo sul fondo salvia (conto alla rovescia): 8,3:1 */
   --oro: #b08a47;
   --successo: #33704a; /* 4,98:1 sul verde tenue: AA per i testi piccoli dei badge (SPEC §31.6) */
   --successo-tenue: #dff0e3;
@@ -28,22 +29,26 @@
   --info: #2f5a9e;
   --info-tenue: #e2ebf9;
   --anello: #a5412a66;
-  --ombra: 0 1px 2px rgb(70 45 25 / 0.05), 0 10px 28px -16px rgb(70 45 25 / 0.28);
+  --ombra: 0 1px 2px rgb(70 45 25 / 0.04), 0 3px 12px rgb(68 42 26 / 0.055);
+  /* Fughe delle piastrelle: griglia tono su tono, solo sullo sfondo dell'app. */
+  --fuga: rgb(110 78 57 / 0.035);
   color-scheme: light;
 }
 
 .dark {
-  --sfondo: #16120f;
-  --testo: #f1e8de;
-  --carta: #211a16;
-  --tenue: #2b231e;
-  --testo-tenue: #b2a397;
-  --bordo: #3b3029;
-  --primario: #e08467;
-  --primario-testo: #1b1210;
-  --primario-tenue: #45261c;
+  /* Più caldo e meno nero (restyling 2026): le superfici restano più chiare dello sfondo. */
+  --sfondo: #201b19;
+  --testo: #f7eee5;
+  --carta: #2c2521;
+  --tenue: #372e29;
+  --testo-tenue: #bca99c; /* 6,7:1 sulla carta: secondario ma distinto dal testo */
+  --bordo: #55453b;
+  --primario: #e8a184;
+  --primario-testo: #281c18;
+  --primario-tenue: #4d2c22;
   --salvia: #9fb592;
-  --salvia-tenue: #26301f;
+  --salvia-tenue: #364633;
+  --salvia-testo: #e5f2d7;
   --oro: #d2ad69;
   --successo: #6cc391;
   --successo-tenue: #1d3a29;
@@ -53,8 +58,9 @@
   --pericolo-tenue: #4a201c;
   --info: #86aef0;
   --info-tenue: #1d2c47;
-  --anello: #e0846780;
-  --ombra: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 28px -16px rgb(0 0 0 / 0.6);
+  --anello: #e8a18480;
+  --ombra: 0 1px 2px rgb(0 0 0 / 0.25), 0 3px 12px rgb(0 0 0 / 0.13);
+  --fuga: rgb(255 240 220 / 0.018);
   color-scheme: dark;
 }
 
@@ -79,6 +85,7 @@
   --color-anello: var(--anello);
   --color-salvia: var(--salvia);
   --color-salvia-tenue: var(--salvia-tenue);
+  --color-salvia-testo: var(--salvia-testo);
   --color-oro: var(--oro);
   --shadow-carta: var(--ombra);
   --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -121,9 +128,23 @@
     @apply bg-sfondo text-testo font-sans antialiased;
     min-height: 100dvh;
     font-feature-settings: 'cv11', 'ss01';
-    background-image: radial-gradient(120% 60% at 100% 0%, rgb(176 138 71 / 0.10), transparent 60%),
+  }
+  /*
+   * Sfondo dell'app su un livello fisso a parte: luci calde e fughe delle piastrelle. Niente
+   * `background-attachment: fixed`, che su Android ridisegna la pagina a ogni scorrimento.
+   */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(var(--fuga) 1px, transparent 1px),
+      linear-gradient(90deg, var(--fuga) 1px, transparent 1px),
+      radial-gradient(120% 60% at 100% 0%, rgb(176 138 71 / 0.1), transparent 60%),
       radial-gradient(90% 50% at 0% 100%, rgb(95 117 86 / 0.08), transparent 60%);
-    background-attachment: fixed;
+    background-size: 3rem 3rem, 3rem 3rem, auto, auto;
   }
   h1,
   h2,
@@ -147,6 +168,9 @@
   body {
     background: white;
     color: black;
+  }
+  body::before {
+    display: none;
   }
   .non-stampare,
   [data-sonner-toaster] {

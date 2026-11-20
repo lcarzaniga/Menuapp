@@ -10,7 +10,6 @@
 import { type APIRequestContext, type Browser, type BrowserContextOptions, devices, expect, type Locator, type Page, test } from '@playwright/test'
 import { apiLeggi, apiScrivi, ORIGINE } from './aiuti'
 
-test.describe.configure({ mode: 'serial' })
 
 const SESSIONE = process.env.MENUAPP_E2E_SESSIONE ?? 'test-results/sessione-aspetto.json'
 /** «Oggi» per il browser: un mese prima degli eventi di prova. */
@@ -105,7 +104,7 @@ async function foto(page: Page): Promise<Buffer> {
   return Buffer.from(dataUrl.split(',')[1]!, 'base64')
 }
 
-async function preparaDati(request: APIRequestContext, page: Page): Promise<Dati> {
+async function preparaDati(request: APIRequestContext, page: Page): Promise<void> {
   const famiglia = (await apiLeggi<{ id: string; nome: string }[]>(request, '/gruppi')).find((g) => g.nome === 'Famiglia')!
   await ok(
     apiScrivi(request, 'post', '/piatti', {
@@ -164,7 +163,6 @@ async function preparaDati(request: APIRequestContext, page: Page): Promise<Dati
   await ok(apiScrivi(request, 'post', '/eventi/asp-vigilia/messaggi', { id: 'asp-m1', testo: 'Si comincia alle 21: chi porta le bevande?' }))
   await ok(apiScrivi(request, 'post', '/eventi/asp-vigilia/messaggi', { id: 'asp-m2', testo: 'Che secondo facciamo?', sondaggio: { opzioni: ['Baccalà', 'Orata al forno'], multipla: false, risultati: 'sempre' } }))
   await ok(apiScrivi(request, 'post', '/eventi/asp-vigilia/messaggi', { id: 'asp-m3', testo: '', proposta: { nome: 'Insalata di mare', portataNome: 'Antipasti' } }))
-  return { vigilia: 'asp-vigilia', conFoto: 'asp-conchiglioni', senzaFoto: 'asp-tiramisu' }
 }
 
 // ── Pagine ──────────────────────────────────────────────────
@@ -197,12 +195,14 @@ const SCHERMATE: Schermata[] = [
 /**
  * Niente transizioni né cursore lampeggiante; barre di scorrimento nascoste (variano col sistema);
  * notifiche a comparsa nascoste (passeggere, compaiono in momenti diversi). Sul telefono la barra in
- * basso va in fondo alla pagina: nelle schermate intere, fissa, coprirebbe il contenuto a metà.
+ * basso va in fondo alla pagina (fissa, nelle schermate intere coprirebbe il contenuto a metà) e lo
+ * sfondo dell'app copre tutta la pagina (fisso, coprirebbe solo la prima schermata).
  */
 const STILE_STABILE = `*, *::before, *::after { transition: none !important; animation: none !important; caret-color: transparent !important; scroll-behavior: auto !important; }
 html { scrollbar-width: none; } ::-webkit-scrollbar { display: none; }
 [data-sonner-toaster] { display: none !important; }
 body { position: relative; }
+body::before { position: absolute !important; }
 nav[aria-label="Sezioni"][class*="bottom-0"] { position: absolute !important; }`
 
 async function apri(browser: Browser, c: Configurazione): Promise<Page> {
@@ -249,11 +249,13 @@ async function attendi(page: Page, s: Schermata) {
   expect(await page.evaluate(() => document.fonts.check("16px 'Fraunces Variable'") && document.fonts.check("16px 'Inter Variable'"))).toBe(true)
 }
 
-let dati: Dati
+/** Identificativi fissi: ogni configurazione è un test a sé, e una differenza non ferma le altre. */
+const dati: Dati = { vigilia: 'asp-vigilia', conFoto: 'asp-conchiglioni', senzaFoto: 'asp-tiramisu' }
 
+// Primo test del file (un solo worker, in ordine): crea i dati sul database nuovo del server.
 test('dati di prova', async ({ request, page }) => {
   await page.goto('/')
-  dati = await preparaDati(request, page)
+  await preparaDati(request, page)
 })
 
 for (const c of CONFIGURAZIONI) {
