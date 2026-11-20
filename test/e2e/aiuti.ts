@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process'
 import { type APIRequestContext, type Browser, devices, expect, type Page } from '@playwright/test'
 
-export const ORIGINE = 'http://127.0.0.1:4174'
+// Server dei test: quello degli e2e o, per i confronti visivi, uno separato (playwright.aspetto.config.ts).
+export const ORIGINE = `http://127.0.0.1:${process.env.MENUAPP_E2E_PORTA ?? '4174'}`
 
 /** Chiamata API come la farebbe un altro dispositivo. */
 export async function apiScrivi(request: APIRequestContext, metodo: 'post' | 'put' | 'delete', url: string, corpo?: unknown) {
@@ -31,7 +32,7 @@ export async function vaiA(page: Page, sezione: 'Eventi' | 'Ricettario' | 'Famig
   await page.getByRole('navigation', { name: 'Sezioni' }).filter({ visible: true }).getByRole('link', { name: sezione }).click()
 }
 
-const DATI_E2E = 'test-results/dati-e2e'
+const DATI_E2E = process.env.MENUAPP_E2E_DATI ?? 'test-results/dati-e2e'
 
 /** Segreto della console del Worker nelle prove su Cloudflare (playwright.cloudflare.config.ts). */
 export const CODICE_CONSOLE_E2E = 'codice-console-e2e-lungo-almeno-trentadue-caratteri'

@@ -17,6 +17,8 @@
     "test:cloudflare": "npm run build:cloudflare && vitest run -c vitest.cloudflare.config.ts",
     "test:e2e:cloudflare": "npm run build:cloudflare && MENUAPP_E2E_CLOUDFLARE=1 playwright test -c playwright.cloudflare.config.ts",
     "test:e2e": "vite build --outDir test-results/dist-e2e --emptyOutDir && MENUAPP_COMMIT=pwa-nuova vite build --outDir test-results/dist-pwa-nuova --emptyOutDir && playwright test",
+    "test:aspetto": "MENUAPP_COMMIT=aspetto vite build --outDir test-results/dist-aspetto --emptyOutDir && playwright test -c playwright.aspetto.config.ts",
+    "test:aspetto:aggiorna": "MENUAPP_COMMIT=aspetto vite build --outDir test-results/dist-aspetto --emptyOutDir && playwright test -c playwright.aspetto.config.ts --update-snapshots",
     "check": "npm run lint && npm run typecheck && npm run typecheck:cloudflare && npm test && npm run build",
     "generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 public/logo.svg"
   },

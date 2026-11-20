@@ -678,3 +678,27 @@ Stato: **sviluppato e testato automaticamente**; non su TEST; non collaudato; no
   orientamento scelto per avere più cartoncini: cavalletto da 4 a 6 per foglio (copertura dal 58%
   all'87%), piatto da 10 a 12 (dal 72% all'87%). Cartoncini girati di 90° sul foglio; misure e
   composizione delle facce invariate. SPEC §42.1.
+
+## Restyling «Cucina di famiglia» — fase 0, rete di sicurezza (20/11/2026, ramo `restyling`)
+
+Stato: **sviluppato e testato automaticamente**; nessun cambiamento visibile; non su TEST.
+
+- Piano approvato da Loris (20/11): sette fasi tecniche su un solo ramo `restyling`, un commit per
+  fase; due cicli di rilascio su TEST (A: fasi 0–2; B: fasi 3–6) e un solo rilascio in PRODUZIONE
+  dopo l'approvazione finale. Decisioni: tema scuro più caldo, segmento selezionato chiaro con
+  ombra, illustrazione del prossimo evento piccola, navigazione invariata, quantità nella colonna
+  sinistra della vista cucina, verde per il completato, nessuna funzione nuova, stampa esclusa.
+- Confronti visivi: `npm run test:aspetto` (`playwright.aspetto.config.ts`, `test/e2e/aspetto.visivo.ts`),
+  server separato sulla porta 4176 con database nuovo a ogni esecuzione. 9 pagine (eventi, evento,
+  menù, bacheca, ricetta con e senza foto, vista cucina, famiglia, impostazioni) × 6 configurazioni
+  (telefono 390 px chiaro e scuro al 100%, chiaro al 150%; telefono 360 px scuro al 150%; desktop
+  chiaro e scuro) = 54 schermate di riferimento in `test/e2e/aspetto/` (8,8 MB), confronto al pixel.
+- Stabilità: dati di prova fissi, orologio del browser al 19/11/2030, date del server riscritte con un
+  istante fisso nelle risposte dell'API, caratteri e immagini attesi, animazioni, notifiche a comparsa
+  e service worker esclusi; barra in basso del telefono in fondo alla pagina negli scatti.
+  Riproducibilità verificata con più esecuzioni consecutive identiche.
+- Le schermate valgono per questo server e il Chrome installato: dopo un aggiornamento di Chrome si
+  rigenerano con `npm run test:aspetto:aggiorna`, prima di qualunque modifica grafica.
+- Difetti già presenti, visibili nelle schermate (da correggere nelle fasi 2–3): a 360 px con testo al
+  150% il titolo «Eventi» è coperto dai pulsanti, i nomi degli eventi successivi sono troncati, le
+  etichette della barra in basso si sovrappongono.

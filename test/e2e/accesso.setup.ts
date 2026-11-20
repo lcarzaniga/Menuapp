@@ -14,5 +14,5 @@ preparazione('primo accesso dell\'amministratore', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Eventi', exact: true })).toBeVisible({ timeout: 10_000 })
   const cookie = (await page.context().cookies()).find((c) => c.name === '__Host-menuapp-sessione')
   expect(cookie).toMatchObject({ httpOnly: true, secure: true, sameSite: 'Lax' })
-  await page.context().storageState({ path: 'test-results/sessione-amministratore.json' })
+  await page.context().storageState({ path: process.env.MENUAPP_E2E_SESSIONE ?? 'test-results/sessione-amministratore.json' })
 })
