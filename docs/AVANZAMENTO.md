@@ -855,3 +855,12 @@ Stato: **sviluppato e testato automaticamente**; non su TEST (serve l'OK di Lori
   d'esempio, importabile così com'è; parser e formato invariati.
 - Test: `src/features/ricettario/template.test.tsx` (file del collegamento → parser → contratto
   dell'API), e2e in `importa-ricette.spec.ts` (telefono e desktop: scarica, compila, ricarica, importa).
+
+## Date come calendario da tavolo (21/11/2026, ramo `date-calendario`)
+
+Stato: **sviluppato e testato automaticamente**; non su TEST (serve l'OK di Loris).
+
+- `BloccoData.tsx`, stessi colori: angoli vivi, bordo e ombra netta solo a destra e in basso (rilievo),
+  fascia del mese in terracotta con testo chiaro (6,1:1; scuro nel tema scuro, 7,2:1), due anelli di
+  rilegatura in oro scuro, numero in terracotta, giorno della settimana in oro scuro in fondo.
+- `npm run check` 889, e2e 59, confronti visivi verdi (cambiano solo le schermate della pagina Eventi).

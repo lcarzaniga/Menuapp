@@ -13,7 +13,7 @@ describe('blocco data', () => {
     const t = container.querySelector('time')!
     expect(t.getAttribute('datetime')).toBe('2026-12-24')
     expect(t.getAttribute('aria-label')).toBe('giovedì 24 dicembre 2026')
-    expect(t.textContent).toBe('gio24dic')
+    expect(t.textContent).toBe('dic24gio')
     expect(t.className).toContain('bg-oro-medio')
     expect(t.querySelector('.text-accento-caldo')!.textContent).toBe('24')
     expect(render(<BloccoData data="2026-12-25" />).container.querySelector('time')!.className).toContain('bg-oro-tenue')
