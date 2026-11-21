@@ -2,14 +2,14 @@
 
 Documento operativo per riprendere il lavoro fra sessioni.
 
-## Stato (aggiornato al 19/11/2026)
+## Stato (aggiornato al 21/11/2026)
 
 | Ambiente | Dove | Codice | Schema |
 |---|---|---|---|
-| **PRODUZIONE** | Cloudflare, `https://app.ricettedifamiglia.online` (Worker `menuapp`, versione `94d01118`, rilascio `20261119-1630-60c2d67`) | `60c2d67` | 21 |
-| **TEST** | Debian, `https://loris-srv01.dala-tortoise.ts.net:9870/` (solo Tailscale) | `60c2d67` + commit di sola documentazione | 21 |
+| **PRODUZIONE** | Cloudflare, `https://app.ricettedifamiglia.online` (Worker `menuapp`, versione `e5814c15`, rilascio `20261121-1713-2eafbbb`) | `2eafbbb` | 21 |
+| **TEST** | Debian, `https://loris-srv01.dala-tortoise.ts.net:9870/` (solo Tailscale) | `2eafbbb` (+ eventuali commit di sola documentazione) | 21 |
 
-Dopo `60c2d67` su `main` ci sono solo commit di documentazione: il codice di TEST e di PRODUZIONE è
+Dopo `2eafbbb` su `main` ci sono solo commit di documentazione: il codice di TEST e di PRODUZIONE è
 lo stesso. Il rilascio attivo su TEST si legge con `readlink rilasci/attuale` (un documento non può
 riportare il commit che lo pubblica).
 
@@ -845,6 +845,15 @@ Stato: **sviluppato e testato automaticamente**; non su TEST (in attesa dell'OK 
 - `npm run check` 885, e2e 57, confronti visivi verdi; revisione su campione (eventi, ricetta, bacheca,
   vista cucina; chiaro e scuro).
 
+## Restyling e palette ottanio in produzione (20/11/2026)
+
+- Su OK di Loris: Cloudflare `20261120-1932-176caed` (versione `5fdd2d95`), nessuna migrazione (schema
+  21). Comprende i cicli A e B del restyling, la palette ottanio, la pagina Eventi in oro e i colori più
+  intensi, tutti provati da Loris su TEST. Verificato: salute ok, 401 senza sessione, file dell'app
+  uguali alla build, dominio principale ancora «Sito in costruzione».
+- Da sistemare al prossimo giro: il colore della barra del browser (`theme-color` e manifest) è ancora
+  `#0D7074`, mentre l'ottanio dei pulsanti è diventato `#0A6064` (differenza minima).
+
 ## Template Markdown della ricetta (20/11/2026, ramo `template-ricetta-md`)
 
 Stato: **sviluppato e testato automaticamente**; non su TEST (serve l'OK di Loris).
@@ -856,6 +865,12 @@ Stato: **sviluppato e testato automaticamente**; non su TEST (serve l'OK di Lori
 - Test: `src/features/ricettario/template.test.tsx` (file del collegamento → parser → contratto
   dell'API), e2e in `importa-ricette.spec.ts` (telefono e desktop: scarica, compila, ricarica, importa).
 
+## Template Markdown in produzione (20/11/2026)
+
+- Su OK di Loris dopo la prova su TEST: Cloudflare `20261120-2213-a2fa862` (versione `035d90dd`), nessuna
+  migrazione. Verificato: salute ok, 401 senza sessione, file dell'app uguali alla build, dominio
+  principale ancora «Sito in costruzione».
+
 ## Date come calendario da tavolo (21/11/2026, ramo `date-calendario`)
 
 Stato: **sviluppato e testato automaticamente**; non su TEST (serve l'OK di Loris).
@@ -864,3 +879,9 @@ Stato: **sviluppato e testato automaticamente**; non su TEST (serve l'OK di Lori
   fascia del mese in terracotta con testo chiaro (6,1:1; scuro nel tema scuro, 7,2:1), due anelli di
   rilegatura in oro scuro, numero in terracotta, giorno della settimana in oro scuro in fondo.
 - `npm run check` 889, e2e 59, confronti visivi verdi (cambiano solo le schermate della pagina Eventi).
+
+## Date a calendario in produzione (21/11/2026)
+
+- Su OK di Loris dopo la prova su TEST: Cloudflare `20261121-1713-2eafbbb` (versione `e5814c15`), nessuna
+  migrazione. Verificato: salute ok, 401 senza sessione, file dell'app uguali alla build, dominio
+  principale ancora «Sito in costruzione».
