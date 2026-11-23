@@ -946,3 +946,14 @@ evento, su richiesta di Loris.
 - Test: check verde (907 unitari); e2e 59 superati (`collaborazione` è fallito una volta in una prima
   esecuzione completa e poi è passato in tre esecuzioni separate e nella seconda suite completa:
   instabile, non legato ai colori); aspetto: 54 immagini aggiornate (le barre cambiano ovunque).
+
+## Ombra del nome dell'app (23/11/2026, ramo `ombra-marchio`)
+
+- Su TEST dal 23/11 (`20261123-1334-82a0f32`) le superfici in ottanio, approvate da Loris; l'alone
+  del marchio era troppo debole.
+- Nuovo `--ombra-marchio` / utilità `ombra-marchio`, solo sul nome dell'app nella barra laterale:
+  filo avorio a contatto (1–2 px, colore carta) + ombra bruna calda `0 2px 3px` (testo, 30%; al buio
+  nero 45%). Le etichette della navigazione restano con `ombra-testo`.
+- Test dei contrasti: terracotta sul quadretto più scuro della tovaglia ≥ 3:1 (testo grande), nei
+  due temi. Il nome sta nella barra laterale, visibile da 768 px in su: sul telefono non compare.
+- Test: check verde; e2e 59 superati; aspetto: 18 immagini desktop aggiornate.

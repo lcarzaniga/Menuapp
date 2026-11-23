@@ -98,6 +98,8 @@ describe.each([
     expect(contrasto(v['testo-tenue']!, quadretto)).toBeGreaterThanOrEqual(4.5)
     expect(contrasto(v['primario-forte']!, quadretto)).toBeGreaterThanOrEqual(4.5)
     expect(contrasto(v.testo!, quadretto)).toBeGreaterThanOrEqual(4.5)
+    // Il nome dell'app in terracotta, testo grande sulla barra laterale.
+    expect(contrasto(v['accento-caldo']!, quadretto)).toBeGreaterThanOrEqual(3)
   })
   // Superficie secondaria (--superficie): un token esistente o una mescolanza di due (color-mix).
   const superficie = (() => {
