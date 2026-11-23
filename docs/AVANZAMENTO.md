@@ -981,3 +981,14 @@ evento, su richiesta di Loris.
 - Terracotta, Plus Jakarta Sans, misure e `ombra-marchio` invariati; resto della barra e palette invariati.
 - Il nome sta nella barra laterale (da 768 px): le schermate da telefono sono rimaste identiche.
 - Test: aspetto con 18 schermate desktop aggiornate (chiaro e scuro), nessuna da telefono.
+
+## Nuvola avorio del nome dell'app (23/11/2026, ramo `marchio-nuvola`)
+
+- L'alone `alone-marchio` era troppo debole (Loris): sostituito da `nuvola-marchio`, un `::before`
+  dietro la scritta (sporge 0,5 rem in alto, 1 rem in basso, 1,5 rem ai lati) con cinque gradienti
+  ellittici nel colore della carta: centrale 94% → 86% → 45% → trasparente, due satelliti al 70%
+  sfalsati sulle due righe, due più piccoli al 45–50%; sfocatura 6 px. Ogni ellisse finisce dentro il
+  livello, quindi nessun bordo. Il simbolo sopra non è coperto.
+- Terracotta, Plus Jakarta Sans, misure e `ombra-marchio` invariati; resto della grafica invariato.
+- Sul telefono la barra laterale non compare (da 768 px): schermate da telefono identiche.
+- Test: aspetto con 18 schermate desktop aggiornate.
