@@ -946,18 +946,3 @@ evento, su richiesta di Loris.
 - Test: check verde (907 unitari); e2e 59 superati (`collaborazione` è fallito una volta in una prima
   esecuzione completa e poi è passato in tre esecuzioni separate e nella seconda suite completa:
   instabile, non legato ai colori); aspetto: 54 immagini aggiornate (le barre cambiano ovunque).
-
-## Superfici in ottanio e ombra del marchio (23/11/2026, ramo `colori-superfici`)
-
-- Token `--superficie` (chiaro: `primario-tenue`; scuro: carta 55% + sfondo) per le schede che portano
-  altrove e le superfici secondarie: eventi successivi, «Per te», righe del ricettario, `ElencoLink`
-  (impostazioni), link dell'account, notifiche lette, `Vuoto`. Avorio conservato per il prossimo
-  evento, i contenuti modificabili sul posto, moduli, campi, dialoghi, menù.
-- Badge `primario` con anello leggero (sulla superficie chiara avrebbe lo stesso fondo).
-- Utilità `ombra-testo` (alone nel colore della carta) sul marchio e sulle etichette delle barre di
-  navigazione, che stanno sulla tovaglia; nessun altro testo sta su fondi decorativi.
-- Test dei contrasti: testo, testo tenue, ottanio, ottanio scuro e oro scuro sulla superficie ≥ 4,5:1
-  e ordine carta > superficie > sfondo, nei due temi.
-- Test: check verde (907 unitari); e2e 59 superati (`collaborazione` è fallito una volta in una prima
-  esecuzione completa, poi è passato in tre esecuzioni separate e nella seconda suite completa:
-  instabile, non legato ai colori); aspetto: 54 immagini aggiornate (le barre cambiano ovunque).
