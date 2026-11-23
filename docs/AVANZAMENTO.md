@@ -1013,3 +1013,11 @@ evento, su richiesta di Loris.
   Ricettario, modifica ricetta); nuovo test della barra di salvataggio durante lo scorrimento (390, 360
   al 150%, desktop).
 - Al buio «Elimina piatto» resta senza fondo: sulla carta scura il rosso sarebbe 4,44:1.
+
+## In produzione dal 23/11/2026 (rilascio Cloudflare `20261123-1818-3f61e8b`, versione `1dcc0e93`)
+
+- Su OK esplicito di Loris dopo il collaudo su TEST: tipografia Plus Jakarta Sans, rifiniture delle
+  schede evento, superfici in ottanio, ottanio più blu, ombra e nuvola del nome dell'app, rifiniture
+  dall'audit visivo. Nessuna migrazione di schema.
+- Verifica in sola lettura: salute ok, API senza sessione 401, pagina e foglio di stile 200 (con i
+  nuovi token), dominio principale ancora su «Sito in costruzione».
