@@ -957,3 +957,17 @@ evento, su richiesta di Loris.
 - Test dei contrasti: terracotta sul quadretto più scuro della tovaglia ≥ 3:1 (testo grande), nei
   due temi. Il nome sta nella barra laterale, visibile da 768 px in su: sul telefono non compare.
 - Test: check verde; e2e 59 superati; aspetto: 18 immagini desktop aggiornate.
+
+## Ottanio più blu nei fondi (23/11/2026, ramo `ottanio-blu`)
+
+- Segnalazione di Loris: la palette virava al verde acqua e al salvia. Causa: i fondi chiari avevano
+  una tinta di 167–169° (`sfondo` #c3dfd9, `tenue` #b5d6d0, `primario-tenue`/superficie #e2f0ed),
+  mentre i pulsanti stanno a 183–184°; al buio i fondi erano a 181–182°.
+- Nuovi valori, tinta 188–193°, luminosità quasi invariata. Chiaro: `sfondo` #c0d9df, `tenue`
+  #b4d0d7, `primario-tenue` #deecf0. Scuro: `sfondo` #09282d, `carta` #123b42, `tenue` #1a4952,
+  `bordo` #33575e, `primario-tenue` #0f545c, fughe rgb(112 178 188). L'alone in basso a sinistra dello
+  sfondo era in salvia (rgb(95 117 86), 8%): ora è ottanio (rgb(16 84 96), 8%); l'alone oro resta.
+- Invariati: pulsanti (`primario` #0a6064, `primario-forte` #0a464a; al buio #86cecc, #b0e2df),
+  carta avorio #fffdf9 del prossimo evento, oro, terracotta, salvia delle illustrazioni, stampa.
+- Test dei contrasti: nuovo controllo della tinta dei fondi (185–200°) nei due temi; tutte le coppie
+  restano ≥ 4,5:1 (ottanio dei link sul tenue 4,51:1).

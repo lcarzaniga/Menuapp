@@ -15,16 +15,18 @@
    * schede avorio; azioni in ottanio (primario), testo e stati attivi in ottanio profondo
    * (primario-forte), selezioni e badge in chiarissimo (primario-tenue). Bordi sabbia; oro antico e
    * terracotta (accento-caldo) solo decoro. Testi in bruno caldo.
+   * Fondi e superfici ottanio a 190–193° di tinta (correzione del 23/11/2026): sotto i 180° virano al
+   * verde acqua e al salvia; i pulsanti (primario, primario-forte) restano a 183–184°.
    */
-  --sfondo: #c3dfd9; /* ottanio chiaro: il fondo dell'app */
+  --sfondo: #c0d9df; /* ottanio chiaro polveroso (tinta 192°): il fondo dell'app */
   --testo: #2b211b;
   --carta: #fffdf9; /* avorio: schede e superfici di lettura */
-  --tenue: #b5d6d0; /* ottanio pallido: superfici secondarie (ottanio dei link ≥ 4,5:1) */
+  --tenue: #b4d0d7; /* ottanio pallido: superfici secondarie (ottanio dei link ≥ 4,5:1) */
   --testo-tenue: #4d4843; /* ≥ 5,8:1 anche sull'ottanio pallido */
   --bordo: #e6d6c2; /* sabbia */
   --primario: #0a6064; /* ottanio principale: 7,3:1 col bianco, ≥ 4,7:1 sui fondi ottanio */
   --primario-testo: #ffffff;
-  --primario-tenue: #e2f0ed; /* ottanio chiarissimo */
+  --primario-tenue: #deecf0; /* ottanio chiarissimo */
   /*
    * Superficie secondaria: schede che portano altrove (eventi successivi, elenchi di collegamenti,
    * notifiche già lette, pagine vuote). L'avorio (carta) resta ai contenuti in evidenza, ai moduli e ai campi.
@@ -58,15 +60,15 @@
 
 .dark {
   /* Fondi petrolio molto scuri, testo chiaro caldo, accenti nell'ottanio morbido. Le superfici restano più chiare dello sfondo. */
-  --sfondo: #09292a;
+  --sfondo: #09282d;
   --testo: #f4ece1;
-  --carta: #123d3e;
-  --tenue: #1a4c4d;
+  --carta: #123b42;
+  --tenue: #1a4952;
   --testo-tenue: #cfc6b8; /* 7,0:1 sulla carta: secondario ma distinto dal testo */
-  --bordo: #335b5c;
+  --bordo: #33575e;
   --primario: #86cecc; /* ottanio morbido: 6,6:1 sulla carta */
   --primario-testo: #0a2527;
-  --primario-tenue: #0f5759;
+  --primario-tenue: #0f545c;
   /* Fra la carta e lo sfondo: la carta resta la scheda più luminosa anche al buio. */
   --superficie: color-mix(in srgb, var(--carta) 55%, var(--sfondo));
   --primario-forte: #b0e2df;
@@ -89,7 +91,7 @@
   --tovaglia: 10%;
   --ombra: 0 1px 2px rgb(0 0 0 / 0.25), 0 3px 12px rgb(0 0 0 / 0.13);
   --ombra-marchio: 0 0 1px var(--carta), 0 0 1px var(--carta), 0 0 2px var(--carta), 0 2px 3px rgb(0 0 0 / 0.45);
-  --fuga: rgb(114 181 181 / 0.035);
+  --fuga: rgb(112 178 188 / 0.035);
   color-scheme: dark;
 }
 
@@ -175,7 +177,7 @@
       linear-gradient(var(--fuga) 1px, transparent 1px),
       linear-gradient(90deg, var(--fuga) 1px, transparent 1px),
       radial-gradient(120% 60% at 100% 0%, rgb(176 138 71 / 0.1), transparent 60%),
-      radial-gradient(90% 50% at 0% 100%, rgb(95 117 86 / 0.08), transparent 60%);
+      radial-gradient(90% 50% at 0% 100%, rgb(16 84 96 / 0.08), transparent 60%); /* ottanio, non salvia */
     background-size: 3rem 3rem, 3rem 3rem, auto, auto;
   }
   h1,

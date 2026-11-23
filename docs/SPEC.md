@@ -2531,6 +2531,13 @@ Fraunces, Garamond, Moderna = Josefin Sans e Inter, Calligrafica), che restano i
   contatto con le lettere e un'ombra bruna calda spostata di 2 px in basso (nera al buio). Font,
   terracotta, misure e tovaglia invariati.
 
+**Tinta dell'ottanio** (23/11/2026, decisione di Loris): fondi e superfici in un ottanio vero,
+leggermente blu, a 188–193° di tinta (sotto i 180° virano al verde acqua e al salvia). Chiaro:
+`sfondo` #c0d9df (polveroso), `tenue` #b4d0d7, `primario-tenue` e superficie secondaria #deecf0;
+scuro: `sfondo` #09282d, `carta` #123b42, `tenue` #1a4952, `bordo` #33575e, `primario-tenue` #0f545c.
+L'alone in basso a sinistra dello sfondo è ottanio (non più salvia). Pulsanti, carta avorio, oro,
+terracotta e decorazioni invariati. Un test verifica la tinta dei fondi.
+
 ### 31.7 Differenze rispetto alla proposta A (motivate)
 
 - La quinta sezione resta **Impostazioni** (non «Altro»): decisione di Loris.
@@ -3065,6 +3072,7 @@ migrazione: stanno nella riga dello stile di stampa dell'evento (`stili_stampa.o
 | 23/11/2026 | 8.2 — **Tipografia** (§31.6): Plus Jakarta Sans per tutta l'interfaccia al posto di Fraunces e Inter, pesi 700/600/500/400 per la gerarchia; caratteri della stampa invariati |
 | 23/11/2026 | 8.3 — **Rifiniture delle schede evento** (§31.6): pulsanti di navigazione equivalenti, riga dei dati con icone, conto alla rovescia in oro scuro, badge di condivisione che va a capo, oro uniforme nei filetti |
 | 23/11/2026 | 8.4 — **Superfici in ottanio** (§31.6): token `superficie` per le schede-collegamento e le superfici secondarie, avorio per i contenuti in evidenza e i moduli; alone del testo sulla tovaglia |
+| 23/11/2026 | 8.5 — **Ottanio più blu** (§31.6): fondi e superfici spostati da 167–182° a 188–193° di tinta, pulsanti e accenti invariati |
 | 19/11/2026 | 7.9 — **Memoria di famiglia** (§40): storia della ricetta pubblicabile, ricordi ed esperienze dei familiari con foto, privati anche nelle ricette pubbliche, non copiati; modello pronto per un archivio di famiglia |
 | 19/11/2026 | 7.8 — **Chi porta cosa flessibile** (§39): piatti a scelta «da definire» con quanti contributi, precisabili senza perdere l'incarico; menù e Chi porta stesso record |
 | 19/11/2026 | 7.7 — **Regia della cucina** (§38): vista del piano per il giorno dell'evento, colonne per fase, filtri, attrezzature dal testo delle ricette, testo grande, schermo acceso, «Prepara il piano dai piatti» |

@@ -90,6 +90,13 @@ describe.each([
       expect(Math.min(d, 360 - d), `${a} / ${b}`).toBeGreaterThanOrEqual(45)
     }
   })
+  it('fondi e superfici in ottanio vero, non verde acqua: tinta fra 185° e 200°', () => {
+    const fondi = selettore === '.dark' ? ['sfondo', 'carta', 'tenue', 'bordo', 'primario-tenue'] : ['sfondo', 'tenue', 'primario-tenue']
+    for (const f of fondi) {
+      expect(tinta(v[f]!), f).toBeGreaterThanOrEqual(185)
+      expect(tinta(v[f]!), f).toBeLessThanOrEqual(200)
+    }
+  })
   it('etichette della navigazione leggibili sul quadretto più scuro della tovaglia (utilità «tovaglia»)', () => {
     // Due bande incrociate del colore principale sulla carta, all'intensità di --tovaglia.
     const blocco = css.slice(css.indexOf(`${selettore} {`))
