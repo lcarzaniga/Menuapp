@@ -2525,8 +2525,11 @@ Fraunces, Garamond, Moderna = Josefin Sans e Inter, Calligrafica), che restano i
   modificare sul posto (menù, bacheca, chi porta, memoria, cronologia, proposte), moduli, campi,
   finestre, menù a comparsa e notifiche da leggere.
 - Il badge `primario` ha un anello ottanio leggero, per restare riconoscibile sulla superficie.
-- Ombra del testo (`ombra-testo`): alone morbido nel colore della carta solo per i testi sulla
-  tovaglia a quadretti (marchio e etichette delle barre di navigazione); nessuna ombra sui fondi uniformi.
+- Ombra del testo (`ombra-testo`): alone morbido nel colore della carta per le etichette delle barre
+  di navigazione sulla tovaglia a quadretti; nessuna ombra sui fondi uniformi.
+- Nome dell'app nella barra laterale (`ombra-marchio`, token `--ombra-marchio`): filo avorio (carta) a
+  contatto con le lettere e un'ombra bruna calda spostata di 2 px in basso (nera al buio). Font,
+  terracotta, misure e tovaglia invariati.
 
 ### 31.7 Differenze rispetto alla proposta A (motivate)
 
