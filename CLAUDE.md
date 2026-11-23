@@ -46,11 +46,12 @@ verità) e `docs/AVANZAMENTO.md` (stato del lavoro) prima di cambiare qualcosa.
 
 ## Regole operative
 
-- Niente push, merge su `main`, rilasci, modifiche a servizi systemd o a Tailscale,
+- Niente push, merge su `main`, rilasci (salvo TEST come sotto), modifiche a servizi systemd o a Tailscale,
   operazioni su dati di produzione senza autorizzazione esplicita di Loris.
-- Rilasci: il lavoro resta su un ramo; a Loris si indica il comando `! scripts/rilascia.sh <ramo>`
-  (TEST: merge in main, controlli, push, migrazioni, rilascio). Lanciarlo è la sua autorizzazione:
-  non chiedere un «autorizzo» separato e non fare merge o push da soli. PRODUZIONE
-  (`! scripts/cloudflare/rilascia.sh`) solo dopo la sua conferma della prova su TEST.
+- Rilasci (docs/RILASCI.md, regola dal 23/11/2026): uno sviluppo approvato da Loris, completato e
+  con i test automatici verdi, va su TEST con `scripts/rilascia.sh <ramo>` **senza chiedere** (merge in
+  main, controlli, push, migrazioni, rilascio); mai merge o push fuori da questo script.
+  PRODUZIONE (`scripts/cloudflare/rilascia.sh`) **sempre e solo** dopo l'OK esplicito di Loris dato
+  dopo il collaudo su TEST; con un OK ambiguo si chiede conferma.
 - Non toccare altri progetti o servizi del server (dailyMeals, sharedKidsCalendar, Apache…).
 - Aggiorna `docs/AVANZAMENTO.md` a ogni attività significativa.

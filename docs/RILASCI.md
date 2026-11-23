@@ -11,16 +11,23 @@ dati da un ambiente all'altro. Il dominio principale `ricettedifamiglia.online` 
 
 ## Procedura (a ogni modifica)
 
-1. **Sviluppo** (Claude): lavoro su un ramo, `npm run check` e `npm run test:e2e` verdi, commit.
-   Nessun merge, push o rilascio.
-2. **TEST** (Loris): `! scripts/rilascia.sh <ramo>`
+Regola ordinaria (decisione di Loris del 23/11/2026): **uno sviluppo approvato va su TEST senza
+un'ulteriore autorizzazione**, appena le modifiche sono complete e i test automatici sono verdi.
+**PRODUZIONE richiede sempre l'OK esplicito di Loris**, dato dopo il collaudo su TEST.
+
+1. **Sviluppo** (Claude, dopo l'approvazione di Loris): lavoro su un ramo partendo da `main`,
+   documentazione (SPEC, AVANZAMENTO) nello stesso ramo, `npm run check`, `npm run test:e2e` e, per
+   le interfacce, `npm run test:aspetto` verdi; commit.
+2. **TEST** (Claude, senza chiedere): `scripts/rilascia.sh <ramo>`
    unisce il ramo in `main`, ripete i controlli, pubblica `main` su GitHub, applica le migrazioni
-   al database di TEST (con backup) e rilascia su Debian. Lanciarlo è l'autorizzazione.
-   Poi Claude verifica in sola lettura (rilascio attivo, salute, schema) e annota AVANZAMENTO.
-3. **Prova funzionale** (Loris) su TEST, dal telefono o dal PC collegati a Tailscale.
-   - Va bene → si passa al punto 4, con una conferma esplicita a Claude.
-   - Non va bene → correzione su un nuovo ramo e di nuovo dal punto 2. Produzione non cambia.
-4. **PRODUZIONE** (Loris, solo dopo la conferma): `! scripts/cloudflare/rilascia.sh`
+   al database di TEST (con backup) e rilascia su Debian. Con test rossi non si rilascia.
+   Poi Claude verifica in sola lettura (rilascio attivo, salute, schema), annota AVANZAMENTO e dice
+   a Loris cosa provare. Anche Loris può lanciarlo con `! scripts/rilascia.sh <ramo>`.
+3. **Collaudo** (Loris) su TEST, dal telefono o dal PC collegati a Tailscale.
+   - Va bene → OK esplicito a Claude per la produzione (es. «porta in produzione»). Una risposta
+     ambigua non vale: Claude chiede conferma.
+   - Non va bene → correzione su un nuovo ramo e di nuovo dal punto 1. Produzione non cambia.
+4. **PRODUZIONE** (Claude o Loris, solo dopo l'OK): `scripts/cloudflare/rilascia.sh`
    rifiuta il rilascio se il commit di `main` non è quello attivo su TEST; poi controlli, prove sul
    Worker in locale, build, `wrangler deploy`, verifica di `app.ricettedifamiglia.online`. Le
    migrazioni di schema le applica il Durable Object al suo avvio, dopo un backup `pre-migrazione`
@@ -29,6 +36,10 @@ dati da un ambiente all'altro. Il dominio principale `ricettedifamiglia.online` 
    ancora sul sito; con una migrazione, il backup `pre-migrazione-…-v<schema precedente>.json` in R2;
    annotazione in AVANZAMENTO. Le prove con un accesso (ricette, foto, famiglie, notifiche) le fa
    Loris nell'app.
+
+La documentazione segue il codice: ogni ramo porta le sue note e arriva su `main` con il rilascio su
+TEST. Le note scritte dopo un rilascio (es. l'esito della produzione) vanno su un ramo breve
+rilasciato a sua volta su TEST, senza restare isolate su rami temporanei.
 
 Nessun rilascio su Cloudflare parte da solo: il Worker `menuapp` non ha build automatiche collegate a
 GitHub (verificato il 19/11/2026), e il push di `main` non pubblica nulla.

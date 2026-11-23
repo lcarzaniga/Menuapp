@@ -923,3 +923,11 @@ evento, su richiesta di Loris.
   (eventi, menù e pagine con la lineetta del titolo), larghezza e barra verdi.
 - Da sapere: a 360 px con testo al 150% le parole lunghe del titolo del prossimo evento si spezzano
   (`break-words`, comportamento già presente, non modificato).
+
+## Rifiniture in TEST e nuova procedura di rilascio (23/11/2026)
+
+- Rifiniture delle schede evento su TEST: rilascio `20261123-1223-1c3a0af` (con Plus Jakarta Sans).
+  In attesa del collaudo di Loris; poi produzione di entrambe insieme.
+- Procedura (docs/RILASCI.md, CLAUDE.md): da ora gli sviluppi approvati, completati e con test verdi
+  vanno su TEST direttamente, senza chiedere; la produzione resta solo con l'OK esplicito di Loris
+  dopo il collaudo su TEST. Dati di TEST e PRODUZIONE sempre separati.
