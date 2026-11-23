@@ -2493,6 +2493,14 @@ Schede sempre visibili (larghe uguali) e segmenti con `aria-current`; pulsanti d
 verde di «confermato» scurito (4,98:1 sul suo sfondo, AA); nessuno scorrimento orizzontale nelle
 pagine collaudate; messaggi in basso.
 
+**Tipografia** (23/11/2026, decisione di Loris): tutta l'interfaccia in **Plus Jakarta Sans**
+(variabile, inclusa nell'app e nella cache della PWA, quindi disponibile anche offline). Un solo
+punto di configurazione: `--font-sans` in `src/styles/index.css`; l'utilità `titolo` marca i titoli
+con lo stesso carattere. Gerarchia per pesi: titoli di pagina e delle schede 700 (`font-bold`),
+sottotitoli e intestazioni secondarie 600, pulsanti e navigazione 500–600, testo 400. Il logo resta
+invariato. I menù e i segnaposto stampabili mantengono le proprie scelte di caratteri (Classica =
+Fraunces, Garamond, Moderna = Josefin Sans e Inter, Calligrafica), che restano incluse solo per la stampa.
+
 ### 31.7 Differenze rispetto alla proposta A (motivate)
 
 - La quinta sezione resta **Impostazioni** (non «Altro»): decisione di Loris.
@@ -3024,6 +3032,7 @@ migrazione: stanno nella riga dello stile di stampa dell'evento (`stili_stampa.o
 | 17/11/2026 | 6.4 — **Riorganizzazione** (§31, proposta A dell'audit): evento in cinque schede (Riepilogo, Menù, Persone, Prepara, Bacheca) con gli stessi indirizzi, azioni in un menù, Famiglia dell'evento distinta da quella attiva, Eventi con segmenti e «Per te», Famiglia con Persone e Gestione, Impostazioni personali e di amministrazione, ricetta con il contenuto prima; `GET /per-te`; nessuna migrazione |
 | 19/11/2026 | 8.0 — **Collaborazione sulle ricette** (§41): proposte di modifica con approvazione per singola modifica, conflitti e dipendenze, foto proposte, cronologia con ripristino, trasferimento della proprietà e riassegnazione amministrativa con accettazione |
 | 19/11/2026 | 8.1 — **Segnaposto** (§42): cavalletto e piatto su A4, nomi dai partecipanti o a mano con copie e ordine, nome dell'evento facoltativo, stile del menù o proprio; nella riga dello stile di stampa, senza migrazione |
+| 23/11/2026 | 8.2 — **Tipografia** (§31.6): Plus Jakarta Sans per tutta l'interfaccia al posto di Fraunces e Inter, pesi 700/600/500/400 per la gerarchia; caratteri della stampa invariati |
 | 19/11/2026 | 7.9 — **Memoria di famiglia** (§40): storia della ricetta pubblicabile, ricordi ed esperienze dei familiari con foto, privati anche nelle ricette pubbliche, non copiati; modello pronto per un archivio di famiglia |
 | 19/11/2026 | 7.8 — **Chi porta cosa flessibile** (§39): piatti a scelta «da definire» con quanti contributi, precisabili senza perdere l'incarico; menù e Chi porta stesso record |
 | 19/11/2026 | 7.7 — **Regia della cucina** (§38): vista del piano per il giorno dell'evento, colonne per fase, filtri, attrezzature dal testo delle ricette, testo grande, schermo acceso, «Prepara il piano dai piatti» |

@@ -382,7 +382,7 @@ export function PaginaUnisciti() {
       ) : (
         <Card>
           <CardContent className="flex flex-col items-start gap-3 pt-4">
-            <p className="titolo text-2xl font-semibold">{a.famiglia.nome}</p>
+            <p className="titolo text-2xl font-bold">{a.famiglia.nome}</p>
             {a.invitatoDa ? <p className="text-sm text-testo-tenue">Ti ha invitato {a.invitatoDa}.</p> : null}
             {a.stato === 'valido' ? (
               <>
@@ -467,11 +467,11 @@ function Classifica({ gruppo }: { gruppo: string }) {
               </span>
               <div className="min-w-0 flex-1">
                 {v.ricettaId ? (
-                  <Link to={`/ricettario/${v.ricettaId}`} className="titolo block truncate text-lg font-semibold hover:text-primario">
+                  <Link to={`/ricettario/${v.ricettaId}`} className="titolo block truncate text-lg font-bold hover:text-primario">
                     {v.nome}
                   </Link>
                 ) : (
-                  <p className="titolo truncate text-lg font-semibold">{v.nome}</p>
+                  <p className="titolo truncate text-lg font-bold">{v.nome}</p>
                 )}
                 <p className="flex flex-wrap items-center gap-x-2 text-xs text-testo-tenue">
                   <Stelle valore={v.media} dimensione="size-3.5" />

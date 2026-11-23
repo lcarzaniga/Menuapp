@@ -253,7 +253,12 @@ async function attendi(page: Page, s: Schermata) {
       await img.decode().catch(() => undefined)
     }
   })
-  expect(await page.evaluate(() => document.fonts.check("16px 'Fraunces Variable'") && document.fonts.check("16px 'Inter Variable'"))).toBe(true)
+  // Il carattere dell'interfaccia deve essere davvero caricato (non il ripiego di sistema) nei pesi usati.
+  const pesi = await page.evaluate(async () => {
+    const caricati = await Promise.all(['400', '500', '600', '700'].map((p) => document.fonts.load(`${p} 16px 'Plus Jakarta Sans Variable'`)))
+    return caricati.map((f) => f.length)
+  })
+  expect(pesi.every((n) => n > 0)).toBe(true)
 }
 
 /** Identificativi fissi: ogni configurazione è un test a sé, e una differenza non ferma le altre. */

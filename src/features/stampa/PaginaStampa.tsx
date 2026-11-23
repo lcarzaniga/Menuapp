@@ -87,7 +87,7 @@ function Designer({ menu, stile }: { menu: Menu; stile: NonNullable<ReturnType<t
           <ArrowLeft className="size-5" />
         </Link>
         <div className="min-w-0 flex-1">
-          <h1 className="titolo truncate text-xl font-semibold leading-tight sm:text-2xl">Stampa menù</h1>
+          <h1 className="titolo truncate text-xl font-bold leading-tight sm:text-2xl">Stampa menù</h1>
           <p className="truncate text-[0.8125rem] text-testo-tenue">
             {evento.nome} · <StatoStile stato={s.stato} modificabile={modificabile} archiviato={archiviato} onRiprova={() => void s.riprova()} />
           </p>

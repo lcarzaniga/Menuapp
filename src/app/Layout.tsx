@@ -78,7 +78,7 @@ function Guscio({ nome }: { nome: string }) {
         <div className="mb-6 flex flex-col items-center gap-1 px-3 pt-3 text-center">
           <Tavola className="h-16 w-auto" />
           {/* Il marchio resta nei colori del logo (terracotta), non in quello delle azioni. */}
-          <span className="titolo text-center text-2xl font-semibold leading-tight text-accento-caldo">Ricette di famiglia &amp; Co.</span>
+          <span className="titolo text-center text-2xl font-bold leading-tight text-accento-caldo">Ricette di famiglia &amp; Co.</span>
           <span className="filetto mt-1 w-24" />
         </div>
         <SelettoreFamiglia className="mb-3" />

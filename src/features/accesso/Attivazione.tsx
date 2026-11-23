@@ -35,7 +35,7 @@ function Cornice({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-dvh items-center justify-center px-4 py-10">
       <main className="w-full max-w-md rounded-3xl border border-bordo/70 bg-carta p-6 text-center shadow-carta sm:p-8">
         <Tavola className="mx-auto mb-2 h-16 w-auto" />
-        <p className="titolo text-2xl font-semibold text-accento-caldo">Ricette di famiglia &amp; Co.</p>
+        <p className="titolo text-2xl font-bold text-accento-caldo">Ricette di famiglia &amp; Co.</p>
         <span className="filetto mx-auto mb-5 mt-1 block w-24" />
         {children}
       </main>
@@ -71,7 +71,7 @@ function StatoRichiesta({ r }: { r: StatoAttivazione }) {
     return (
       <div className="flex flex-col items-center gap-2">
         <ShieldX className="size-10 text-pericolo" />
-        <h1 className="titolo text-xl font-semibold">{r.stato === 'rifiutata' ? 'Richiesta non approvata' : 'Richiesta scaduta'}</h1>
+        <h1 className="titolo text-xl font-bold">{r.stato === 'rifiutata' ? 'Richiesta non approvata' : 'Richiesta scaduta'}</h1>
         <p className="text-sm text-testo-tenue">Chiedi un nuovo invito a chi gestisce Ricette &amp; Co.</p>
       </div>
     )
@@ -80,7 +80,7 @@ function StatoRichiesta({ r }: { r: StatoAttivazione }) {
     return (
       <div className="flex flex-col items-center gap-2">
         <CheckCircle2 className="size-10 text-successo" />
-        <h1 className="titolo text-xl font-semibold">Dispositivo autorizzato</h1>
+        <h1 className="titolo text-xl font-bold">Dispositivo autorizzato</h1>
         <p className="text-sm text-testo-tenue">{errore ?? 'Apertura dell\'app…'}</p>
       </div>
     )
@@ -88,7 +88,7 @@ function StatoRichiesta({ r }: { r: StatoAttivazione }) {
   return (
     <div className="flex flex-col items-center gap-3" aria-live="polite">
       <Clock className="size-10 text-oro" />
-      <h1 className="titolo text-xl font-semibold">In attesa di approvazione</h1>
+      <h1 className="titolo text-xl font-bold">In attesa di approvazione</h1>
       <p className="text-sm text-testo-tenue">
         Richiesta di accesso come <strong className="text-testo">{r.utenteNome}</strong>. Chi ti ha invitato vedrà questo codice: controllate che sia lo stesso.
       </p>
@@ -115,7 +115,7 @@ export function PaginaAttivazione() {
     return (
       <Cornice>
         <CheckCircle2 className="mx-auto size-10 text-successo" />
-        <h1 className="titolo mt-2 text-xl font-semibold">Questo dispositivo è già autorizzato</h1>
+        <h1 className="titolo mt-2 text-xl font-bold">Questo dispositivo è già autorizzato</h1>
         <p className="mt-1 text-sm text-testo-tenue">Sei collegato come {sessione.data.utente.nome}. L&apos;invito non è stato usato.</p>
         <Button asChild className="mt-5">
           <a href="#/">Apri Ricette &amp; Co.</a>
@@ -143,7 +143,7 @@ export function PaginaAttivazione() {
   return (
     <Cornice>
       <KeyRound className="mx-auto size-10 text-primario" />
-      <h1 className="titolo mt-2 text-xl font-semibold">Autorizza questo dispositivo</h1>
+      <h1 className="titolo mt-2 text-xl font-bold">Autorizza questo dispositivo</h1>
       <p className="mt-1 text-sm text-testo-tenue">Hai ricevuto un invito. Dai un nome a questo dispositivo e chiedi l&apos;accesso: chi ti ha invitato lo approverà.</p>
       <div className="mt-5 text-left">
         <Campo etichetta="Nome del dispositivo" htmlFor="dispositivo" aiuto="Ti aiuterà a riconoscerlo nell'elenco dei dispositivi." errore={errore ?? undefined}>
@@ -169,7 +169,7 @@ export function PaginaAccesso({ revocata = false }: { revocata?: boolean }) {
       ) : (
         <div className="flex flex-col items-center gap-2">
           <KeyRound className="size-10 text-primario" />
-          <h1 className="titolo text-xl font-semibold">{revocata ? 'Accesso non più valido' : 'Dispositivo non autorizzato'}</h1>
+          <h1 className="titolo text-xl font-bold">{revocata ? 'Accesso non più valido' : 'Dispositivo non autorizzato'}</h1>
           <p className="text-sm text-testo-tenue">
             {revocata
               ? 'L\'autorizzazione di questo dispositivo è stata revocata o è scaduta.'

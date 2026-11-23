@@ -44,7 +44,7 @@ export function SchedaEvento({ e }: { e: RiepilogoEvento }) {
       <BloccoData data={e.data} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <h2 className="titolo min-w-0 text-lg font-semibold leading-snug break-words">{e.nome}</h2>
+          <h2 className="titolo min-w-0 text-lg font-bold leading-snug break-words">{e.nome}</h2>
           {e.stato === 'concluso' ? <Badge>Concluso</Badge> : null}
           {e.stato === 'archiviato' ? <Badge variante="info">Archiviato</Badge> : null}
           {daConcludere(e, oggiISO()) ? <Badge variante="avviso">Da concludere</Badge> : null}
@@ -89,7 +89,7 @@ function Prossimo({ e }: { e: RiepilogoEvento }) {
       <div className="flex gap-3 sm:gap-4">
         <BloccoData data={e.data} evidenza className="self-start" />
         <div className="min-w-0 flex-1">
-          <Link to={`/eventi/${e.id}`} className="titolo block text-[1.625rem] font-semibold leading-tight break-words hover:text-primario sm:text-[2rem]">
+          <Link to={`/eventi/${e.id}`} className="titolo block text-[1.625rem] font-bold leading-tight break-words hover:text-primario sm:text-[2rem]">
             {e.nome}
           </Link>
           <p className="mt-1 text-sm text-testo-tenue">

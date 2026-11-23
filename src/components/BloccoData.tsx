@@ -27,7 +27,7 @@ export function BloccoData({ data, evidenza = false, className }: { data: DataIS
       <span className="bg-accento-caldo pt-1.5 pb-1 text-[min(0.6875rem,13px)] font-semibold tracking-wider text-carta dark:text-sfondo" aria-hidden>
         {p.mese}
       </span>
-      <span className="titolo pt-1.5 text-[min(1.75rem,34px)] font-semibold leading-none tabular-nums text-accento-caldo" aria-hidden>
+      <span className="titolo pt-1.5 text-[min(1.75rem,34px)] font-bold leading-none tabular-nums text-accento-caldo" aria-hidden>
         {p.numero}
       </span>
       <span className="pt-0.5 pb-1.5 text-[min(0.6875rem,13px)] font-medium tracking-wider text-oro-forte" aria-hidden>

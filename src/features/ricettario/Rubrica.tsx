@@ -116,7 +116,7 @@ export function Rubrica({ lettere }: { lettere: string[] }) {
       </nav>
       {trascinata ? (
         <div aria-hidden className="pointer-events-none fixed left-1/2 top-1/2 z-40 flex size-24 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-3xl bg-primario/90 text-primario-testo shadow-xl">
-          <span className="titolo text-5xl font-semibold">{trascinata}</span>
+          <span className="titolo text-5xl font-bold">{trascinata}</span>
         </div>
       ) : null}
     </>

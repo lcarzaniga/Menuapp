@@ -885,3 +885,18 @@ Stato: **sviluppato e testato automaticamente**; non su TEST (serve l'OK di Lori
 - Su OK di Loris dopo la prova su TEST: Cloudflare `20261121-1713-2eafbbb` (versione `e5814c15`), nessuna
   migrazione. Verificato: salute ok, 401 senza sessione, file dell'app uguali alla build, dominio
   principale ancora «Sito in costruzione».
+
+## Tipografia Plus Jakarta Sans (23/11/2026, ramo `tipografia-jakarta`)
+
+- Tutta l'interfaccia in Plus Jakarta Sans (`@fontsource-variable/plus-jakarta-sans`), al posto di
+  Fraunces (titoli) e Inter (testo). Configurazione in un solo punto: `--font-sans` in
+  `src/styles/index.css`; l'utilità `titolo` usa lo stesso carattere (niente più `--font-serif` nell'interfaccia).
+- Pesi: titoli di pagina, delle schede, dei dialoghi e nome dell'app 700 (`font-bold`); sottotitoli
+  e intestazioni di sezione 600; pulsanti e navigazione 500–600 (invariati); testo 400.
+- Stampa invariata: Fraunces e Inter restano inclusi solo per i caratteri «Classica» e «Moderna» del
+  menù e dei segnaposto (`stampa/caratteri.ts`).
+- PWA: i file del carattere (latin, latin-ext, vietnamese; ~57 KB) sono nel precache, quindi
+  disponibili offline. Il confronto visivo ora verifica che i pesi 400–700 siano davvero caricati.
+- Test: `npm run check` verde; e2e 59 superati; aspetto: 54 immagini di riferimento rigenerate,
+  larghezza pagina e barra in basso verdi. Problema **preesistente** (identico prima del cambio):
+  a 360 px con testo al 150% le schede dell'evento si accavallano e la pagina supera la larghezza.

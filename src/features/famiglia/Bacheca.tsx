@@ -282,7 +282,7 @@ function SchedaRicetta({ p }: { p: { id: string; nome: string; fotoPrincipale: s
         </span>
       )}
       <span className="min-w-0">
-        <span className="titolo block truncate font-semibold">{p.nome}</span>
+        <span className="titolo block truncate font-bold">{p.nome}</span>
         <span className="text-xs text-testo-tenue">ricetta di {p.proprietario}</span>
       </span>
     </Link>
@@ -568,7 +568,7 @@ function Proposta({ m, portate }: { m: Messaggio; portate: { id: string; nome: s
     <div className="mt-2 rounded-xl border border-primario/30 bg-primario-tenue/30 p-3">
       <p className="flex flex-wrap items-center gap-2">
         <UtensilsCrossed className="size-4 text-primario" />
-        <span className="titolo text-lg font-semibold">{p.nome}</span>
+        <span className="titolo text-lg font-bold">{p.nome}</span>
         {p.portataNome ? <span className="text-xs text-testo-tenue">per {p.portataNome}</span> : null}
         <Badge variante={p.stato === 'accettata' ? 'successo' : p.stato === 'rifiutata' ? 'pericolo' : 'neutro'} className="ml-auto">
           {NOMI_STATO[p.stato]}

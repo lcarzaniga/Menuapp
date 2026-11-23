@@ -158,7 +158,7 @@ export function LayoutEvento() {
           </div>
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
-              <h1 className="titolo mt-1 truncate text-[1.75rem] font-semibold leading-tight">{e.nome}</h1>
+              <h1 className="titolo mt-1 truncate text-[1.75rem] font-bold leading-tight">{e.nome}</h1>
               <p className="text-sm text-testo-tenue first-letter:uppercase">
                 {dataLunga(e.data)}
                 {e.oraServizio ? ` · ore ${e.oraServizio}` : ''}

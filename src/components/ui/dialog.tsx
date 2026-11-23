@@ -35,7 +35,7 @@ export function Finestra({
         <D.Content className={cn(pannello, className)} aria-describedby={descrizione ? undefined : undefined}>
           <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-3 pt-5">
             <div>
-              <D.Title className="text-lg font-semibold leading-tight">{titolo}</D.Title>
+              <D.Title className="text-lg font-bold leading-tight">{titolo}</D.Title>
               {descrizione ? <D.Description className="mt-1 text-sm text-testo-tenue">{descrizione}</D.Description> : <D.Description className="sr-only">{String(titolo)}</D.Description>}
             </div>
             <D.Close asChild>
@@ -80,7 +80,7 @@ export function Conferma({
         <AD.Overlay className={sovrapposizione} />
         <AD.Content className={pannello}>
           <div className="min-h-0 flex-1 overflow-y-auto p-5">
-            <AD.Title className="text-lg font-semibold">{titolo}</AD.Title>
+            <AD.Title className="text-lg font-bold">{titolo}</AD.Title>
             <AD.Description className={cn('mt-2 text-sm text-testo-tenue', !descrizione && 'sr-only')}>{descrizione ?? String(titolo)}</AD.Description>
             {children}
           </div>

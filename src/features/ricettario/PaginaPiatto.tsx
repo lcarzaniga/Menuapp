@@ -140,7 +140,7 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
         <BarraCollaborazione piatto={p} onProponi={onModifica} />
 
         <section className="border-t border-bordo/70 pt-4">
-          <h2 className="mb-2 font-serif text-lg font-semibold text-primario">Ingredienti</h2>
+          <h2 className="mb-2 titolo text-lg font-semibold text-primario">Ingredienti</h2>
           {p.ingredienti.length === 0 ? (
             <p className="text-sm text-testo-tenue">Nessun ingrediente. Tocca «Modifica» per incollarli.</p>
           ) : (
@@ -165,7 +165,7 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
 
         {p.procedimento.length ? (
           <section className="border-t border-bordo/70 pt-4">
-            <h2 className="mb-2 font-serif text-lg font-semibold text-primario">Procedimento</h2>
+            <h2 className="mb-2 titolo text-lg font-semibold text-primario">Procedimento</h2>
             <ol className="flex flex-col gap-3">
               {p.procedimento.map((passo, k) => (
                 <li key={k} className="flex gap-3 text-[0.9375rem] leading-relaxed">
@@ -418,7 +418,7 @@ function EditorPiatto({ piatto: p, proposta = false, onFine }: { piatto: Dettagl
         </div>
 
         <section>
-          <h2 className="mb-2 font-serif text-lg font-semibold text-primario">Ingredienti</h2>
+          <h2 className="mb-2 titolo text-lg font-semibold text-primario">Ingredienti</h2>
           <EditorIngredienti righe={b.ingredienti} onCambia={(ingredienti) => setB({ ...b, ingredienti })} />
         </section>
 
@@ -488,7 +488,7 @@ function FotoProposte({
 }) {
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="font-serif text-lg font-semibold text-primario">Foto</h2>
+      <h2 className="titolo text-lg font-semibold text-primario">Foto</h2>
       {p.foto.length ? (
         <ul className="flex flex-wrap gap-2" aria-label="Foto attuali">
           {p.foto.map((f) => (

@@ -85,7 +85,7 @@ export function VistaCucina({ piatto, porzioniIniziali, indietro, sottotitolo }:
         ) : null}
 
         <section>
-          <h2 className="mb-2 font-serif text-xl font-semibold text-primario">Ingredienti</h2>
+          <h2 className="mb-2 titolo text-xl font-semibold text-primario">Ingredienti</h2>
           {piatto.ingredienti.length === 0 ? (
             <p className="text-testo-tenue">Nessun ingrediente nella ricetta.</p>
           ) : (
@@ -119,7 +119,7 @@ export function VistaCucina({ piatto, porzioniIniziali, indietro, sottotitolo }:
 
         {piatto.procedimento.length ? (
           <section>
-            <h2 className="mb-2 font-serif text-xl font-semibold text-primario">Procedimento</h2>
+            <h2 className="mb-2 titolo text-xl font-semibold text-primario">Procedimento</h2>
             <ol className="flex flex-col divide-y divide-bordo/70 border-y border-bordo/70">
               {piatto.procedimento.map((p, k) => {
                 const id = `passo-${k}`

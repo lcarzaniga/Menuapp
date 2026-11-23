@@ -88,7 +88,7 @@ export function PaginaRegia() {
           </Link>
         </Button>
         <div className="min-w-0 flex-1">
-          <h1 className="titolo truncate text-2xl font-semibold">Regia della cucina</h1>
+          <h1 className="titolo truncate text-2xl font-bold">Regia della cucina</h1>
           <p className="text-sm text-testo-tenue">
             {r.evento.nome} · {dataBreve(r.evento.data)}
             {r.evento.oraServizio ? ` · servizio alle ${r.evento.oraServizio}` : ''} · ore {adesso.ora}

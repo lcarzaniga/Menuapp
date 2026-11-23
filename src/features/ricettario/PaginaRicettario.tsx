@@ -167,7 +167,7 @@ export function PaginaRicettario() {
             {gruppi.map((g) => (
               <section key={g.lettera} id={idLettera(g.lettera)} aria-label={`Lettera ${g.lettera}`} className="mb-3">
                 <h2 className="sticky top-0 z-10 -mx-1 flex items-center gap-3 bg-sfondo/90 px-1 pb-1.5 pt-1 backdrop-blur">
-                  <span className="titolo w-7 text-2xl font-semibold leading-none text-primario">{g.lettera}</span>
+                  <span className="titolo w-7 text-2xl font-bold leading-none text-primario">{g.lettera}</span>
                   <span className="filetto flex-1" />
                 </h2>
                 <ul className="flex flex-col gap-2">
@@ -221,7 +221,7 @@ function RigaPiatto({ piatto: p, ingredienti = [] }: { piatto: RiepilogoPiatto; 
         </span>
       )}
       <div className="min-w-0 flex-1">
-        <p className="titolo truncate text-lg font-semibold">{p.nome}</p>
+        <p className="titolo truncate text-lg font-bold">{p.nome}</p>
         <p className="mt-0.5 flex flex-wrap gap-1.5 text-xs text-testo-tenue">
           {p.visibilita === 'pubblica' ? (
             <Badge variante="info">
