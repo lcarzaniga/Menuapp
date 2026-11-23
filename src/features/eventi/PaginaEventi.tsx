@@ -1,6 +1,6 @@
 // Eventi, la pagina iniziale: prossimo evento, «Per te», in programma, conclusi, archivio (SPEC §5, §31.3).
 import { useQuery } from '@tanstack/react-query'
-import { BarChart3, CalendarPlus, ChefHat, ChevronRight, Copy, HandHelping, House, ShoppingBasket, Users, UtensilsCrossed } from 'lucide-react'
+import { BarChart3, CalendarPlus, ChefHat, ChevronRight, Clock, Copy, HandHelping, House, ShoppingBasket, Users, UtensilsCrossed } from 'lucide-react'
 import { useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router'
 import { api } from '@/api/client'
@@ -19,6 +19,7 @@ import type { RiepilogoEvento } from '@/contratto/eventi.ts'
 import { daConcludere } from '@/domain/regole/evento.ts'
 import { dataBreve, differenzaGiorni, oggiISO } from '@/domain/tempo.ts'
 import { plurale } from '@/lib/formato'
+import { cn } from '@/lib/utils'
 import { useFamigliaAttiva } from '@/features/famiglia/attiva'
 
 function quando(data: string): string {
@@ -36,9 +37,30 @@ function persone(e: RiepilogoEvento): string {
   return n > 0 ? plurale(n, 'persona', 'persone') : ''
 }
 
+/** Orario, persone e piatti: la stessa riga, con le stesse icone, nelle due schede degli eventi. */
+function DatiEvento({ e, className }: { e: RiepilogoEvento; className?: string }) {
+  const chi = persone(e)
+  return (
+    <p className={cn('flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-testo-tenue', className)}>
+      {e.oraServizio ? (
+        <span className="flex items-center gap-1.5 whitespace-nowrap">
+          <Clock className="size-4 shrink-0" aria-hidden /> ore {e.oraServizio}
+        </span>
+      ) : null}
+      {chi ? (
+        <span className="flex items-center gap-1.5 whitespace-nowrap">
+          <Users className="size-4 shrink-0" aria-hidden /> {chi}
+        </span>
+      ) : null}
+      <span className="flex items-center gap-1.5 whitespace-nowrap">
+        <UtensilsCrossed className="size-4 shrink-0" aria-hidden /> {plurale(e.numeroVoci, 'piatto', 'piatti')}
+      </span>
+    </p>
+  )
+}
+
 export function SchedaEvento({ e }: { e: RiepilogoEvento }) {
   const tra = quando(e.data)
-  const chi = persone(e)
   return (
     <Link to={`/eventi/${e.id}`} className="group flex items-center gap-3 rounded-2xl border border-bordo/70 bg-carta p-3 shadow-carta transition-colors hover:bg-tenue/50">
       <BloccoData data={e.data} />
@@ -50,18 +72,9 @@ export function SchedaEvento({ e }: { e: RiepilogoEvento }) {
           {daConcludere(e, oggiISO()) ? <Badge variante="avviso">Da concludere</Badge> : null}
           <BadgeCondiviso e={e} />
         </div>
-        <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.8125rem] text-testo-tenue">
-          {e.oraServizio ? <span className="whitespace-nowrap">ore {e.oraServizio}</span> : null}
-          {chi ? (
-            <span className="flex items-center gap-1 whitespace-nowrap">
-              <Users className="size-3.5" aria-hidden /> {chi}
-            </span>
-          ) : null}
-          <span className="flex items-center gap-1 whitespace-nowrap">
-            <UtensilsCrossed className="size-3.5" aria-hidden /> {plurale(e.numeroVoci, 'piatto', 'piatti')}
-          </span>
-        </p>
-        {tra && tra !== 'passato' ? <p className="mt-0.5 text-xs text-testo-tenue">{tra}</p> : null}
+        <DatiEvento e={e} className="mt-1" />
+        {/* Conto alla rovescia in oro scuro, come il badge del prossimo evento. */}
+        {tra && tra !== 'passato' ? <p className="mt-0.5 text-[0.8125rem] font-semibold text-oro-forte">{tra}</p> : null}
       </div>
       <ChevronRight className="size-5 shrink-0 text-testo-tenue transition-transform group-hover:translate-x-0.5" aria-hidden />
     </Link>
@@ -69,12 +82,15 @@ export function SchedaEvento({ e }: { e: RiepilogoEvento }) {
 }
 
 /** «di Anna · sola lettura»: l'evento non è mio ma condiviso con me. */
-function BadgeCondiviso({ e }: { e: RiepilogoEvento }) {
+function BadgeCondiviso({ e, className }: { e: RiepilogoEvento; className?: string }) {
   if (e.permesso === 'proprietario') return null
+  // Su schermi stretti o con testo grande va a capo: i permessi restano leggibili per intero.
   return (
-    <Badge variante={e.permesso === 'lettura' ? 'info' : 'primario'} data-testid="evento-condiviso">
-      di {e.proprietario.nome}
-      {e.permesso === 'lettura' ? ' · sola lettura' : ' · puoi modificare'}
+    <Badge variante={e.permesso === 'lettura' ? 'info' : 'primario'} data-testid="evento-condiviso" className={cn('max-w-full whitespace-normal rounded-xl', className)}>
+      <span className="min-w-0 break-words">
+        di {e.proprietario.nome}
+        {e.permesso === 'lettura' ? ' · sola lettura' : ' · puoi modificare'}
+      </span>
     </Badge>
   )
 }
@@ -83,7 +99,6 @@ function BadgeCondiviso({ e }: { e: RiepilogoEvento }) {
 function Prossimo({ e }: { e: RiepilogoEvento }) {
   const giorni = differenzaGiorni(oggiISO(), e.data)
   const quanto = giorni === 0 ? 'Oggi' : giorni === 1 ? 'Domani' : giorni > 1 ? `Tra ${giorni} giorni` : 'Passato'
-  const chi = persone(e)
   return (
     <section aria-label="Prossimo evento" className="rounded-3xl border border-bordo/70 bg-carta p-4 shadow-carta sm:p-5">
       <div className="flex gap-3 sm:gap-4">
@@ -92,30 +107,29 @@ function Prossimo({ e }: { e: RiepilogoEvento }) {
           <Link to={`/eventi/${e.id}`} className="titolo block text-[1.625rem] font-bold leading-tight break-words hover:text-primario sm:text-[2rem]">
             {e.nome}
           </Link>
-          <p className="mt-1 text-sm text-testo-tenue">
-            {[e.oraServizio ? `ore ${e.oraServizio}` : '', chi].filter(Boolean).join(' · ')}
-          </p>
+          <BadgeCondiviso e={e} className="mt-1.5" />
+          <DatiEvento e={e} className="mt-1.5" />
           {/* L'illustrazione sta nella riga del conto alla rovescia: il titolo ha tutta la larghezza. */}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {/* Il conto alla rovescia in evidenza: più grande degli altri badge, con il contorno ottanio. */}
             <Badge variante="tempo" className="px-2.5 py-1 text-sm">
               {quanto}
             </Badge>
-            <BadgeCondiviso e={e} />
             <IllustrazioneEvento evento={e} className="ml-auto h-10 w-auto shrink-0 sm:h-14" />
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button asChild>
+            {/* Tre destinazioni equivalenti: stesso aspetto, nessuna come azione principale. */}
+            <Button asChild variante="navigazione">
               <Link to={`/eventi/${e.id}/menu`}>
                 <ChefHat /> Menù
               </Link>
             </Button>
-            <Button asChild variante="contorno">
+            <Button asChild variante="navigazione">
               <Link to={`/eventi/${e.id}/partecipanti`}>
                 <Users /> Persone
               </Link>
             </Button>
-            <Button asChild variante="contorno">
+            <Button asChild variante="navigazione">
               <Link to={`/eventi/${e.id}/spesa`}>
                 <ShoppingBasket /> Prepara
               </Link>

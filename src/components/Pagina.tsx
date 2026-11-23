@@ -32,7 +32,7 @@ export function Pagina({
         <div className="min-w-0 flex-[1_1_12rem]">
           <h1 className="titolo text-[1.75rem] font-bold leading-tight break-words">{titolo}</h1>
           {/* Filetto corto in oro antico sotto il titolo: dettaglio editoriale, solo decoro. */}
-          <span className="mt-1.5 block h-0.5 w-10 rounded-full bg-oro/80" aria-hidden />
+          <span className="mt-1.5 block h-0.5 w-10 rounded-full bg-oro" aria-hidden />
           {sottotitolo ? <div className="mt-0.5 text-sm font-semibold text-testo-tenue">{sottotitolo}</div> : null}
         </div>
         {azioni ? <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-1">{azioni}</div> : null}

@@ -2501,6 +2501,19 @@ sottotitoli e intestazioni secondarie 600, pulsanti e navigazione 500–600, tes
 invariato. I menù e i segnaposto stampabili mantengono le proprie scelte di caratteri (Classica =
 Fraunces, Garamond, Moderna = Josefin Sans e Inter, Calligrafica), che restano incluse solo per la stampa.
 
+**Rifiniture delle schede evento** (23/11/2026, decisione di Loris):
+- Menù, Persone e Prepara nella scheda del prossimo evento sono destinazioni equivalenti: variante di
+  pulsante `navigazione` (carta, bordo ottanio tenue, testo ottanio scuro; al passaggio e alla pressione
+  ottanio chiarissimo). I pulsanti pieni restano alle azioni principali («Nuovo»). La variante non si
+  usa altrove senza verificare il ruolo del pulsante.
+- Orario, persone e piatti: una riga uguale nelle due schede, con icone da 16 px (orologio, persone,
+  posate) e testo 14 px. Gerarchia: titolo, conto alla rovescia, dati. Nelle schede dell'elenco il
+  conto alla rovescia è in oro scuro (`oro-forte`, ≥ 4,5:1 su carta e tenue nei due temi).
+- Il badge di condivisione nella scheda principale sta sotto il titolo e va a capo invece di
+  troncarsi (leggibile a 360 px con testo al 150%).
+- Oro uniforme a parità di funzione: filetti delle portate pieni come gli altri, lineetta sotto i
+  titoli di pagina in oro pieno come quella della voce attiva.
+
 ### 31.7 Differenze rispetto alla proposta A (motivate)
 
 - La quinta sezione resta **Impostazioni** (non «Altro»): decisione di Loris.
@@ -3033,6 +3046,7 @@ migrazione: stanno nella riga dello stile di stampa dell'evento (`stili_stampa.o
 | 19/11/2026 | 8.0 — **Collaborazione sulle ricette** (§41): proposte di modifica con approvazione per singola modifica, conflitti e dipendenze, foto proposte, cronologia con ripristino, trasferimento della proprietà e riassegnazione amministrativa con accettazione |
 | 19/11/2026 | 8.1 — **Segnaposto** (§42): cavalletto e piatto su A4, nomi dai partecipanti o a mano con copie e ordine, nome dell'evento facoltativo, stile del menù o proprio; nella riga dello stile di stampa, senza migrazione |
 | 23/11/2026 | 8.2 — **Tipografia** (§31.6): Plus Jakarta Sans per tutta l'interfaccia al posto di Fraunces e Inter, pesi 700/600/500/400 per la gerarchia; caratteri della stampa invariati |
+| 23/11/2026 | 8.3 — **Rifiniture delle schede evento** (§31.6): pulsanti di navigazione equivalenti, riga dei dati con icone, conto alla rovescia in oro scuro, badge di condivisione che va a capo, oro uniforme nei filetti |
 | 19/11/2026 | 7.9 — **Memoria di famiglia** (§40): storia della ricetta pubblicabile, ricordi ed esperienze dei familiari con foto, privati anche nelle ricette pubbliche, non copiati; modello pronto per un archivio di famiglia |
 | 19/11/2026 | 7.8 — **Chi porta cosa flessibile** (§39): piatti a scelta «da definire» con quanti contributi, precisabili senza perdere l'incarico; menù e Chi porta stesso record |
 | 19/11/2026 | 7.7 — **Regia della cucina** (§38): vista del piano per il giorno dell'evento, colonne per fase, filtri, attrezzature dal testo delle ricette, testo grande, schermo acceso, «Prepara il piano dai piatti» |

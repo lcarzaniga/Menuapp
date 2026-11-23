@@ -97,7 +97,7 @@ function SezionePortata({
       <h2 id={`portata-${portata.id}`} className="mb-2.5 flex items-center gap-3">
         <span className="titolo text-xl font-semibold text-primario">{portata.nome}</span>
         {portata.voci.length ? <span className="text-xs text-testo-tenue">{portata.voci.length}</span> : null}
-        <span className="filetto flex-1 opacity-70" />
+        <span className="filetto flex-1" />
       </h2>
       <ul className="flex flex-col gap-1.5">
         {portata.voci.map((v, j) => (

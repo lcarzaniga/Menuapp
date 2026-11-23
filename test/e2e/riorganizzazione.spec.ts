@@ -122,6 +122,18 @@ test('navigazione riorganizzata, Famiglie, schede, duplicazione e permessi', asy
   // la copia di Ornella (marzo 2028), senza sezioni separate.
   await expect(anna.page.getByRole('region', { name: 'Prossimo evento' })).toContainText('Pranzo della domenica')
   await expect(anna.page.getByRole('region', { name: 'Prossimo evento' }).getByTestId('evento-condiviso')).toHaveText('di Loris · sola lettura')
+  // Telefono stretto con il testo più grande: il badge dei permessi va a capo, intero e dentro la scheda.
+  const dimensioni = anna.page.viewportSize()!
+  await anna.page.setViewportSize({ width: 360, height: 780 })
+  await anna.page.evaluate(() => (document.documentElement.dataset.testo = 'enorme'))
+  const prossimo = anna.page.getByRole('region', { name: 'Prossimo evento' })
+  const [riquadro, badge] = [await prossimo.boundingBox(), await prossimo.getByTestId('evento-condiviso').boundingBox()]
+  expect(badge!.x + badge!.width).toBeLessThanOrEqual(riquadro!.x + riquadro!.width)
+  expect(await prossimo.getByTestId('evento-condiviso').evaluate((b) => b.scrollWidth <= b.clientWidth)).toBe(true)
+  expect(await anna.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await prossimo.screenshot({ path: `${CARTELLA}/01b-condiviso-360-enorme.png` })
+  await anna.page.evaluate(() => delete document.documentElement.dataset.testo)
+  await anna.page.setViewportSize(dimensioni)
   await expect(anna.page.getByRole('region', { name: 'Condivisi con me' })).toHaveCount(0)
   // Le schede dell'elenco (fuori da «Per te»): sotto il prossimo, la copia di Ornella, senza badge.
   const schede = anna.page.locator('a[href^="#/eventi/"]').filter({ hasText: /\d+ piatt[oi]/ }).filter({ hasText: 'Pranzo della domenica' })

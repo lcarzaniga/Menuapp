@@ -58,6 +58,11 @@ const COPPIE: [string, string, number][] = [
   ['oro-forte', 'oro-medio', 4.5],
   ['accento-caldo', 'oro-tenue', 4.5],
   ['accento-caldo', 'oro-medio', 3],
+  // Conto alla rovescia delle schede dell'elenco in oro scuro sulla carta (e sul tenue al passaggio del mouse).
+  ['oro-forte', 'carta', 4.5],
+  ['oro-forte', 'tenue', 4.5],
+  // Pulsanti di navigazione della scheda del prossimo evento: ottanio scuro sulla carta.
+  ['primario-forte', 'carta', 4.5],
   ['successo', 'successo-tenue', 4.5],
   ['avviso', 'avviso-tenue', 4.5],
   ['pericolo', 'pericolo-tenue', 4.5],

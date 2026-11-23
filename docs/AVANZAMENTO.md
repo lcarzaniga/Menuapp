@@ -900,3 +900,26 @@ Stato: **sviluppato e testato automaticamente**; non su TEST (serve l'OK di Lori
 - Test: `npm run check` verde; e2e 59 superati; aspetto: 54 immagini di riferimento rigenerate,
   larghezza pagina e barra in basso verdi. Problema **preesistente** (identico prima del cambio):
   a 360 px con testo al 150% le schede dell'evento si accavallano e la pagina supera la larghezza.
+
+## Tipografia in TEST (23/11/2026)
+
+Rilascio `20261123-1047-ef2fae3` su TEST. In produzione andrà insieme alle rifiniture delle schede
+evento, su richiesta di Loris.
+
+## Rifiniture delle schede evento (23/11/2026, ramo `rifiniture-eventi`)
+
+- Pulsanti Menù/Persone/Prepara con la nuova variante `navigazione` (ottanio tenue, uguali fra loro);
+  «Nuovo» resta l'unico pulsante pieno della pagina. Verificato il ruolo degli altri pulsanti pieni
+  (Nuovo, Nuovo evento, Torna agli eventi): sono azioni, restano invariati.
+- `DatiEvento`: orario, persone e piatti con icone allineate nelle due schede (prima la scheda
+  principale non aveva icone né piatti); testo da 13 a 14 px.
+- Conto alla rovescia delle schede dell'elenco in `oro-forte`; badge di condivisione sotto il titolo
+  del prossimo evento, a capo su schermi stretti (controllo e2e a 360 px con testo «enorme» in
+  `riorganizzazione.spec.ts`).
+- Oro: filetti delle portate pieni (prima 70%), lineetta dei titoli di pagina piena (prima 80%).
+- Contrasti aggiunti a `test/contrasti.test.ts`: oro-forte su carta e tenue, primario-forte su carta,
+  nei due temi.
+- Test: `npm run check` verde (895 unitari); e2e 59 superati; aspetto: 42 immagini aggiornate
+  (eventi, menù e pagine con la lineetta del titolo), larghezza e barra verdi.
+- Da sapere: a 360 px con testo al 150% le parole lunghe del titolo del prossimo evento si spezzano
+  (`break-words`, comportamento già presente, non modificato).

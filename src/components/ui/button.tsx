@@ -11,6 +11,8 @@ export const varianteBottone = cva(
         primario: 'bg-primario text-primario-testo hover:bg-primario-forte active:bg-primario-forte',
         secondario: 'bg-tenue text-testo hover:bg-bordo/70',
         contorno: 'border border-oro/60 bg-carta hover:bg-tenue',
+        /** Destinazioni equivalenti (Menù, Persone, Prepara): nessuna prevale, distinte dalle azioni piene. */
+        navigazione: 'border border-primario/30 bg-carta text-primario-forte hover:border-primario/55 hover:bg-primario-tenue active:border-primario/55 active:bg-primario-tenue',
         fantasma: 'hover:bg-tenue',
         pericolo: 'bg-pericolo text-white hover:brightness-110',
         collegamento: 'text-primario underline decoration-oro/70 underline-offset-4 hover:decoration-oro px-0',
