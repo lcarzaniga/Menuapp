@@ -2514,6 +2514,20 @@ Fraunces, Garamond, Moderna = Josefin Sans e Inter, Calligrafica), che restano i
 - Oro uniforme a parità di funzione: filetti delle portate pieni come gli altri, lineetta sotto i
   titoli di pagina in oro pieno come quella della voce attiva.
 
+**Distribuzione dei colori delle superfici** (23/11/2026, decisione di Loris): meno avorio, più ottanio.
+- Token `--superficie` (nessun colore nuovo): in chiaro l'ottanio chiarissimo (`primario-tenue`), in
+  scuro una mescolanza di carta e sfondo. Ordine di luminosità verificato dai test: carta, superficie,
+  sfondo.
+- Su `superficie`, con bordo ottanio leggero (`primario/15`): le schede che portano altrove (eventi
+  successivi, «Per te», righe del ricettario, elenchi di collegamenti delle impostazioni, link
+  dell'account), le notifiche già lette e le pagine vuote.
+- Restano avorio (carta): la scheda del prossimo evento (la più luminosa), i contenuti da leggere o
+  modificare sul posto (menù, bacheca, chi porta, memoria, cronologia, proposte), moduli, campi,
+  finestre, menù a comparsa e notifiche da leggere.
+- Il badge `primario` ha un anello ottanio leggero, per restare riconoscibile sulla superficie.
+- Ombra del testo (`ombra-testo`): alone morbido nel colore della carta solo per i testi sulla
+  tovaglia a quadretti (marchio e etichette delle barre di navigazione); nessuna ombra sui fondi uniformi.
+
 ### 31.7 Differenze rispetto alla proposta A (motivate)
 
 - La quinta sezione resta **Impostazioni** (non «Altro»): decisione di Loris.
@@ -3047,6 +3061,7 @@ migrazione: stanno nella riga dello stile di stampa dell'evento (`stili_stampa.o
 | 19/11/2026 | 8.1 — **Segnaposto** (§42): cavalletto e piatto su A4, nomi dai partecipanti o a mano con copie e ordine, nome dell'evento facoltativo, stile del menù o proprio; nella riga dello stile di stampa, senza migrazione |
 | 23/11/2026 | 8.2 — **Tipografia** (§31.6): Plus Jakarta Sans per tutta l'interfaccia al posto di Fraunces e Inter, pesi 700/600/500/400 per la gerarchia; caratteri della stampa invariati |
 | 23/11/2026 | 8.3 — **Rifiniture delle schede evento** (§31.6): pulsanti di navigazione equivalenti, riga dei dati con icone, conto alla rovescia in oro scuro, badge di condivisione che va a capo, oro uniforme nei filetti |
+| 23/11/2026 | 8.4 — **Superfici in ottanio** (§31.6): token `superficie` per le schede-collegamento e le superfici secondarie, avorio per i contenuti in evidenza e i moduli; alone del testo sulla tovaglia |
 | 19/11/2026 | 7.9 — **Memoria di famiglia** (§40): storia della ricetta pubblicabile, ricordi ed esperienze dei familiari con foto, privati anche nelle ricette pubbliche, non copiati; modello pronto per un archivio di famiglia |
 | 19/11/2026 | 7.8 — **Chi porta cosa flessibile** (§39): piatti a scelta «da definire» con quanti contributi, precisabili senza perdere l'incarico; menù e Chi porta stesso record |
 | 19/11/2026 | 7.7 — **Regia della cucina** (§38): vista del piano per il giorno dell'evento, colonne per fase, filtri, attrezzature dal testo delle ricette, testo grande, schermo acceso, «Prepara il piano dai piatti» |

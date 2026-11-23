@@ -212,7 +212,7 @@ function RisultatiRicerca({ risultati }: { risultati: Risultato<RiepilogoPiatto>
 
 function RigaPiatto({ piatto: p, ingredienti = [] }: { piatto: RiepilogoPiatto; ingredienti?: string[] }) {
   return (
-    <Link to={`/ricettario/${p.id}`} className="flex items-center gap-3 rounded-2xl border border-bordo/70 bg-carta p-2 pr-3 shadow-carta hover:bg-tenue/60">
+    <Link to={`/ricettario/${p.id}`} className="flex items-center gap-3 rounded-2xl border border-primario/15 bg-superficie p-2 pr-3 shadow-carta hover:bg-tenue/60">
       {p.fotoPrincipale ? (
         <img src={urlFoto(p.fotoPrincipale)} alt="" loading="lazy" className="size-16 shrink-0 rounded-xl object-cover" />
       ) : (

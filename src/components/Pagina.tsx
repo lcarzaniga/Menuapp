@@ -57,7 +57,7 @@ export function Vuoto({
 }) {
   const Disegno = illustrazione ? ILLUSTRAZIONI[illustrazione] : null
   return (
-    <div className="flex flex-col items-center gap-2 rounded-3xl border border-bordo/70 bg-carta/70 px-6 py-10 text-center shadow-carta">
+    <div className="flex flex-col items-center gap-2 rounded-3xl border border-primario/15 bg-superficie px-6 py-10 text-center shadow-carta">
       {Disegno ? <Disegno className="mb-1 h-32 w-auto" /> : icona ? <div className="text-testo-tenue [&_svg]:size-8">{icona}</div> : null}
       <p className="titolo text-xl font-bold">{titolo}</p>
       {testo ? <p className="max-w-sm text-sm text-testo-tenue">{testo}</p> : null}

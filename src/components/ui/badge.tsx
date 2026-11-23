@@ -6,7 +6,8 @@ const varianteBadge = cva('inline-flex items-center gap-1 rounded-full px-2 py-0
   variants: {
     variante: {
       neutro: 'bg-tenue text-testo-tenue',
-      primario: 'bg-primario-tenue text-primario-forte',
+      /** L'anello tiene la forma anche sulla superficie secondaria, che in chiaro ha lo stesso ottanio chiarissimo. */
+      primario: 'bg-primario-tenue text-primario-forte ring-1 ring-primario/20',
       successo: 'bg-successo-tenue text-successo',
       avviso: 'bg-avviso-tenue text-avviso',
       pericolo: 'bg-pericolo-tenue text-pericolo',

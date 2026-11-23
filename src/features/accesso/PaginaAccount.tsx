@@ -36,7 +36,7 @@ export function PaginaAccount() {
     <Pagina titolo="Il mio account" sottotitolo={<span className="inline-flex items-center gap-2">{utente.nome} {amministratore ? <Badge variante="primario">amministratore</Badge> : null}</span>}>
       <div className="flex flex-col gap-4">
         {amministratore && ingressoPrivato ? (
-          <Link to="/impostazioni/utenti" className="flex items-center gap-3 rounded-2xl border border-bordo bg-carta p-4 hover:bg-tenue/60">
+          <Link to="/impostazioni/utenti" className="flex items-center gap-3 rounded-2xl border border-primario/15 bg-superficie p-4 hover:bg-tenue/60">
             <Users className="size-5 text-primario" />
             <span className="flex-1">
               <span className="block font-medium">Utenti e dispositivi</span>

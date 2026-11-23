@@ -25,6 +25,11 @@
   --primario: #0a6064; /* ottanio principale: 7,3:1 col bianco, ≥ 4,7:1 sui fondi ottanio */
   --primario-testo: #ffffff;
   --primario-tenue: #e2f0ed; /* ottanio chiarissimo */
+  /*
+   * Superficie secondaria: schede che portano altrove (eventi successivi, elenchi di collegamenti,
+   * notifiche già lette, pagine vuote). L'avorio (carta) resta ai contenuti in evidenza, ai moduli e ai campi.
+   */
+  --superficie: var(--primario-tenue);
   --primario-forte: #0a464a; /* ottanio profondo: 7,9:1 sul chiarissimo */
   --accento-caldo: #a5412a; /* terracotta: illustrazioni e fascia a quadretti */
   --salvia: #5f7556;
@@ -60,6 +65,8 @@
   --primario: #86cecc; /* ottanio morbido: 6,6:1 sulla carta */
   --primario-testo: #0a2527;
   --primario-tenue: #0f5759;
+  /* Fra la carta e lo sfondo: la carta resta la scheda più luminosa anche al buio. */
+  --superficie: color-mix(in srgb, var(--carta) 55%, var(--sfondo));
   --primario-forte: #b0e2df;
   --accento-caldo: #e8a184;
   --salvia: #9fb592;
@@ -88,6 +95,7 @@
   --color-testo: var(--testo);
   --color-carta: var(--carta);
   --color-tenue: var(--tenue);
+  --color-superficie: var(--superficie);
   --color-testo-tenue: var(--testo-tenue);
   --color-bordo: var(--bordo);
   --color-primario: var(--primario);
@@ -232,6 +240,17 @@
  * (laterale sul desktop, in basso sul telefono). Due bande incrociate (--tovaglia) sulla carta: dove si
  * sovrappongono il quadretto è più scuro. Le etichette restano leggibili anche lì (≥ 4,5:1).
  */
+/*
+ * Alone morbido nel colore della carta per i testi posati sulla tovaglia a quadretti (marchio ed
+ * etichette delle barre di navigazione): stacca le lettere dai quadretti senza contorni né rilievo.
+ * Non serve sui fondi uniformi.
+ */
+@utility ombra-testo {
+  text-shadow:
+    0 0 6px var(--carta),
+    0 1px 1px color-mix(in srgb, var(--carta) 80%, transparent);
+}
+
 @utility tovaglia {
   background-color: var(--carta);
   background-image:

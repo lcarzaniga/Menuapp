@@ -107,7 +107,7 @@ function SchedaNotifica({ x, onApri }: { x: Notifica; onApri: (x: Notifica, coll
   // Più aggiornamenti: chi ha scritto, senza ripetere i nomi.
   const autori = [...new Set(x.dettagli.map((d) => d.attore).filter((a): a is string => Boolean(a)))]
   return (
-    <div data-testid="notifica" className={cn('rounded-2xl border shadow-carta', x.letta ? 'border-bordo/60 bg-carta/70' : 'border-primario/40 bg-carta')}>
+    <div data-testid="notifica" className={cn('rounded-2xl border shadow-carta', x.letta ? 'border-primario/15 bg-superficie' : 'border-primario/40 bg-carta')}>
       <button type="button" onClick={() => void onApri(x)} className="flex w-full items-start gap-3 rounded-2xl p-3 text-left hover:bg-tenue/60">
         <span className={cn('relative mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full', x.letta ? 'bg-tenue text-testo-tenue' : 'bg-primario-tenue text-primario-forte')}>
           <Icona className="size-4" aria-hidden />

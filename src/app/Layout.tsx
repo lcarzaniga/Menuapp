@@ -78,7 +78,7 @@ function Guscio({ nome }: { nome: string }) {
         <div className="mb-6 flex flex-col items-center gap-1 px-3 pt-3 text-center">
           <Tavola className="h-16 w-auto" />
           {/* Il marchio resta nei colori del logo (terracotta), non in quello delle azioni. */}
-          <span className="titolo text-center text-2xl font-bold leading-tight text-accento-caldo">Ricette di famiglia &amp; Co.</span>
+          <span className="titolo ombra-testo text-center text-2xl font-bold leading-tight text-accento-caldo">Ricette di famiglia &amp; Co.</span>
           <span className="filetto mt-1 w-24" />
         </div>
         <SelettoreFamiglia className="mb-3" />
@@ -90,7 +90,7 @@ function Guscio({ nome }: { nome: string }) {
           >
             {/* Voce attiva: una lineetta in oro antico, dettaglio editoriale. */}
             {s.attiva(pathname) ? <span className="absolute inset-y-2.5 left-0 w-0.5 rounded-full bg-oro" aria-hidden /> : null}
-            <s.icona className="size-5" /> {s.etichetta}
+            <s.icona className="size-5" /> <span className="ombra-testo">{s.etichetta}</span>
             {s.a === '/notifiche' ? <Contatore n={nonLette} className="ml-auto" /> : null}
           </NavLink>
         ))}
@@ -98,7 +98,7 @@ function Guscio({ nome }: { nome: string }) {
           to="/account"
           className={cn('mt-auto flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium hover:bg-tenue', pathname.startsWith('/account') && 'bg-primario-tenue text-primario-forte')}
         >
-          <CircleUserRound className="size-5" /> <span className="truncate">{nome}</span>
+          <CircleUserRound className="size-5" /> <span className="ombra-testo truncate">{nome}</span>
         </NavLink>
       </nav>
       <main>
@@ -127,7 +127,7 @@ function Guscio({ nome }: { nome: string }) {
             {s.a === '/notifiche' ? <Contatore n={nonLette} className="absolute left-1/2 top-2 ml-1.5" /> : null}
             {/* Etichette a 11 px anche con il testo ingrandito: le icone crescono, le parole restano intere
                 («Impostazioni» sta in 1/5 di un telefono da 360 px). Misura fissa voluta, eccezione ai rem. */}
-            <span className="max-w-full truncate text-[11px] leading-tight tracking-tight">{s.etichetta}</span>
+            <span className="ombra-testo max-w-full truncate text-[11px] leading-tight tracking-tight">{s.etichetta}</span>
           </NavLink>
         ))}
       </nav>

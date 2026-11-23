@@ -62,7 +62,7 @@ function DatiEvento({ e, className }: { e: RiepilogoEvento; className?: string }
 export function SchedaEvento({ e }: { e: RiepilogoEvento }) {
   const tra = quando(e.data)
   return (
-    <Link to={`/eventi/${e.id}`} className="group flex items-center gap-3 rounded-2xl border border-bordo/70 bg-carta p-3 shadow-carta transition-colors hover:bg-tenue/50">
+    <Link to={`/eventi/${e.id}`} className="group flex items-center gap-3 rounded-2xl border border-primario/15 bg-superficie p-3 shadow-carta transition-colors hover:bg-tenue/60">
       <BloccoData data={e.data} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -257,7 +257,7 @@ function PerTe() {
   const d = q.data
   if (!d || (!d.incarichi.length && !d.sondaggi.length)) return null
   return (
-    <section aria-label="Per te" className="rounded-2xl border border-bordo/70 bg-carta p-3 shadow-carta">
+    <section aria-label="Per te" className="rounded-2xl border border-primario/15 bg-superficie p-3 shadow-carta">
       <h2 className="mb-1 px-1 text-sm font-semibold">Per te</h2>
       <ul className="flex flex-col">
         {d.incarichi.map((i) => (

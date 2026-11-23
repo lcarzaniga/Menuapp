@@ -99,6 +99,21 @@ describe.each([
     expect(contrasto(v['primario-forte']!, quadretto)).toBeGreaterThanOrEqual(4.5)
     expect(contrasto(v.testo!, quadretto)).toBeGreaterThanOrEqual(4.5)
   })
+  // Superficie secondaria (--superficie): un token esistente o una mescolanza di due (color-mix).
+  const superficie = (() => {
+    const blocco = css.slice(css.indexOf(`${selettore} {`), css.indexOf('\n}', css.indexOf(`${selettore} {`)))
+    const def = /--superficie:\s*([^;]+);/.exec(blocco)![1]!.trim()
+    const mix = /color-mix\(in srgb, var\(--([\w-]+)\) (\d+)%, var\(--([\w-]+)\)\)/.exec(def)
+    if (mix) return mescola(v[mix[1]!]!, v[mix[3]!]!, 1 - Number(mix[2]) / 100)
+    return v[/var\(--([\w-]+)\)/.exec(def)![1]!]!
+  })()
+  it.each(['testo', 'testo-tenue', 'primario', 'primario-forte', 'oro-forte'])('%s sulla superficie secondaria ≥ 4,5:1', (testo) => {
+    expect(contrasto(v[testo]!, superficie)).toBeGreaterThanOrEqual(4.5)
+  })
+  it('la carta resta la scheda più luminosa: carta, poi superficie secondaria, poi sfondo', () => {
+    expect(luminanza(v.carta!)).toBeGreaterThan(luminanza(superficie))
+    expect(luminanza(superficie)).toBeGreaterThan(luminanza(v.sfondo!))
+  })
   it('le superfici del tema scuro sono più chiare dello sfondo (carta, poi tenue)', () => {
     if (selettore !== '.dark') return
     expect(luminanza(v.carta!)).toBeGreaterThan(luminanza(v.sfondo!))

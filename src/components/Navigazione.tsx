@@ -121,7 +121,7 @@ export function RigaLink({ a, icona: Icona, titolo, descrizione }: { a: string; 
 /** Elenco di righe-link in un riquadro, con divisori. */
 export function ElencoLink({ children, etichetta }: { children: ReactNode; etichetta?: string }) {
   return (
-    <nav aria-label={etichetta} className="flex flex-col divide-y divide-bordo/60 overflow-hidden rounded-2xl border border-bordo/70 bg-carta shadow-carta">
+    <nav aria-label={etichetta} className="flex flex-col divide-y divide-primario/15 overflow-hidden rounded-2xl border border-primario/15 bg-superficie shadow-carta">
       {children}
     </nav>
   )
