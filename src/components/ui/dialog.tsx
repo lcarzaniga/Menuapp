@@ -34,12 +34,12 @@ export function Finestra({
         <D.Overlay className={sovrapposizione} />
         <D.Content className={cn(pannello, className)} aria-describedby={descrizione ? undefined : undefined}>
           <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-3 pt-5">
-            <div>
+            <div className="min-w-0 flex-1">
               <D.Title className="text-lg font-bold leading-tight">{titolo}</D.Title>
               {descrizione ? <D.Description className="mt-1 text-sm text-testo-tenue">{descrizione}</D.Description> : <D.Description className="sr-only">{String(titolo)}</D.Description>}
             </div>
             <D.Close asChild>
-              <Button variante="fantasma" misura="iconaPiccola" aria-label="Chiudi">
+              <Button variante="fantasma" misura="iconaPiccola" className="shrink-0" aria-label="Chiudi">
                 <X />
               </Button>
             </D.Close>

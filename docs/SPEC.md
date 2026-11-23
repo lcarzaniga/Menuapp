@@ -2542,6 +2542,25 @@ scuro: `sfondo` #09282d, `carta` #123b42, `tenue` #1a4952, `bordo` #33575e, `pri
 L'alone in basso a sinistra dello sfondo è ottanio (non più salvia). Pulsanti, carta avorio, oro,
 terracotta e decorazioni invariati. Un test verifica la tinta dei fondi.
 
+**Rifiniture dall'audit visivo** (23/11/2026, decisione di Loris; la pagina Eventi è il riferimento):
+- Titoli: nome dell'evento nell'intestazione su due righe al massimo (mai troncato), illustrazione più
+  piccola sotto i 400 px; nomi delle ricette nel Ricettario su due righe al massimo.
+- Campi: bordo `--bordo-campo` (testo secondario al 60% sulla carta, ≥ 3:1 sulla carta nei due temi);
+  a fuoco bordo e anello ottanio, errore bordo rosso, disabilitato su fondo tenue e attenuato. I campi
+  «Aggiungi a…» del menù, sullo sfondo, hanno il tratteggio ottanio e il segnaposto in testo secondario.
+- Scheda ricetta: ingredienti e procedimento su superficie ottanio leggera (`superficie` al 60%, bordo
+  ottanio tenue), numeri dei passaggi su carta; riquadri delle foto tratteggiati in ottanio su superficie;
+  «Elimina piatto» a contorno (sulla carta nel tema chiaro, ≥ 4,5:1).
+- Prossimo evento nel tema scuro: filo oro sottile (`oro/45`) attorno alla scheda.
+- Chi porta: «Me ne occupo io» a contorno ottanio; gli incarichi assegnati hanno il cerchio pieno di
+  ottanio e il nome di chi se ne occupa.
+- Prepara: piatti della vista cucina con «…» oltre 18 rem, sfumatura sul bordo destro della riga.
+- Bersagli: X delle finestre che non si restringe (36 px); «Chiudi il sondaggio», «Ritira il voto» e la
+  × dei commenti con area di tocco di almeno 24 px. Segmenti sotto i 400 px un filo più piccoli, così
+  «In programma» sta su una riga.
+- Test visivi estesi: evento condiviso, attività del Piano, incarico assegnato, ricetta con foto, pagine
+  Chi porta, Piano, Ricettario e modifica ricetta; barra di salvataggio durante lo scorrimento.
+
 ### 31.7 Differenze rispetto alla proposta A (motivate)
 
 - La quinta sezione resta **Impostazioni** (non «Altro»): decisione di Loris.
@@ -3078,6 +3097,7 @@ migrazione: stanno nella riga dello stile di stampa dell'evento (`stili_stampa.o
 | 23/11/2026 | 8.4 — **Superfici in ottanio** (§31.6): token `superficie` per le schede-collegamento e le superfici secondarie, avorio per i contenuti in evidenza e i moduli; alone del testo sulla tovaglia |
 | 23/11/2026 | 8.5 — **Ottanio più blu** (§31.6): fondi e superfici spostati da 167–182° a 188–193° di tinta, pulsanti e accenti invariati |
 | 23/11/2026 | 8.6 — **Nuvola del nome dell'app** (§31.6): alone avorio morbido a più ellissi dietro la scritta nella barra laterale |
+| 23/11/2026 | 8.7 — **Rifiniture dall'audit visivo** (§31.6): titoli su due righe, bordi dei campi ≥ 3:1, superfici della ricetta, foto, filo oro del prossimo evento al buio, «Me ne occupo io» a contorno, bersagli più grandi; test visivi estesi |
 | 19/11/2026 | 7.9 — **Memoria di famiglia** (§40): storia della ricetta pubblicabile, ricordi ed esperienze dei familiari con foto, privati anche nelle ricette pubbliche, non copiati; modello pronto per un archivio di famiglia |
 | 19/11/2026 | 7.8 — **Chi porta cosa flessibile** (§39): piatti a scelta «da definire» con quanti contributi, precisabili senza perdere l'incarico; menù e Chi porta stesso record |
 | 19/11/2026 | 7.7 — **Regia della cucina** (§38): vista del piano per il giorno dell'evento, colonne per fase, filtri, attrezzature dal testo delle ricette, testo grande, schermo acceso, «Prepara il piano dai piatti» |

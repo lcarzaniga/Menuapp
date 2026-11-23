@@ -164,6 +164,16 @@ async function preparaDati(request: APIRequestContext, page: Page): Promise<void
   await ok(apiScrivi(request, 'post', '/eventi/asp-vigilia/messaggi', { id: 'asp-m1', testo: 'Si comincia alle 21: chi porta le bevande?' }))
   await ok(apiScrivi(request, 'post', '/eventi/asp-vigilia/messaggi', { id: 'asp-m2', testo: 'Che secondo facciamo?', sondaggio: { opzioni: ['Baccalà', 'Orata al forno'], multipla: false, risultati: 'sempre' } }))
   await ok(apiScrivi(request, 'post', '/eventi/asp-vigilia/messaggi', { id: 'asp-m3', testo: '', proposta: { nome: 'Insalata di mare', portataNome: 'Antipasti' } }))
+  // Evento condiviso con un'altra persona (senza dispositivo: basta l'account).
+  await ok(apiScrivi(request, 'post', '/admin/utenti', { id: 'asp-anna', nome: 'Anna', famiglia: true }))
+  await ok(apiScrivi(request, 'put', '/eventi/asp-vigilia/condivisioni/asp-anna', { permesso: 'lettura' }))
+  // Piano con due attività, una collegata a un piatto del menù.
+  await ok(apiScrivi(request, 'post', '/eventi/asp-vigilia/attivita', { id: 'asp-a1', titolo: 'Preparare il ragù', data: '2030-12-23', ora: '18:00', voceMenuId: null, note: '' }))
+  await ok(apiScrivi(request, 'post', '/eventi/asp-vigilia/attivita', { id: 'asp-a2', titolo: 'Montare la crema del tiramisù', data: '2030-12-24', ora: null, voceMenuId: 'asp-v4', note: 'Tenere in frigo fino al servizio.' }))
+  // Chi porta: un piatto già preso dall'amministratore, gli altri da assegnare.
+  const menu = await apiLeggi<{ portate: { voci: { id: string; versione: number }[] }[] }>(request, '/eventi/asp-vigilia/menu')
+  const tiramisu = menu.portate.flatMap((p) => p.voci).find((v) => v.id === 'asp-v4')!
+  await ok(apiScrivi(request, 'post', '/voci/asp-v4/prendi', { versione: tiramisu.versione }))
 }
 
 // ── Pagine ──────────────────────────────────────────────────
@@ -189,6 +199,10 @@ const SCHERMATE: Schermata[] = [
   { nome: 'ricetta-con-foto', url: (d) => `/#/ricettario/${d.conFoto}`, pronta: (p) => p.getByRole('heading', { name: 'Conchiglioni melanzane e pesce spada' }) },
   { nome: 'ricetta-senza-foto', url: (d) => `/#/ricettario/${d.senzaFoto}`, pronta: (p) => p.getByRole('heading', { name: 'Tiramisù della tradizione' }) },
   { nome: 'cucina', url: (d) => `/#/ricettario/${d.conFoto}/cucina`, pronta: (p) => p.getByText('Schermo sempre acceso') },
+  { nome: 'chi-porta', url: (d) => `/#/eventi/${d.vigilia}/chi-porta`, pronta: (p) => p.getByText('Olive ripiene di tonno fritte').first() },
+  { nome: 'piano', url: (d) => `/#/eventi/${d.vigilia}/piano`, pronta: (p) => p.getByText('Montare la crema del tiramisù').first() },
+  { nome: 'ricettario', url: () => '/#/ricettario', pronta: (p) => p.getByText('Tiramisù della tradizione').first() },
+  { nome: 'modifica-ricetta', url: (d) => `/#/ricettario/${d.conFoto}?modifica=1`, pronta: (p) => p.getByRole('button', { name: 'Salva piatto' }) },
   { nome: 'famiglia', url: () => '/#/famiglia', pronta: (p) => p.getByRole('heading', { name: 'Famiglia', exact: true }).first() },
   { nome: 'impostazioni', url: () => '/#/impostazioni', pronta: (p) => p.getByRole('heading', { name: 'Impostazioni', exact: true }).first() },
 ]
@@ -332,6 +346,34 @@ test('barra in basso durante lo scorrimento', async ({ browser }) => {
         for (let i = 1; i < m.etichette.length; i++) expect(m.etichette[i]!.r.left, `${c.nome}: etichette separate`).toBeGreaterThanOrEqual(m.etichette[i - 1]!.r.right)
         if (posizione === 'fondo') expect(m.ultimo, `${c.nome} ${url}: fine pagina sopra la barra`).toBeLessThanOrEqual(m.alto + 1)
       }
+    }
+    await page.context().close()
+  }
+})
+
+// Barra «Annulla / Salva piatto» della modifica ricetta com'è davvero: durante lo scorrimento resta visibile
+// sopra la barra in basso (telefono) senza coprirla, e in fondo alla pagina non copre l'ultimo campo.
+test('barra di salvataggio durante lo scorrimento', async ({ browser }) => {
+  for (const c of [CONFIGURAZIONI[0]!, CONFIGURAZIONI[3]!, CONFIGURAZIONI[4]!]) {
+    const page = await apri(browser, c)
+    await page.goto(`/#/ricettario/${dati.conFoto}?modifica=1`)
+    const salva = page.getByRole('button', { name: 'Salva piatto' })
+    await expect(salva).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    for (const posizione of ['inizio', 'meta', 'fondo'] as const) {
+      await page.evaluate((p) => window.scrollTo(0, p === 'inizio' ? 0 : p === 'fondo' ? document.documentElement.scrollHeight : document.documentElement.scrollHeight / 2), posizione)
+      await page.waitForTimeout(100)
+      const m = await salva.evaluate((b) => {
+        const barra = b.parentElement!.getBoundingClientRect()
+        const nav = [...document.querySelectorAll('nav[aria-label="Sezioni"]')].map((n) => n.getBoundingClientRect()).find((r) => r.height > 0 && r.top > innerHeight / 2)
+        const campi = [...document.querySelectorAll('main form input, main form textarea, main form select')].map((e) => e.getBoundingClientRect()).filter((r) => r.height > 0)
+        const ultimo = campi.reduce((a, r) => (r.bottom > a.bottom ? r : a), campi[0]!)
+        return { alto: barra.top, basso: barra.bottom, navAlto: nav?.top ?? innerHeight, altezza: innerHeight, ultimoBasso: ultimo.bottom }
+      })
+      expect(m.basso, `${c.nome} ${posizione}: barra di salvataggio nello schermo`).toBeLessThanOrEqual(m.altezza)
+      expect(m.alto, `${c.nome} ${posizione}: barra di salvataggio visibile`).toBeGreaterThanOrEqual(0)
+      expect(m.basso, `${c.nome} ${posizione}: sopra la barra in basso`).toBeLessThanOrEqual(m.navAlto + 1)
+      if (posizione === 'fondo') expect(m.ultimoBasso, `${c.nome}: ultimo campo non coperto`).toBeLessThanOrEqual(m.alto + 1)
     }
     await page.context().close()
   }

@@ -1,8 +1,10 @@
 import type { ComponentProps, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
+// Bordo ≥ 3:1 sulla carta (--bordo-campo); a fuoco anello ottanio e bordo ottanio; errore in rosso (anche a
+// fuoco); disabilitato più chiaro e su fondo tenue.
 const baseCampo =
-  'w-full rounded-xl border border-bordo bg-carta px-3 text-base text-testo placeholder:text-testo-tenue/70 focus:outline-2 focus:outline-anello disabled:opacity-60 aria-invalid:border-pericolo'
+  'w-full rounded-xl border border-bordo-campo bg-carta px-3 text-base text-testo placeholder:text-testo-tenue/70 focus:border-primario focus:outline-2 focus:outline-anello disabled:bg-tenue/40 disabled:opacity-60 aria-invalid:border-pericolo'
 
 export function Input({ className, ...props }: ComponentProps<'input'>) {
   return <input className={cn(baseCampo, 'h-11', className)} {...props} />

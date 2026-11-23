@@ -73,12 +73,13 @@ function CucinaRapida({ eventoId }: { eventoId: string }) {
   const menu = useMenu(eventoId)
   const voci = menu.data?.portate.flatMap((p) => p.voci).filter((v) => v.piattoId) ?? []
   if (!voci.length) return null
+  // La sfumatura a destra dice che la riga continua (su desktop la barra di scorrimento non si vede).
   return (
-    <nav aria-label="Vista cucina dei piatti" className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 text-sm [scrollbar-width:thin]">
+    <nav aria-label="Vista cucina dei piatti" className="flex items-center gap-1.5 overflow-x-auto pb-1 pr-8 text-sm [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] [scrollbar-width:thin]">
       <CookingPot className="size-4 shrink-0 text-primario" aria-hidden />
       {voci.map((v) => (
-        <Link key={v.id} to={`/eventi/${eventoId}/voci/${v.id}/cucina`} className="flex min-h-9 shrink-0 items-center rounded-full border border-bordo bg-carta px-3 hover:bg-tenue">
-          {v.nome}
+        <Link key={v.id} to={`/eventi/${eventoId}/voci/${v.id}/cucina`} title={v.nome} className="flex min-h-9 max-w-72 shrink-0 items-center rounded-full border border-bordo bg-carta px-3 hover:bg-tenue">
+          <span className="truncate">{v.nome}</span>
         </Link>
       ))}
     </nav>
@@ -158,13 +159,14 @@ export function LayoutEvento() {
           </div>
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
-              <h1 className="titolo mt-1 truncate text-[1.75rem] font-bold leading-tight">{e.nome}</h1>
+              {/* Su due righe al massimo invece del troncamento: sul telefono il nome resta leggibile. */}
+              <h1 className="titolo mt-1 line-clamp-2 text-[1.75rem] font-bold leading-tight break-words">{e.nome}</h1>
               <p className="text-sm text-testo-tenue first-letter:uppercase">
                 {dataLunga(e.data)}
                 {e.oraServizio ? ` · ore ${e.oraServizio}` : ''}
               </p>
             </div>
-            <IllustrazioneEvento evento={e} className="h-14 w-auto shrink-0 sm:h-20" />
+            <IllustrazioneEvento evento={e} className="h-10 w-auto shrink-0 min-[400px]:h-14 sm:h-20" />
           </div>
           <Schede schede={schedeEvento(e.id)} etichetta="Schede dell'evento" className="-mx-2 mt-1" />
         </div>

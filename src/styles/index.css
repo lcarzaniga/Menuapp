@@ -50,6 +50,8 @@
   --info-tenue: #e2ebf9;
   --anello: #0a6064;
   --tovaglia: 13%; /* intensità delle bande della tovaglia nelle barre di navigazione */
+  /* Bordo dei campi (input, select, testo): dal testo secondario sulla carta, ≥ 3:1 sulla carta. */
+  --bordo-campo: color-mix(in srgb, var(--testo-tenue) 60%, var(--carta));
   --ombra: 0 1px 2px rgb(11 79 84 / 0.06), 0 3px 12px rgb(11 79 84 / 0.08);
   /* Nome dell'app sulla tovaglia: filo avorio a contatto con le lettere, poi un'ombra bruna calda in basso. */
   --ombra-marchio: 0 0 1px var(--carta), 0 0 1px var(--carta), 0 0 2px var(--carta), 0 2px 3px rgb(43 33 27 / 0.3);
@@ -89,6 +91,7 @@
   --info-tenue: #1d2c47;
   --anello: #86cecc;
   --tovaglia: 10%;
+  --bordo-campo: color-mix(in srgb, var(--testo-tenue) 60%, var(--carta));
   --ombra: 0 1px 2px rgb(0 0 0 / 0.25), 0 3px 12px rgb(0 0 0 / 0.13);
   --ombra-marchio: 0 0 1px var(--carta), 0 0 1px var(--carta), 0 0 2px var(--carta), 0 2px 3px rgb(0 0 0 / 0.45);
   --fuga: rgb(112 178 188 / 0.035);
@@ -103,6 +106,7 @@
   --color-superficie: var(--superficie);
   --color-testo-tenue: var(--testo-tenue);
   --color-bordo: var(--bordo);
+  --color-bordo-campo: var(--bordo-campo);
   --color-primario: var(--primario);
   --color-primario-testo: var(--primario-testo);
   --color-primario-tenue: var(--primario-tenue);

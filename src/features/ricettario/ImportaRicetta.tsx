@@ -115,7 +115,7 @@ export function ImportaRicetta({ aperta, onCambia }: { aperta: boolean; onCambia
       aperta={aperta}
       onCambia={(a) => (a ? onCambia(true) : chiudi())}
       titolo="Importa ricetta"
-      descrizione="Pacchetto di Ricette di famiglia & Co. (con foto), file JSON o testo scritto a mano. Formato: docs/FORMATO-RICETTA.md."
+      descrizione="Pacchetto di Ricette di famiglia & Co. (con foto), file JSON o testo scritto a mano: il formato è nel modello qui sotto."
       piede={
         voci.length ? (
           <>

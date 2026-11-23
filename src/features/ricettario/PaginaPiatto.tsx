@@ -139,7 +139,8 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
         </Button>
         <BarraCollaborazione piatto={p} onProponi={onModifica} />
 
-        <section className="border-t border-bordo/70 pt-4">
+        {/* Ingredienti e procedimento su una superficie ottanio leggera, non su una scheda avorio. */}
+        <section className="rounded-2xl border border-primario/10 bg-superficie/60 p-4">
           <h2 className="mb-2 titolo text-lg font-semibold text-primario">Ingredienti</h2>
           {p.ingredienti.length === 0 ? (
             <p className="text-sm text-testo-tenue">Nessun ingrediente. Tocca «Modifica» per incollarli.</p>
@@ -164,12 +165,12 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
         </section>
 
         {p.procedimento.length ? (
-          <section className="border-t border-bordo/70 pt-4">
+          <section className="rounded-2xl border border-primario/10 bg-superficie/60 p-4">
             <h2 className="mb-2 titolo text-lg font-semibold text-primario">Procedimento</h2>
             <ol className="flex flex-col gap-3">
               {p.procedimento.map((passo, k) => (
                 <li key={k} className="flex gap-3 text-[0.9375rem] leading-relaxed">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primario-tenue text-sm font-semibold text-primario-forte">{k + 1}</span>
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-carta text-sm font-semibold text-primario-forte ring-1 ring-primario/20">{k + 1}</span>
                   <div className="min-w-0 flex-1 pt-0.5">
                     <span className="whitespace-pre-line">{passo}</span>
                     <FotoPasso piattoId={p.id} foto={p.foto} passo={k} nome={p.nome} procedimento={p.procedimento} modificabile={puoScrivere} />
@@ -234,7 +235,7 @@ function SchedaPiatto({ piatto: p, onModifica }: { piatto: DettaglioPiatto; onMo
               <Share2 /> Condividi come testo
             </Button>
             {p.mio ? (
-              <Button variante="fantasma" misura="piccolo" className="text-pericolo" disabled={!puoScrivere} onClick={() => setElimina(true)}>
+              <Button variante="contorno" misura="piccolo" className="text-pericolo dark:bg-transparent" disabled={!puoScrivere} onClick={() => setElimina(true)}>
                 <Trash2 /> Elimina piatto
               </Button>
             ) : null}
@@ -425,7 +426,7 @@ function EditorPiatto({ piatto: p, proposta = false, onFine }: { piatto: Dettagl
         <Campo etichetta="Procedimento" htmlFor="p-proc" aiuto="Lascia una riga vuota fra un passaggio e l'altro">
           <Textarea id="p-proc" className="min-h-40" value={b.procedimento} onChange={set('procedimento')} />
         </Campo>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 items-end gap-2">
           <Campo etichetta="Preparazione (min)" htmlFor="p-prep">
             <Input id="p-prep" inputMode="numeric" value={b.tempoPreparazioneMin} onChange={set('tempoPreparazioneMin')} />
           </Campo>

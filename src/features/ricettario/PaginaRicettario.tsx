@@ -221,7 +221,7 @@ function RigaPiatto({ piatto: p, ingredienti = [] }: { piatto: RiepilogoPiatto; 
         </span>
       )}
       <div className="min-w-0 flex-1">
-        <p className="titolo truncate text-lg font-bold">{p.nome}</p>
+        <p className="titolo line-clamp-2 text-lg font-bold leading-snug break-words">{p.nome}</p>
         <p className="mt-0.5 flex flex-wrap gap-1.5 text-xs text-testo-tenue">
           {p.visibilita === 'pubblica' ? (
             <Badge variante="info">

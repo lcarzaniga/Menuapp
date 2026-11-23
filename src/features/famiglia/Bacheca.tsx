@@ -446,7 +446,7 @@ function Commenti({ m, puoScrivere }: { m: Messaggio; puoScrivere: boolean }) {
               <span className="min-w-0 flex-1 whitespace-pre-line break-words">{c.testo}</span>
               <span className="shrink-0 text-xs text-testo-tenue">{quando(c.creatoIl)}</span>
               {(c.puoModificare || m.puoFissare) && connesso ? (
-                <button type="button" aria-label={`Elimina il commento di ${c.autore.nome}`} className="shrink-0 text-testo-tenue hover:text-pericolo" onClick={() => void togli.esegui(c.id)}>
+                <button type="button" aria-label={`Elimina il commento di ${c.autore.nome}`} className="-m-1.5 flex size-7 shrink-0 items-center justify-center rounded-md text-testo-tenue hover:text-pericolo" onClick={() => void togli.esegui(c.id)}>
                   <X className="size-3.5" />
                 </button>
               ) : null}
@@ -534,12 +534,12 @@ function Sondaggio({ m }: { m: Messaggio }) {
           </Button>
         ) : null}
         {s.puoVotare && s.mieScelte.length ? (
-          <button type="button" className="underline" onClick={() => void vota.esegui([])}>
+          <button type="button" className="inline-flex min-h-6 items-center underline" onClick={() => void vota.esegui([])}>
             Ritira il voto
           </button>
         ) : null}
         {s.puoChiudere ? (
-          <button type="button" className="underline" onClick={() => void chiudi.esegui(undefined)}>
+          <button type="button" className="inline-flex min-h-6 items-center underline" onClick={() => void chiudi.esegui(undefined)}>
             Chiudi il sondaggio
           </button>
         ) : null}

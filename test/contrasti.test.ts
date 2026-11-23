@@ -97,6 +97,15 @@ describe.each([
       expect(tinta(v[f]!), f).toBeLessThanOrEqual(200)
     }
   })
+  it('«Elimina piatto» a contorno sulla carta nel tema chiaro (al buio resta sul fondo della sezione)', () => {
+    if (selettore !== ':root') return
+    expect(contrasto(v.pericolo!, v.carta!)).toBeGreaterThanOrEqual(4.5)
+  })
+  it('bordo dei campi ≥ 3:1 sulla carta (--bordo-campo, mescolanza del testo secondario con la carta)', () => {
+    const blocco = css.slice(css.indexOf(`${selettore} {`))
+    const t = Number(/--bordo-campo:\s*color-mix\(in srgb, var\(--testo-tenue\) (\d+)%, var\(--carta\)\)/.exec(blocco)![1]) / 100
+    expect(contrasto(mescola(v.carta!, v['testo-tenue']!, t), v.carta!)).toBeGreaterThanOrEqual(3)
+  })
   it('etichette della navigazione leggibili sul quadretto più scuro della tovaglia (utilità «tovaglia»)', () => {
     // Due bande incrociate del colore principale sulla carta, all'intensità di --tovaglia.
     const blocco = css.slice(css.indexOf(`${selettore} {`))

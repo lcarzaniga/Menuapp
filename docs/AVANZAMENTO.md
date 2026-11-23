@@ -992,3 +992,24 @@ evento, su richiesta di Loris.
 - Terracotta, Plus Jakarta Sans, misure e `ombra-marchio` invariati; resto della grafica invariato.
 - Sul telefono la barra laterale non compare (da 768 px): schermate da telefono identiche.
 - Test: aspetto con 18 schermate desktop aggiornate.
+
+## Rifiniture dall'audit visivo (23/11/2026, ramo `rifiniture-audit`)
+
+- Audit su 22 pagine × 3 larghezze (1440, 768, 360) × 2 temi, sulla stessa build di TEST con dati di
+  prova isolati (scratchpad, porta separata): nessuno scorrimento orizzontale, Plus Jakarta Sans ovunque.
+  Loris ha approvato i 9 difetti oggettivi e le proposte A, B, C, D, E, G; F (pagine vuote) rimandata.
+- Difetti corretti: titolo dell'evento troncato sul telefono (ora due righe, illustrazione più piccola
+  sotto i 400 px); «Elimina piatto» 4,29:1 (ora a contorno su carta nel chiaro); campi «Aggiungi a…»
+  del menù quasi invisibili (tratteggio ottanio, segnaposto pieno); piatti di Prepara tagliati senza
+  segnale (troncati con «…», sfumatura a destra, dentro la colonna); «In programma» su due righe a 360;
+  campi dei tempi disallineati; X delle finestre ristretta a 16–20 px (il pulsante si restringeva nel
+  flex: ora `shrink-0`); bersagli piccoli in bacheca; percorso tecnico nel testo dell'importazione.
+- Proposte: titoli del Ricettario su due righe (A); ingredienti e procedimento su superficie ottanio
+  leggera (B); riquadri delle foto in ottanio (C); filo oro del prossimo evento al buio (D); «Me ne
+  occupo io» a contorno, cerchio pieno per gli assegnati (E); `--bordo-campo` per tutti i campi, con
+  stati a fuoco, errore e disabilitato verificati (G).
+- Test: contrasti (bordo dei campi ≥ 3:1 nei due temi, «Elimina» su carta nel chiaro); confronti visivi
+  con evento condiviso, Piano con attività, incarico assegnato e quattro pagine nuove (Chi porta, Piano,
+  Ricettario, modifica ricetta); nuovo test della barra di salvataggio durante lo scorrimento (390, 360
+  al 150%, desktop).
+- Al buio «Elimina piatto» resta senza fondo: sulla carta scura il rosso sarebbe 4,44:1.

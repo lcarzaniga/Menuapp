@@ -108,8 +108,9 @@ function Riga({ i, d, evidenziato }: { i: Incarico; d: Incarichi; evidenziato: b
       className={cn('flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2.5', i.stato === 'completato' && 'bg-tenue/40', evidenziato && 'ring-2 ring-inset ring-primario/50')}
       data-testid="incarico"
     >
-        {i.stato === 'completato' ? <CheckCircle2 className="size-5 shrink-0 text-successo" /> : <Circle className={cn('size-5 shrink-0', i.stato === 'assegnato' ? 'text-primario' : 'text-bordo')} />}
-        {/* Su telefono i comandi possono andare a capo sotto il testo, che resta leggibile. */}
+        {i.stato === 'completato' ? <CheckCircle2 className="size-5 shrink-0 text-successo" /> : <Circle className={cn('size-5 shrink-0', i.stato === 'assegnato' ? 'fill-primario/25 text-primario' : 'text-testo-tenue/60')} />}
+        {/* Cerchio pieno di ottanio per gli incarichi già assegnati, vuoto per quelli da assegnare. Su telefono i
+            comandi possono andare a capo sotto il testo, che resta leggibile. */}
         <div className="min-w-0 flex-1 basis-40">
           <p className={cn('font-medium', i.stato === 'completato' && 'text-testo-tenue line-through decoration-1')}>
             {i.contributi > 1 ? `${i.contributi} × ` : ''}
@@ -145,7 +146,7 @@ function Riga({ i, d, evidenziato }: { i: Incarico; d: Incarichi; evidenziato: b
         </div>
         <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
           {i.puoPrendere ? (
-            <Button misura="piccolo" disabled={!connesso || azione.inCorso} onClick={() => (i.tipo === 'voce' && i.inSpesa ? setPrendi(true) : void azione.esegui({ verbo: 'prendi', corpo: {} }))}>
+            <Button variante="contorno" misura="piccolo" className="border-primario/45 text-primario-forte" disabled={!connesso || azione.inCorso} onClick={() => (i.tipo === 'voce' && i.inSpesa ? setPrendi(true) : void azione.esegui({ verbo: 'prendi', corpo: {} }))}>
               <HandHeart /> Me ne occupo io
             </Button>
           ) : null}

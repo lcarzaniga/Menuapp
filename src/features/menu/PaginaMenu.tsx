@@ -179,7 +179,7 @@ function InserimentoRapido({ evento, portata, autoFocus }: { evento: Evento; por
           aria-label={`Aggiungi a ${portata.nome}`}
           placeholder={`Aggiungi a ${portata.nome.toLowerCase()}…`}
           enterKeyHint="done"
-          className="h-11 border-dashed bg-transparent"
+          className="h-11 border-dashed border-primario/45 bg-transparent placeholder:text-testo-tenue"
           role="combobox"
           aria-autocomplete="list"
           aria-expanded={trovati.length > 0}

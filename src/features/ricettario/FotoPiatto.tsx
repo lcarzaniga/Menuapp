@@ -64,7 +64,7 @@ export function GalleriaFoto({ piattoId, foto, nome, procedimento }: { piattoId:
               type="button"
               disabled={!puoScrivere || Boolean(carica)}
               onClick={() => fileRef.current?.click()}
-              className={cn('flex size-20 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-bordo text-xs text-testo-tenue hover:bg-tenue disabled:opacity-50', !foto.length && 'w-auto px-4')}
+              className={cn('flex size-20 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-primario/45 bg-superficie/70 text-xs font-medium text-primario-forte hover:bg-tenue disabled:opacity-50', !foto.length && 'w-auto px-4')}
             >
               <Camera className="size-5" /> {carica ?? (foto.length ? 'Aggiungi' : 'Aggiungi foto')}
             </button>
@@ -162,7 +162,7 @@ export function FotoPasso({ piattoId, foto, passo, nome, procedimento, modificab
           aria-label={`Aggiungi una foto al passaggio ${passo + 1}`}
           disabled={!puoScrivere || carica}
           onClick={() => fileRef.current?.click()}
-          className="flex h-9 items-center gap-1.5 self-start rounded-lg border border-dashed border-bordo px-2.5 text-xs text-testo-tenue hover:bg-tenue disabled:opacity-50"
+          className="flex h-9 items-center gap-1.5 self-start rounded-lg border border-dashed border-primario/45 bg-superficie/70 px-2.5 text-xs font-medium text-primario-forte hover:bg-tenue disabled:opacity-50"
         >
           <Camera className="size-4" /> {carica ? 'Caricamento…' : 'Foto'}
         </button>

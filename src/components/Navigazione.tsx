@@ -52,9 +52,10 @@ export function Segmenti({ voci, etichetta, className }: { voci: Scheda[]; etich
             replace
             aria-current={attiva ? 'page' : undefined}
             // Selezionato chiaro con ombra (nel tema scuro la superficie più chiara). Con il testo grande va a
-            // capo, con un tetto di 16 px perché ogni parola stia nella sua colonna anche a 360 px.
+            // capo, con un tetto di 16 px perché ogni parola stia nella sua colonna anche a 360 px; sotto i 400 px un
+            // filo più piccolo, così col testo normale «In programma» sta su una riga.
             className={cn(
-              'flex min-h-9 min-w-0 flex-1 items-center justify-center rounded-lg px-2 py-1 text-center text-[min(0.875rem,16px)] leading-tight font-medium text-testo-tenue',
+              'flex min-h-9 min-w-0 flex-1 items-center justify-center rounded-lg px-2 py-1 text-center text-[min(0.875rem,16px)] leading-tight font-medium text-testo-tenue max-[400px]:px-1 max-[400px]:text-[min(0.8125rem,16px)]',
               attiva && 'bg-carta font-semibold text-testo shadow-carta dark:bg-tenue',
             )}
           >

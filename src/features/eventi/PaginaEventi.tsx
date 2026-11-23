@@ -99,8 +99,9 @@ function BadgeCondiviso({ e, className }: { e: RiepilogoEvento; className?: stri
 function Prossimo({ e }: { e: RiepilogoEvento }) {
   const giorni = differenzaGiorni(oggiISO(), e.data)
   const quanto = giorni === 0 ? 'Oggi' : giorni === 1 ? 'Domani' : giorni > 1 ? `Tra ${giorni} giorni` : 'Passato'
+  // Al buio la carta si distingue poco dalle schede successive: un filo oro sottile la mette in evidenza.
   return (
-    <section aria-label="Prossimo evento" className="rounded-3xl border border-bordo/70 bg-carta p-4 shadow-carta sm:p-5">
+    <section aria-label="Prossimo evento" className="rounded-3xl border border-bordo/70 bg-carta p-4 shadow-carta sm:p-5 dark:border-oro/45">
       <div className="flex gap-3 sm:gap-4">
         <BloccoData data={e.data} evidenza className="self-start" />
         <div className="min-w-0 flex-1">
