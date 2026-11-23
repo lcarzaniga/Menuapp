@@ -971,3 +971,13 @@ evento, su richiesta di Loris.
   carta avorio #fffdf9 del prossimo evento, oro, terracotta, salvia delle illustrazioni, stampa.
 - Test dei contrasti: nuovo controllo della tinta dei fondi (185–200°) nei due temi; tutte le coppie
   restano ≥ 4,5:1 (ottanio dei link sul tenue 4,51:1).
+
+## Alone avorio del nome dell'app (23/11/2026, ramo `marchio-alone`)
+
+- Utilità `alone-marchio` sul nome nella barra laterale: gradiente radiale ellittico `closest-side`
+  dalla carta al 70% al centro (40% a metà raggio) fino al trasparente sui bordi del riquadro; il
+  riquadro si allarga di 1,5 rem ai lati e 0,25 rem in alto e in basso con margini negativi, così il
+  layout resta uguale e il simbolo sopra non è coperto. Al buio il velo è nella carta scura.
+- Terracotta, Plus Jakarta Sans, misure e `ombra-marchio` invariati; resto della barra e palette invariati.
+- Il nome sta nella barra laterale (da 768 px): le schermate da telefono sono rimaste identiche.
+- Test: aspetto con 18 schermate desktop aggiornate (chiaro e scuro), nessuna da telefono.

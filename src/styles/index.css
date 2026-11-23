@@ -260,6 +260,24 @@
 @utility ombra-marchio {
   text-shadow: var(--ombra-marchio);
 }
+/*
+ * Alone del nome dell'app: velo ellittico nel colore della carta (avorio; al buio la carta scura) che
+ * attenua i quadretti sotto le lettere e svanisce a zero sui bordi del riquadro (closest-side), senza
+ * contorni. Il riquadro si allarga ai lati con un margine negativo, così il layout non cambia; in
+ * verticale resta entro lo spazio fra simbolo e filetto, per non coprire il simbolo.
+ */
+@utility alone-marchio {
+  margin-inline: -1.5rem;
+  padding-inline: 1.5rem;
+  margin-block: -0.25rem;
+  padding-block: 0.25rem;
+  background-image: radial-gradient(
+    ellipse closest-side,
+    color-mix(in srgb, var(--carta) 70%, transparent),
+    color-mix(in srgb, var(--carta) 40%, transparent) 55%,
+    transparent
+  );
+}
 
 @utility tovaglia {
   background-color: var(--carta);
