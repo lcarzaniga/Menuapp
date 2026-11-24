@@ -1,5 +1,5 @@
 // SQL di eventi, portate e voci di menù.
-import type { Evento, Portata, StatoEvento, TipoEvento, VoceMenu } from '../../../src/domain/tipi.ts'
+import type { Evento, Portata, StatoEvento, TipoEvento, VarianteVoce, VoceMenu } from '../../../src/domain/tipi.ts'
 import { copertiEffettivi } from '../../../src/domain/partecipanti.ts'
 import { type Db, esegui, tutti, uno } from '../connessione.ts'
 import { presenzeEvento } from './partecipanti.ts'
@@ -157,6 +157,7 @@ interface RigaVoce {
   note: string
   da_definire: number
   contributi: number
+  variante: string | null
   versione: number
   creato_il: number
   aggiornato_il: number
@@ -175,6 +176,8 @@ const daRigaVoce = (r: RigaVoce): VoceMenu => ({
   note: r.note,
   daDefinire: r.da_definire === 1,
   contributi: r.contributi,
+  // Senza ricetta (eliminata, scollegata) la variante non vale più (SPEC §44); l'archivio conserva la sua.
+  variante: r.variante && r.piatto_id ? (JSON.parse(r.variante) as VarianteVoce) : null,
   versione: r.versione,
   creatoIl: r.creato_il,
   aggiornatoIl: r.aggiornato_il,
@@ -203,9 +206,20 @@ export function inserisciVoce(db: Db, v: Omit<VoceMenu, 'versione'>): void {
   esegui(
     db,
     `INSERT INTO voci_menu (id, evento_id, portata_id, ordine, nome, piatto_id, porzioni, incaricato, in_spesa, note, da_definire, contributi,
-       versione, creato_il, aggiornato_il) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
-    v.id, v.eventoId, v.portataId, v.ordine, v.nome, v.piattoId, v.porzioni, v.incaricato, v.inSpesa, v.note, v.daDefinire, v.contributi, v.creatoIl, v.aggiornatoIl,
+       variante, versione, creato_il, aggiornato_il) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+    v.id, v.eventoId, v.portataId, v.ordine, v.nome, v.piattoId, v.porzioni, v.incaricato, v.inSpesa, v.note, v.daDefinire, v.contributi,
+    v.variante ? JSON.stringify(v.variante) : null, v.creatoIl, v.aggiornatoIl,
   )
+}
+
+/** Ricetta d'origine di una ricetta (le copie risalgono all'originale): identità delle varianti (SPEC §44). */
+export function origineRicetta(db: Db, piattoId: string): string {
+  return uno<{ o: string }>(db, 'SELECT coalesce(origine_piatto_id, id) AS o FROM piatti WHERE id = ?', piattoId)?.o ?? piattoId
+}
+
+/** Ingredienti adattati di una voce (SPEC §44); null la riporta alla ricetta. Versione già controllata. */
+export function scriviVariante(db: Db, voceId: string, variante: VarianteVoce | null, adesso: number): void {
+  esegui(db, 'UPDATE voci_menu SET variante = ?, versione = versione + 1, aggiornato_il = ? WHERE id = ?', variante ? JSON.stringify(variante) : null, adesso, voceId)
 }
 
 /** Riscrive l'ordine 0..n-1 delle voci di una portata nell'ordine indicato. */

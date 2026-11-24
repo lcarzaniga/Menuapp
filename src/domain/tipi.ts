@@ -68,6 +68,23 @@ export interface VoceMenu extends Versionato {
   daDefinire: boolean
   /** Quanti contributi vale la voce («due antipasti a scelta»): 1 di solito. */
   contributi: number
+  /** Ingredienti adattati per questo evento (SPEC §44); null = come la ricetta. */
+  variante: VarianteVoce | null
+}
+
+/**
+ * Variante di una ricetta in una voce del menù (SPEC §44): copia completa e indipendente degli
+ * ingredienti effettivi, mai ricalcolata dalla ricetta, che resta invariata.
+ */
+export interface VarianteVoce {
+  /** Ricetta d'origine (copie comprese) quando la variante è stata salvata: serve a riproporla. */
+  ricettaOrigine: Id
+  descrizione: string
+  /** «Nota per questa versione»: in Cucina sopra il procedimento, mai nel menù stampato. */
+  nota: string
+  /** Porzioni a cui si riferiscono le quantità della variante (null: da verificare come una ricetta senza). */
+  porzioniBase: number | null
+  ingredienti: IngredientePiatto[]
 }
 
 export const STATI_PARSING = ['certo', 'da_verificare', 'confermato'] as const

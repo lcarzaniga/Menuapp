@@ -1,10 +1,10 @@
 // Casi d'uso di eventi, portate e voci di menù (SPEC §7.1–7.3, §7.8, §12.5).
-import type { AggiornaEvento, AggiornaVoce, Menu, NuovaVoce, NuovoEvento, RiepilogoEvento, RiordinoVoci } from '../../src/contratto/eventi.ts'
+import type { AggiornaEvento, AggiornaVoce, Menu, NuovaVoce, NuovoEvento, RiepilogoEvento, RiordinoVoci, VarianteNuova } from '../../src/contratto/eventi.ts'
 import { copertiEquivalenti, porzioniEffettive } from '../../src/domain/porzioni.ts'
 import { modificabile, statoDopo } from '../../src/domain/regole/evento.ts'
 import { standardPerOccasione } from '../../src/domain/ricorrenze.ts'
 import { norm, pulisci } from '../../src/domain/testo.ts'
-import type { Evento, StatoEvento, VoceMenu } from '../../src/domain/tipi.ts'
+import type { Evento, StatoEvento, VarianteVoce, VoceMenu } from '../../src/domain/tipi.ts'
 import { type Db, esegui, lettura, transazione } from '../db/connessione.ts'
 import * as repoAccesso from '../db/repo/accesso.ts'
 import * as repo from '../db/repo/eventi.ts'
@@ -195,6 +195,22 @@ function controllaPiatto(db: Db, piattoId: string | null | undefined, risolvi: R
   return risolvi(piattoId)
 }
 
+/**
+ * Variante da salvare su una voce collegata a `piattoId` (SPEC §44): niente senza ricetta; ingredienti
+ * con id distinti e ordine 0..n-1; la ricetta d'origine la stabilisce il server.
+ */
+export function variantePer(db: Db, piattoId: string | null, v: VarianteNuova | null | undefined): VarianteVoce | null {
+  if (!v || !piattoId) return null
+  if (new Set(v.ingredienti.map((i) => i.id)).size !== v.ingredienti.length) throw richiestaNonValida('Ingredienti della variante con lo stesso id')
+  return {
+    ricettaOrigine: repo.origineRicetta(db, piattoId),
+    descrizione: v.descrizione,
+    nota: v.nota,
+    porzioniBase: v.porzioniBase,
+    ingredienti: v.ingredienti.map((i, ordine) => ({ ...i, ordine })),
+  }
+}
+
 /** Crea una o più voci (inserimento rapido multiriga). Ripetizioni con lo stesso id: idempotenti. */
 export function creaVoci(db: Db, eventoId: string, voci: NuovaVoce[], risolvi: RisolviPiatto, adesso = Date.now()): VoceMenu[] {
   return transazione(db, () => {
@@ -216,6 +232,7 @@ export function creaVoci(db: Db, eventoId: string, voci: NuovaVoce[], risolvi: R
         note: v.note ?? '',
         daDefinire,
         contributi: v.contributi ?? 1,
+        variante: variantePer(db, piattoId, v.variante),
       }
       const esito = creaIdempotente(
         db,
@@ -253,6 +270,8 @@ export function aggiornaVoce(db: Db, id: string, d: AggiornaVoce, risolvi: Risol
     const piattoId = d.piattoId === v.piattoId ? v.piattoId : controllaPiatto(db, d.piattoId, risolvi)
     // Collegare una ricetta precisa il contributo; senza indicazione resta com'era (SPEC §39).
     const daDefinire = piattoId ? false : (d.daDefinire ?? v.daDefinire)
+    // Un'altra ricetta (o nessuna): gli ingredienti adattati erano per quella di prima (SPEC §44).
+    const variante = piattoId === v.piattoId ? v.variante : null
     aggiornaConVersione(
       db,
       'voci_menu',
@@ -267,6 +286,7 @@ export function aggiornaVoce(db: Db, id: string, d: AggiornaVoce, risolvi: Risol
         note: d.note,
         da_definire: daDefinire,
         contributi: d.contributi ?? v.contributi,
+        variante: variante ? JSON.stringify(variante) : null,
       },
       () => leggiVoce(db, id),
       adesso,

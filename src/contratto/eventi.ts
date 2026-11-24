@@ -5,6 +5,7 @@ import { ID_RICORRENZE_STANDARD } from '../domain/ricorrenze.ts'
 import { STATI_EVENTO, TIPI_EVENTO } from '../domain/tipi.ts'
 import { DataISO, Epoch, Id, NomeObbligatorio, Ora, TestoBreve, TestoLungo, Versione } from './comune.ts'
 import { Coefficiente } from './impostazioni.ts'
+import { SchemaIngredientePiatto } from './ricettario.ts'
 
 const Persone = z.number().int('Numero intero').min(0, 'Non può essere negativo').max(999)
 
@@ -88,6 +89,33 @@ export const SchemaAggiornaEvento = z.object({
 })
 export type AggiornaEvento = z.infer<typeof SchemaAggiornaEvento>
 
+/** Ingredienti adattati per una voce (SPEC §44), come li manda il client: elenco completo. */
+export const SchemaVarianteNuova = z.object({
+  descrizione: z.string().trim().max(80).default(''),
+  nota: z.string().trim().max(2000).default(''),
+  porzioniBase: z.number().positive('Le porzioni devono essere più di zero').max(10_000).nullable(),
+  ingredienti: z.array(SchemaIngredientePiatto).min(1, 'Serve almeno un ingrediente: per tornare alla ricetta usa «Torna alla ricetta»').max(100),
+})
+export type VarianteNuova = z.infer<typeof SchemaVarianteNuova>
+
+/** La variante salvata: in più la ricetta d'origine, stabilita dal server. */
+export const SchemaVariante = SchemaVarianteNuova.extend({ ricettaOrigine: Id })
+
+export const SchemaImpostaVariante = z.object({ variante: SchemaVarianteNuova.nullable(), versione: Versione })
+export type ImpostaVariante = z.infer<typeof SchemaImpostaVariante>
+
+/** Una variante di un altro evento, da riprendere («Usa una versione precedente»). */
+export const SchemaVariantePrecedente = z.object({
+  voceId: Id,
+  eventoId: Id,
+  eventoNome: z.string(),
+  data: z.string(),
+  archiviato: z.boolean(),
+  voceNome: z.string(),
+  variante: SchemaVariante,
+})
+export type VariantePrecedente = z.infer<typeof SchemaVariantePrecedente>
+
 export const SchemaVoceMenu = z.object({
   id: Id,
   eventoId: Id,
@@ -102,6 +130,8 @@ export const SchemaVoceMenu = z.object({
   /** Contributo a scelta di chi lo porta (SPEC §39); assente negli archivi precedenti. */
   daDefinire: z.boolean().default(false),
   contributi: z.number().int().default(1),
+  /** Ingredienti adattati per questo evento (SPEC §44); assente negli archivi precedenti. */
+  variante: SchemaVariante.nullable().default(null),
   versione: Versione,
   creatoIl: Epoch,
   aggiornatoIl: Epoch,
@@ -125,6 +155,8 @@ export const SchemaNuovaVoce = z.object({
   contributi: Contributi.optional(),
   /** Posizione nella portata (per «Annulla» dopo un'eliminazione); assente = in fondo. */
   ordine: z.number().int().min(0).optional(),
+  /** Variante da rimettere (per «Annulla» dopo un'eliminazione, SPEC §44). */
+  variante: SchemaVarianteNuova.nullable().optional(),
 })
 export type NuovaVoce = z.infer<typeof SchemaNuovaVoce>
 

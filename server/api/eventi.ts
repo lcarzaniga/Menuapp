@@ -7,6 +7,7 @@ import { PREFISSO_API, SchemaVersione } from '../../src/contratto/comune.ts'
 import {
   SchemaAggiornaEvento,
   SchemaAggiornaVoce,
+  SchemaImpostaVariante,
   SchemaNuoveVoci,
   SchemaNuovoEvento,
   SchemaRiordinoVoci,
@@ -15,6 +16,7 @@ import { STATI_EVENTO } from '../../src/domain/tipi.ts'
 import * as archivio from '../servizi/archivio.ts'
 import * as condivisione from '../servizi/condivisione.ts'
 import * as eventi from '../servizi/eventi.ts'
+import * as varianti from '../servizi/varianti.ts'
 import { fileAllegatiEvento, togliFile } from '../servizi/bacheca.ts'
 import { avvisa, personeEvento } from '../servizi/notifiche.ts'
 import { gruppiDiUtente } from '../servizi/gruppi.ts'
@@ -119,6 +121,19 @@ export function rotteEventi(app: FastifyInstance, ctx: Contesto): void {
     const u = chi(req)
     const eventoId = richiediVoce(db, u, req.params.id, 'modifica')
     return eventi.aggiornaVoce(db, req.params.id, valida(SchemaAggiornaVoce, req.body), risolvi(u, eventoId))
+  })
+
+  // Ingredienti adattati per questo evento (SPEC §44): chi modifica l'evento; null torna alla ricetta.
+  app.put<ConId>(`${P}/voci/:id/variante`, async (req) => {
+    richiediVoce(db, chi(req), req.params.id, 'modifica')
+    return varianti.impostaVariante(db, req.params.id, valida(SchemaImpostaVariante, req.body))
+  })
+
+  // «Usa una versione precedente»: solo eventi che l'utente vede (adattare richiede poi la modifica).
+  app.get<ConId>(`${P}/voci/:id/varianti`, async (req) => {
+    const u = chi(req)
+    richiediVoce(db, u, req.params.id, 'lettura')
+    return varianti.variantiPrecedenti(db, u, req.params.id)
   })
 
   app.delete<ConId>(`${P}/voci/:id`, async (req, reply) => {

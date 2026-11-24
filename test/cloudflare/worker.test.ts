@@ -179,6 +179,14 @@ describe('installazione Cloudflare', () => {
 
   it('backup in R2, esportazione con le foto, ripristino dalla console e cestino', async () => {
     const fotoCopiaId = (await anna.chiama('GET', '/piatti/p-anna')).corpo.foto[0].id as string
+    // Una voce con gli ingredienti adattati (SPEC §44, migrazione 0022 nel Durable Object).
+    const portata = (await loris.chiama('GET', '/eventi/ev/menu')).corpo.portate[4].id as string
+    const creata = await loris.chiama('POST', '/eventi/ev/voci', { voci: [{ id: 'v-tiramisu', portataId: portata, nome: 'Tiramisù', piattoId: 'p1' }] })
+    expect(creata.stato, JSON.stringify(creata.corpo)).toBe(201)
+    const ingrediente = { id: 'iv1', ordine: 0, testoOriginale: '250 g ricotta', nome: 'ricotta', ingredienteId: null, quantita: 250, quantitaMax: null, unita: 'g', scalatura: 'proporzionale', facoltativo: false, nota: '', statoParsing: 'certo', problemiParsing: [] }
+    const adattata = await loris.chiama('PUT', '/voci/v-tiramisu/variante', { variante: { descrizione: 'con ricotta', nota: '', porzioniBase: 4, ingredienti: [ingrediente] }, versione: 1 })
+    expect(adattata.stato, JSON.stringify(adattata.corpo)).toBe(200)
+    expect(adattata.corpo.variante).toMatchObject({ ricettaOrigine: 'p1', descrizione: 'con ricotta' })
     const b = await loris.chiama('POST', '/backup', {})
     expect(b.stato).toBe(201)
     expect(b.corpo).toMatchObject({ tipo: 'manuale', verificato: true, conteggi: { eventi: 1 } })
@@ -203,6 +211,7 @@ describe('installazione Cloudflare', () => {
     expect(esito.stato, esito.testo).toBe(200)
     expect(esito.testo).toContain('Dati precedenti salvati in pre-ripristino-')
     expect((await loris.chiama('GET', '/eventi/ev')).stato).toBe(200)
+    expect((await loris.chiama('GET', '/voci/v-tiramisu')).corpo.variante).toMatchObject({ descrizione: 'con ricotta' })
     expect(new Uint8Array(await (await loris.chiama('GET', '/foto/f1')).risposta.arrayBuffer())).toEqual(JPEG)
     // Le sessioni restano valide dopo il ripristino.
     expect((await anna.chiama('GET', '/sessione')).stato).toBe(200)

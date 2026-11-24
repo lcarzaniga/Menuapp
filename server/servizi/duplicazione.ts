@@ -222,6 +222,8 @@ export function duplica(db: Db, cartellaFoto: CartellaFile, u: UtenteCorrente, o
             incaricato: '',
             daDefinire: v.daDefinire ?? false,
             contributi: v.contributi ?? 1,
+            // Gli ingredienti adattati viaggiano con la voce (SPEC §44); senza ricetta decadono.
+            variante: v.variante ?? null,
           }
         }),
         (id) => id,

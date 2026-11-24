@@ -1,5 +1,5 @@
 // Evento — Menù: portate, voci, inserimento rapido, riordino (SPEC F2, §7.2).
-import { ArrowDown, ArrowUp, BookOpen, ChefHat, CookingPot, FolderInput, Link2, ListOrdered, Pencil, Plus, Printer, ShoppingCart, Trash2, User } from 'lucide-react'
+import { ArrowDown, ArrowUp, BookOpen, ChefHat, CookingPot, FolderInput, Link2, ListOrdered, Pencil, Plus, Printer, ShoppingCart, SlidersHorizontal, Trash2, User } from 'lucide-react'
 import { type ClipboardEvent, type KeyboardEvent, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
@@ -375,6 +375,12 @@ function RigaVoce({
           {voce.piattoId ? (
             <Badge variante="successo">
               <ChefHat className="size-3" /> ricetta
+            </Badge>
+          ) : null}
+          {/* Ingredienti adattati per questo evento (SPEC §44). */}
+          {voce.piattoId && voce.variante ? (
+            <Badge variante="primario" className="max-w-56" title={voce.variante.descrizione || 'Ingredienti personalizzati'}>
+              <SlidersHorizontal className="size-3" /> <span className="truncate">variante{voce.variante.descrizione ? ` · ${voce.variante.descrizione}` : ''}</span>
             </Badge>
           ) : null}
           {personalizzate ? <Badge variante="primario">{formattaCoperti(voce.porzioni!)} porzioni</Badge> : null}

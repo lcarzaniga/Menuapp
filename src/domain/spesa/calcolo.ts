@@ -2,7 +2,7 @@
 // Principio: si somma solo ciò che è certo; ogni contributo incompleto resta visibile a sé.
 import { copertiEquivalenti, fattoreScalatura, porzioniEffettive, scala, arrotondaPrecisione } from '../porzioni.ts'
 import { norm } from '../testo.ts'
-import { type Id, type IngredientePiatto, type Piatto, REPARTO_ALTRO } from '../tipi.ts'
+import { type Id, type IngredientePiatto, type Piatto, REPARTO_ALTRO, type VarianteVoce } from '../tipi.ts'
 import { aUnitaBase, chiaveFamiglia, type CodiceUnita, famiglia, unitaBase } from '../unita.ts'
 
 export type Natura = 'sommata' | 'qb' | 'da_verificare' | 'facoltativa'
@@ -41,7 +41,16 @@ export interface AvvisoSpesa {
 export interface DatiCalcolo {
   evento: { adulti: number; bambini: number; coefficienteBambini: number }
   /** `daDefinire`: contributo a scelta di chi lo porta (SPEC §39), fuori dalla spesa e senza avvisi. */
-  voci: { id: Id; nome: string; piattoId: Id | null; porzioni: number | null; inSpesa: boolean; daDefinire?: boolean }[]
+  voci: {
+    id: Id
+    nome: string
+    piattoId: Id | null
+    porzioni: number | null
+    inSpesa: boolean
+    daDefinire?: boolean
+    /** Ingredienti adattati per questa voce (SPEC §44): prendono il posto di quelli della ricetta. */
+    variante?: Pick<VarianteVoce, 'porzioniBase' | 'ingredienti'> | null
+  }[]
   piatti: ReadonlyMap<Id, Piatto>
   catalogo: ReadonlyMap<Id, { id: Id; nome: string; repartoId: Id }>
 }
@@ -66,6 +75,16 @@ function unitaRiga(u: CodiceUnita | null): CodiceUnita | null {
   return unitaBase(u)
 }
 
+/**
+ * La ricetta come la usa una voce: con una variante (SPEC §44) porzioni base e ingredienti sono
+ * quelli della variante; il resto (nome, id) resta della ricetta.
+ */
+export function ricettaDellaVoce(voce: DatiCalcolo['voci'][number], piatti: DatiCalcolo['piatti']): Piatto | undefined {
+  const piatto = voce.piattoId ? piatti.get(voce.piattoId) : undefined
+  if (!piatto || !voce.variante) return piatto
+  return { ...piatto, porzioniBase: voce.variante.porzioniBase, ingredienti: voce.variante.ingredienti }
+}
+
 export function calcolaSpesa(d: DatiCalcolo): RisultatoCalcolo {
   const coperti = copertiEquivalenti(d.evento)
   const righe = new Map<string, RigaCalcolata>()
@@ -77,7 +96,7 @@ export function calcolaSpesa(d: DatiCalcolo): RisultatoCalcolo {
       avvisi.push({ tipo: 'voce_senza_ricetta', voceId: voce.id, nomeVoce: voce.nome, messaggio: `${voce.nome}: nessuna ricetta — aggiungila o crea un articolo manuale` })
       continue
     }
-    const piatto = d.piatti.get(voce.piattoId)
+    const piatto = ricettaDellaVoce(voce, d.piatti)
     if (!piatto || piatto.ingredienti.length === 0) {
       avvisi.push({ tipo: 'piatto_senza_ingredienti', voceId: voce.id, nomeVoce: voce.nome, messaggio: `${voce.nome}: nessun ingrediente — aggiungili o crea un articolo manuale` })
       continue
@@ -157,12 +176,14 @@ export function identitaDaChiave(chiave: string): string {
 }
 
 /** Contributi da verificare dello stesso ingrediente di una riga sommata (rimando «+ N da verificare»). */
-export function contributiDaVerificare(righe: RigaCalcolata[], d: Pick<DatiCalcolo, 'piatti' | 'catalogo'>): Map<string, number> {
+export function contributiDaVerificare(righe: RigaCalcolata[], d: Pick<DatiCalcolo, 'voci' | 'piatti' | 'catalogo'>): Map<string, number> {
   const conteggio = new Map<string, number>()
+  const voci = new Map(d.voci.map((v) => [v.id, v]))
   for (const r of righe) {
     if (r.natura !== 'da_verificare') continue
     const p = r.provenienze[0]!
-    const ing = d.piatti.get(p.piattoId)?.ingredienti.find((i) => i.id === p.ingredientePiattoId)
+    const voce = voci.get(p.voceId)
+    const ing = (voce ? ricettaDellaVoce(voce, d.piatti) : d.piatti.get(p.piattoId))?.ingredienti.find((i) => i.id === p.ingredientePiattoId)
     if (!ing) continue
     const id = identita(ing, d.catalogo)
     conteggio.set(id, (conteggio.get(id) ?? 0) + 1)

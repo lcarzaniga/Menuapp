@@ -1,5 +1,5 @@
 // Vista cucina: ricetta leggibile alle porzioni scelte (SPEC F7).
-import { AlertTriangle, Check, Minus, Plus, SunMedium } from 'lucide-react'
+import { AlertTriangle, Check, Info, Minus, Plus, SunMedium } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { useMenu, usePiatto, useSnapshot } from '@/api/query'
@@ -46,9 +46,23 @@ export function quantitaCucina(i: IngredientePiatto, fattore: number | null): st
   return `${a.numero}–${formattaQuantita(scala(i.quantitaMax, f, i.scalatura), i.unita, 'cucina').testo}`
 }
 
-export function VistaCucina({ piatto, porzioniIniziali, indietro, sottotitolo }: { piatto: Piatto; porzioniIniziali: number | null; indietro: string; sottotitolo?: string }) {
+export function VistaCucina({
+  piatto,
+  porzioniIniziali,
+  indietro,
+  sottotitolo,
+  variante = null,
+}: {
+  piatto: Piatto
+  porzioniIniziali: number | null
+  indietro: string
+  sottotitolo?: string
+  /** Ingredienti personalizzati della voce (SPEC §44): già in `piatto`; qui la nota e la chiave delle spunte. */
+  variante?: { voceId: string; nota: string } | null
+}) {
   const [porzioni, setPorzioni] = useState<number | null>(porzioniIniziali ?? piatto.porzioniBase)
-  const [spunte, cambia] = useSpunte(`menuapp.cucina.${piatto.id}`)
+  // Con una variante le spunte sono della voce: non si mescolano con quelle della ricetta originale.
+  const [spunte, cambia] = useSpunte(variante ? `menuapp.cucina.voce.${variante.voceId}` : `menuapp.cucina.${piatto.id}`)
   const schermo = useSchermoAcceso()
   const fattore = porzioni === null ? null : fattoreScalatura(porzioni, piatto.porzioniBase)
   const passo = porzioni !== null && porzioni < 4 ? 0.5 : 1
@@ -85,7 +99,9 @@ export function VistaCucina({ piatto, porzioniIniziali, indietro, sottotitolo }:
         ) : null}
 
         <section>
-          <h2 className="mb-2 titolo text-xl font-semibold text-primario">Ingredienti</h2>
+          <h2 className="mb-2 flex flex-wrap items-baseline gap-x-2 titolo text-xl font-semibold text-primario">
+            Ingredienti {variante ? <span className="font-sans text-sm font-medium text-testo-tenue">personalizzati per questo evento</span> : null}
+          </h2>
           {piatto.ingredienti.length === 0 ? (
             <p className="text-testo-tenue">Nessun ingrediente nella ricetta.</p>
           ) : (
@@ -116,6 +132,15 @@ export function VistaCucina({ piatto, porzioniIniziali, indietro, sottotitolo }:
             </ul>
           )}
         </section>
+
+        {variante ? (
+          <div className="flex flex-col gap-2" data-testid="avviso-variante">
+            <p className="flex items-start gap-2 rounded-xl border border-bordo/70 px-3 py-2 text-sm text-testo-tenue">
+              <Info className="mt-0.5 size-4 shrink-0 text-primario" /> Ingredienti personalizzati: verifica che il procedimento sia adatto a questa versione.
+            </p>
+            {variante.nota ? <p className="whitespace-pre-line rounded-xl bg-tenue p-3 text-[0.9375rem]">{variante.nota}</p> : null}
+          </div>
+        ) : null}
 
         {piatto.procedimento.length ? (
           <section>
@@ -177,5 +202,18 @@ export function PaginaCucinaVoce() {
       </Pagina>
     )
   }
-  return <VistaCucina piatto={ricetta} porzioniIniziali={voce.porzioniEffettive} indietro={`/eventi/${id}/menu`} sottotitolo={`${menu.data!.evento.nome} · ${voce.nome}`} />
+  // Ingredienti adattati per questo evento (SPEC §44): dalla voce (o dall'archivio, se archiviato).
+  const variante = archiviato
+    ? (snapshot.data?.find((s) => s.stato === 'valido')?.contenuto.menu.flatMap((p) => p.voci).find((v) => v.id === voceId)?.variante ?? null)
+    : voce.variante
+  const effettiva = variante ? { ...ricetta, porzioniBase: variante.porzioniBase, ingredienti: variante.ingredienti } : ricetta
+  return (
+    <VistaCucina
+      piatto={effettiva}
+      porzioniIniziali={voce.porzioniEffettive}
+      indietro={`/eventi/${id}/menu`}
+      sottotitolo={`${menu.data!.evento.nome} · ${voce.nome}`}
+      variante={variante ? { voceId: voce.id, nota: variante.nota } : null}
+    />
+  )
 }

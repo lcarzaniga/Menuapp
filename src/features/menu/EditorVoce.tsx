@@ -14,6 +14,7 @@ import { formattaCoperti } from '@/domain/porzioni.ts'
 import type { Evento, VoceMenu } from '@/domain/tipi.ts'
 import { CollegaPiatto } from '@/features/ricettario/CollegaPiatto'
 import { ModuloAttivita } from '@/features/piano/ModuloAttivita'
+import { IngredientiVoce } from './IngredientiVoce'
 
 interface Dati {
   nome: string
@@ -40,6 +41,10 @@ export function EditorVoce({ evento, menu, voce, onChiudi }: { evento: Evento; m
     contributi: voce.contributi,
   })
   const [preparazione, setPreparazione] = useState(false)
+  // La voce com'è adesso nel menù (gli ingredienti adattati si salvano a parte, SPEC §44) e la versione
+  // da mandare con «Salva»: una variante salvata da qui non deve far scattare un conflitto.
+  const viva = menu.portate.flatMap((p) => p.voci).find((x) => x.id === voce.id) ?? voce
+  const [versione, setVersione] = useState(voce.versione)
   const [porzioniTesto, setPorzioniTesto] = useState(voce.porzioni === null ? '' : String(voce.porzioni).replace('.', ','))
   const salva = useScrittura((x: Dati & { versione: number }) => api.modifica<VoceMenu>(`/voci/${voce.id}`, x), {
     oggetto: `«${voce.nome}»`,
@@ -65,7 +70,7 @@ export function EditorVoce({ evento, menu, voce, onChiudi }: { evento: Evento; m
         className="flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault()
-          if (d.nome.trim() && porzioniValide) void salva.esegui({ ...d, nome: d.nome.trim(), versione: voce.versione })
+          if (d.nome.trim() && porzioniValide) void salva.esegui({ ...d, nome: d.nome.trim(), versione })
         }}
       >
         <fieldset disabled={solaLettura} className="flex flex-col gap-4">
@@ -162,7 +167,12 @@ export function EditorVoce({ evento, menu, voce, onChiudi }: { evento: Evento; m
                 </Button>
               ) : null}
             </div>
-          ) : solaLettura ? (
+          ) : null}
+          {/* Ingredienti adattati per questo evento (SPEC §44): solo con la ricetta già collegata. */}
+          {d.piattoId && voce.piattoId === d.piattoId && !d.daDefinire ? (
+            <IngredientiVoce voce={viva} solaLettura={solaLettura} onSalvata={(v) => setVersione(v.versione)} />
+          ) : null}
+          {d.piattoId ? null : solaLettura ? (
             <p className="text-sm text-testo-tenue">Nessuna ricetta collegata.</p>
           ) : (
             <CollegaPiatto voce={voce} onCollega={(piattoId) => setD({ ...d, piattoId })} onCreato={onChiudi} />

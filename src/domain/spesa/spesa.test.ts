@@ -189,3 +189,54 @@ describe('condivisione', () => {
     expect(t).not.toMatch(/hai|possied/i)
   })
 })
+
+describe('varianti delle voci (SPEC §44)', () => {
+  // Ricetta: mortadella e pistacchi per 6; variante: ricotta, sesamo ed erba cipollina (tre al posto di due) per 4.
+  const palline = piatto('palline', 6, [
+    ing('mortadella', { quantita: 300, unita: 'g' }),
+    ing('pistacchi', { quantita: 60, unita: 'g' }),
+    ing('burro', { ingredienteId: 'ing-burro', quantita: 30, unita: 'g' }),
+  ])
+  const variante = {
+    porzioniBase: 4,
+    ingredienti: [
+      ing('ricotta', { quantita: 250, unita: 'g' }),
+      ing('sesamo', { quantita: 40, unita: 'g' }),
+      ing('erba cipollina', { unita: 'qb', scalatura: 'fissa' }),
+      ing('burro', { ingredienteId: 'ing-burro', quantita: 20, unita: 'g' }),
+      ing('pepe rosa', { statoParsing: 'da_verificare', problemiParsing: ['quantità?'] }),
+    ],
+  }
+  const nomi = (r: ReturnType<typeof calcolaSpesa>) => r.righe.map((x) => x.nome).sort()
+
+  it('la variante prende il posto degli ingredienti della ricetta, scalata sulle sue porzioni di riferimento', () => {
+    const r = calcolaSpesa(dati([palline], [voce('v1', 'palline', { porzioni: 8, variante })]))
+    expect(nomi(r)).toEqual(['Burro', 'erba cipollina', 'pepe rosa', 'ricotta', 'sesamo'])
+    // 250 g × 8/4 = 500 g; burro 20 g × 2 = 40 g
+    expect(r.righe.find((x) => x.nome === 'ricotta')?.quantita).toBe(500)
+    expect(r.righe.find((x) => x.nome === 'Burro')?.quantita).toBe(40)
+  })
+  it('la ricetta originale resta per le altre voci; i totali dello stesso ingrediente si sommano', () => {
+    const r = calcolaSpesa(dati([palline], [voce('v1', 'palline', { porzioni: 8, variante }), voce('v2', 'palline', { porzioni: 6 })]))
+    expect(r.righe.find((x) => x.nome === 'mortadella')?.quantita).toBe(300)
+    expect(r.righe.find((x) => x.nome === 'Burro')?.quantita).toBe(70)
+    expect(r.righe.find((x) => x.nome === 'Burro')?.provenienze.map((p) => p.voceId)).toEqual(['v1', 'v2'])
+  })
+  it('porzioni di riferimento mancanti: contributi da verificare, come una ricetta senza porzioni base', () => {
+    const r = calcolaSpesa(dati([palline], [voce('v1', 'palline', { variante: { ...variante, porzioniBase: null } })]))
+    expect(r.righe.find((x) => x.nome === 'ricotta')).toMatchObject({ natura: 'da_verificare' })
+  })
+  it('rimando «+ N da verificare» anche con gli ingredienti della variante', () => {
+    const conPepe = { ...variante, ingredienti: [...variante.ingredienti, ing('pepe rosa', { ingredienteId: 'ing-burro', statoParsing: 'da_verificare' })] }
+    const d = dati([palline], [voce('v1', 'palline', { variante: conPepe })])
+    expect(contributiDaVerificare(calcolaSpesa(d).righe, d).get('ing:ing-burro')).toBe(1)
+  })
+  it('passando dalla ricetta alla variante, ciò che era segnato e non serve più va fra i non più necessari', () => {
+    const prima = calcolaSpesa(dati([palline], [voce('v1', 'palline', { porzioni: 6 })]))
+    const chiaveMortadella = prima.righe.find((x) => x.nome === 'mortadella')!.chiave
+    const dopo = calcolaSpesa(dati([palline], [voce('v1', 'palline', { porzioni: 6, variante })]))
+    const lista = riconciliaSpesa(dopo.righe, [articolo(chiaveMortadella, { stato: 'comprato', fabbisognoCoperto: 300 })], { ordineReparti })
+    expect(lista.voci.find((v) => v.chiave === chiaveMortadella)?.sezione).toBe('non_piu_necessari')
+    expect(lista.voci.find((v) => v.nome === 'ricotta')?.sezione).toBe('da_comprare')
+  })
+})
