@@ -1040,3 +1040,12 @@ evento, su richiesta di Loris.
   Controllo visivo a parte su desktop 1440/1024, tablet a tocco orizzontale e verticale, telefono 360,
   chiaro e scuro. La tastiera virtuale vera non è riproducibile nei test: verificato il calcolo
   (`dispositivo.test.tsx`) e la posizione del campo sopra il pannello.
+
+## In produzione dal 24/11/2026 (rilascio Cloudflare `20261124-1121-1899b8a`, versione `884848cc`)
+
+- Su OK esplicito di Loris dopo il collaudo su TEST: ricettario contestuale nel menù (SPEC §43).
+  Nessuna migrazione di schema.
+- Verifica in sola lettura: salute ok, API senza sessione 401, pagina 200 con il nuovo pacchetto
+  (`index-vXR5wQL7.js`, che contiene il pannello), dominio principale ancora su «Sito in costruzione».
+  Subito dopo il rilascio la pagina servita dalla cache di Cloudflare puntava per pochi secondi al
+  pacchetto precedente; poi quello nuovo.
