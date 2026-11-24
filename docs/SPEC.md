@@ -48,6 +48,40 @@ Principi:
 - **Telefono prima di tutto** (Android, Chrome), ma pienamente usabile da PC e tablet.
 - **Italiano** in interfaccia, dati, messaggi, codice di dominio e documentazione.
 
+### 1.1 Principi guida per l'evoluzione (linee guida permanenti)
+
+Decisione di Loris (24/11/2026). Valgono per ogni analisi, proposta e realizzazione futura.
+
+**Principio fondamentale: l'app deve far risparmiare lavoro all'utente, non chiedergli di
+organizzare come lavorerà.** Ricette di famiglia & Co. non è un gestionale: è un'app familiare che
+aiuta a organizzare pranzi, cene e ricorrenze in modo piacevole, semplice e intuitivo.
+
+1. **Semplicità prima della completezza.** Una funzione non si fa perché manca o perché è
+   tecnicamente possibile. Ogni proposta risponde a tre domande: quale problema concreto risolve;
+   quanti passaggi elimina rispetto a oggi; quanta complessità aggiunge all'interfaccia e all'uso. Se
+   chiede più lavoro di quanto ne fa risparmiare, non è un miglioramento.
+2. **Prima l'usabilità di ciò che c'è.** Prima di nuove funzioni si cerca di rendere più immediate
+   quelle esistenti: meno clic e cambi di schermata, meno campi, meno configurazioni e decisioni
+   obbligatorie, azioni intuitive e contestuali, automatismi discreti senza procedure guidate. Esempio
+   della direzione giusta: il ricettario contestuale nel menù (§43), che non aggiunge un processo ma
+   semplifica un'operazione esistente.
+3. **Niente deriva gestionale.** Non si propongono di propria iniziativa: assegnazione dettagliata
+   dei compiti, pianificazione complessa delle preparazioni, scadenze per ingrediente, orari e
+   risorse per portata, nuovi stati, ruoli o procedure di approvazione. Non sono vietati in assoluto,
+   ma devono nascere da un'esigenza concreta emersa nell'uso reale, non da un'analisi teorica di ciò
+   che manca.
+4. **Non complicare ciò che funziona.** Le funzioni attuali sono una base da semplificare e
+   valorizzare. Niente opzioni, pulsanti o campi nuovi nelle schermate principali se non
+   indispensabili; le funzioni avanzate restano facoltative e non ostacolano l'uso più semplice.
+5. **Criterio di valutazione** di ogni idea, prima di proporne lo sviluppo: beneficio concreto per
+   chi organizza; frequenza d'uso; operazioni risparmiate; complessità aggiunta all'interfaccia;
+   possibilità di ottenere lo stesso risultato semplificando una funzione esistente. Si preferiscono
+   piccoli miglioramenti ad alto impatto; non serve riempire una roadmap, e non sviluppare nulla può
+   essere la decisione migliore.
+6. **Idee e approvazioni.** Le idee nate dalle analisi (per esempio il rapporto funzionale del
+   24/11/2026) sono idee da rivalutare, non attività approvate: nessuno sviluppo parte senza una
+   richiesta esplicita di Loris. Lo stato di approvate, idee e rimandate è in `docs/AVANZAMENTO.md`.
+
 ## 2. Perimetro MVP (v1.0)
 
 Incluso:
@@ -3146,6 +3180,7 @@ elenco per campo.
 | 23/11/2026 | 8.6 — **Nuvola del nome dell'app** (§31.6): alone avorio morbido a più ellissi dietro la scritta nella barra laterale |
 | 23/11/2026 | 8.7 — **Rifiniture dall'audit visivo** (§31.6): titoli su due righe, bordi dei campi ≥ 3:1, superfici della ricetta, foto, filo oro del prossimo evento al buio, «Me ne occupo io» a contorno, bersagli più grandi; test visivi estesi |
 | 24/11/2026 | 8.8 — **Ricettario contestuale nel menù** (§43): pannello delle ricette della portata filtrato dal campo «Aggiungi a…»; colonna a destra con trascinamento su portate e voci libere, doppio clic e tastiera; pannello dal basso con «+» sopra la tastiera; nessuna migrazione |
+| 24/11/2026 | 8.9 — **Principi guida per l'evoluzione** (§1.1): semplicità prima della completezza, usabilità dell'esistente, niente deriva gestionale, criterio di valutazione delle proposte; le idee delle analisi non sono attività approvate |
 | 19/11/2026 | 7.9 — **Memoria di famiglia** (§40): storia della ricetta pubblicabile, ricordi ed esperienze dei familiari con foto, privati anche nelle ricette pubbliche, non copiati; modello pronto per un archivio di famiglia |
 | 19/11/2026 | 7.8 — **Chi porta cosa flessibile** (§39): piatti a scelta «da definire» con quanti contributi, precisabili senza perdere l'incarico; menù e Chi porta stesso record |
 | 19/11/2026 | 7.7 — **Regia della cucina** (§38): vista del piano per il giorno dell'evento, colonne per fase, filtri, attrezzature dal testo delle ricette, testo grande, schermo acceso, «Prepara il piano dai piatti» |

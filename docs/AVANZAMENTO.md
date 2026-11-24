@@ -2,14 +2,14 @@
 
 Documento operativo per riprendere il lavoro fra sessioni.
 
-## Stato (aggiornato al 21/11/2026)
+## Stato (aggiornato al 24/11/2026)
 
 | Ambiente | Dove | Codice | Schema |
 |---|---|---|---|
-| **PRODUZIONE** | Cloudflare, `https://app.ricettedifamiglia.online` (Worker `menuapp`, versione `e5814c15`, rilascio `20261121-1713-2eafbbb`) | `2eafbbb` | 21 |
-| **TEST** | Debian, `https://loris-srv01.dala-tortoise.ts.net:9870/` (solo Tailscale) | `2eafbbb` (+ eventuali commit di sola documentazione) | 21 |
+| **PRODUZIONE** | Cloudflare, `https://app.ricettedifamiglia.online` (Worker `menuapp`, versione `884848cc`, rilascio `20261124-1121-1899b8a`) | `1899b8a` | 21 |
+| **TEST** | Debian, `https://loris-srv01.dala-tortoise.ts.net:9870/` (solo Tailscale) | `1899b8a` (+ eventuali commit di sola documentazione) | 21 |
 
-Dopo `2eafbbb` su `main` ci sono solo commit di documentazione: il codice di TEST e di PRODUZIONE è
+Dopo `1899b8a` su `main` ci sono solo commit di documentazione: il codice di TEST e di PRODUZIONE è
 lo stesso. Il rilascio attivo su TEST si legge con `readlink rilasci/attuale` (un documento non può
 riportare il commit che lo pubblica).
 
@@ -63,11 +63,41 @@ riportare il commit che lo pubblica).
   accesso (ricette, foto, famiglie, notifiche) le fa Loris nell'app.
 - Rami vecchi non uniti, non toccati: `avanzamento-organizzazione`, `avanzamento-ricerca`.
 
-## Prossima attività
+## Indirizzo del progetto
 
-Nessuna in corso. Il piano di evoluzione (docs/PIANO-EVOLUZIONE.md) è completato; le richieste
-successive (ricette della Famiglia attiva, «Chi porta cosa» flessibile, memoria di famiglia,
-collaborazione sulle ricette) sono in produzione.
+Linee guida permanenti in SPEC §1.1 (decisione di Loris del 24/11/2026): l'app deve far risparmiare
+lavoro, non chiedere di organizzare come si lavorerà; prima l'usabilità di ciò che c'è, niente deriva
+gestionale, piccoli miglioramenti ad alto impatto. Nessuno sviluppo parte senza richiesta esplicita.
+
+## Funzionalità approvate
+
+- **Ricettario contestuale nel menù** (SPEC §43): realizzato e in produzione dal 24/11/2026. Resta il
+  collaudo reale di Loris (menù di un evento vero da PC e telefono, pannello dal basso con la tastiera
+  di Android). Correzioni che emergono dal collaudo: priorità attuale.
+- Nessun'altra attività approvata.
+
+## Idee da valutare (non approvate, non avviare)
+
+Dal rapporto funzionale del 24/11/2026, da rivalutare con il criterio di SPEC §1.1. Quelle che
+toccano la deriva gestionale (§1.1 punto 3) solo se nasce un'esigenza dall'uso reale.
+
+- Semplificazioni dell'esistente: «Prepara il piano» che esclude i piatti portati da altri o fuori
+  dalla spesa; «in ritardo» del Piano che si aggiorna da solo; «Com'è andata?» dal menù dopo l'evento
+  (memoria con l'evento già scelto); «L'ultima volta» quando si sceglie un piatto; condividere solo
+  alcuni reparti della spesa; «Condividi il riepilogo» dell'evento come testo.
+- Più impegnative: preparazioni anticipate dal menù con il giorno per piatto; «Serve entro» nella
+  spesa; «Oggi e domani» in «Per te»; piatti da un altro evento in un evento esistente; timer in
+  cucina.
+- Con rischio di deriva gestionale (solo da esigenza reale): attività del piano affidabili alle
+  persone; chi compra cosa; orari per portata e avviso forno nella Regia.
+
+## Funzionalità rimandate
+
+- Elenco di SPEC §3 (modifiche e consultazione offline, foto degli eventi, prezzi, importazione da
+  URL, valori nutrizionali, stampa di ricette e spesa, conversioni per densità, statistiche,
+  aggiornamenti in tempo reale, copia dei backup su un secondo supporto).
+- Stati vuoti illustrati (punto F dell'audit visivo del 23/11/2026): rinviati da Loris.
+- Trascinamento per il riordino delle voci del menù (resta Su/Giù/Sposta in).
 
 ---
 
@@ -1049,3 +1079,9 @@ evento, su richiesta di Loris.
   (`index-vXR5wQL7.js`, che contiene il pannello), dominio principale ancora su «Sito in costruzione».
   Subito dopo il rilascio la pagina servita dalla cache di Cloudflare puntava per pochi secondi al
   pacchetto precedente; poi quello nuovo.
+
+## Principi guida per l'evoluzione (24/11/2026, ramo `principi-guida`)
+
+- Richiesta di Loris: linee guida permanenti in SPEC §1.1 (registro 8.9); in questo documento lo stato
+  è diviso in funzionalità approvate, idee da valutare e funzionalità rimandate. Solo documentazione:
+  nessuna modifica a funzioni o interfaccia, nessun rilascio.
