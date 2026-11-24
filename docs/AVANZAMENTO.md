@@ -45,10 +45,10 @@ riportare il commit che lo pubblica).
 
 | Comando | Ultima esecuzione documentata | Esito |
 |---|---|---|
-| `npm run check` (lint, tipi, test di dominio, server su Fastify e sul motore leggero, interfaccia, architettura, build) | 24/11/2026, ricettario contestuale | verde, 920 test; verde anche nei controlli degli script di rilascio dello stesso giorno (conteggio non registrato) |
-| `npm run test:e2e` (telefono e desktop) | 24/11/2026, ricettario contestuale | 61 superati, 29 saltati (scenari riservati al solo telefono o al solo desktop), nessun fallimento |
-| `npm run test:aspetto` (confronti visivi) | 24/11/2026, ricettario contestuale | 10 test verdi, 78 schermate di riferimento invariate |
-| `npm run test:cloudflare` (prove sul Worker in locale, R2 compreso) | 24/11/2026, dentro `scripts/cloudflare/rilascia.sh` (rilascio `20261124-1121-1899b8a`) | verde (lo script si ferma altrimenti); ultimo conteggio documentato: 9 prove, 19/11/2026 |
+| `npm run check` (lint, tipi, test di dominio, server su Fastify e sul motore leggero, interfaccia, architettura, build) | 24/11/2026, varianti delle ricette | verde, 949 test |
+| `npm run test:e2e` (telefono e desktop) | 24/11/2026, varianti delle ricette | 63 superati, 29 saltati (scenari riservati al solo telefono o al solo desktop), nessun fallimento |
+| `npm run test:aspetto` (confronti visivi) | 24/11/2026, varianti delle ricette | 10 test verdi, 78 schermate di riferimento invariate |
+| `npm run test:cloudflare` (prove sul Worker in locale, R2 compreso) | 24/11/2026, varianti delle ricette | 9 prove verdi |
 | `npm run test:e2e:cloudflare` (e2e sul Worker) | 18/11/2026, installazione Cloudflare | eseguito allora; non ripetuto dopo |
 
 ## Decisioni tecniche
@@ -78,6 +78,8 @@ gestionale, piccoli miglioramenti ad alto impatto. Nessuno sviluppo parte senza 
 - **Ricettario contestuale nel menù** (SPEC §43): realizzato e in produzione dal 24/11/2026. Resta il
   collaudo reale di Loris (menù di un evento vero da PC e telefono, pannello dal basso con la tastiera
   di Android). Correzioni che emergono dal collaudo: priorità attuale.
+- **Varianti delle ricette nelle voci del menù** (SPEC §44): approvate il 24/11/2026 con le precisazioni
+  di Loris; sviluppate e su TEST, in attesa del suo collaudo e del suo OK per la PRODUZIONE.
 - Nessun'altra attività approvata.
 
 ## Idee da valutare (non approvate, non avviare)
@@ -1107,3 +1109,22 @@ evento, su richiesta di Loris.
   documentate, con la data di ciascuna suite.
 - Su `main` appena prima del prossimo rilascio in PRODUZIONE (`scripts/documentazione.sh`), senza
   rilascio.
+
+## Varianti delle ricette nelle voci del menù (24/11/2026, ramo `varianti-ricette`, schema 22)
+
+- Richiesta di Loris discussa in tre passaggi (analisi, proposta, precisazioni) e approvata. SPEC §44.
+  Precisazioni: elenco degli ingredienti liberamente modificabile (mai sostituzioni uno-a-uno);
+  versioni precedenti fin da subito, ultime 20 senza togliere doppioni; identità indipendente dal nome
+  dell'evento; archiviati letti dall'archivio; porzioni di riferimento ben distinte da quelle della
+  voce; avviso in Cucina senza confronto automatico col procedimento.
+- Migrazione `0022_varianti_voci.sql` (colonna `voci_menu.variante`), registrata anche per il Worker.
+  Interventi: dati e dominio (`ricettaDellaVoce` nella spesa); server (`PUT /voci/:id/variante`,
+  `GET /voci/:id/varianti`, variante che decade cambiando ricetta, «Annulla», duplicazione); menù
+  (`IngredientiVoce.tsx`: riga nella finestra della voce, «Ingredienti per questo evento» con
+  `EditorIngredienti` del Ricettario, versioni precedenti, badge); Cucina e archivio.
+- Test: dominio (5 nuovi sulla spesa); API sui due motori (12 × 2: permessi, versione, regole,
+  decadenza, «Annulla», archivio, ricetta cambiata, copie, visibilità, limite 20, duplicazione,
+  esportazione e ripristino); matrice delle autorizzazioni; prove sul Worker (variante in backup e
+  ripristino); e2e `varianti.spec.ts` su telefono e desktop.
+- Esecuzione completa del 24/11: `npm run check` 949 test verdi; e2e 63 superati, 29 saltati, nessun
+  fallimento; confronti visivi 10 test, 78 schermate invariate; `npm run test:cloudflare` 9 prove verdi.

@@ -3149,6 +3149,61 @@ elenco per campo.
   `ricettario-contestuale.spec.ts` (desktop e telefono), `ricerca.spec.ts` e `rifinitura.spec.ts`
   adeguati; confronti visivi del menù invariati.
 
+## 44. Varianti delle ricette nelle voci del menù (9.0)
+
+Richiesta di Loris (24/11/2026), approvata dopo la discussione con le sue precisazioni. Alcune
+ricette sono più una tecnica che una combinazione fissa di ingredienti (es. «Finte palline di
+Natale»: mortadella e pistacchi, oppure ricotta e sesamo, tonno…). Si adattano gli ingredienti per
+una voce del menù, senza toccare la ricetta e senza un secondo ricettario. Migrazione
+`0022_varianti_voci.sql` (una colonna facoltativa), nessuna tabella nuova.
+
+- **Inserimento invariato**: la ricetta si mette nel menù come sempre (ricettario contestuale, §43).
+  Chi non usa le varianti non vede nulla di nuovo, salvo la riga «Ingredienti» nella finestra della
+  voce.
+- **Adatta ingredienti** (finestra della voce, solo con una ricetta collegata e non «da definire»):
+  apre «Ingredienti per questo evento» con lo stesso editor degli ingredienti del Ricettario,
+  compilato con quelli della ricetta. L'elenco si modifica **liberamente** (aggiungere, togliere,
+  cambiare quantità e unità; due ingredienti possono diventarne uno o quattro): la variante è
+  l'**elenco completo** degli ingredienti effettivi, mai una serie di sostituzioni. In più: le
+  **porzioni di riferimento** delle quantità (riquadro a sé: «Le quantità qui sotto sono per N
+  porzioni», con le porzioni della voce nel menù scritte sotto, per non confonderle), una
+  **descrizione** facoltativa (≤ 80) e una **«Nota per questa versione»** facoltativa (≤ 2000). Si
+  salva a parte dal «Salva» della voce (che prende la nuova versione, nessun conflitto). «Torna alla
+  ricetta» (con conferma) toglie la variante. Procedimento, foto e tempi non si modificano.
+- **Usa una versione precedente** (solo se ce n'è almeno una accessibile): le ultime **20** varianti
+  della stessa ricetta d'origine (copie comprese) in altri eventi che l'utente vede, dalla data più
+  recente, **senza togliere doppioni**. Si riconoscono da evento, data e descrizione (sotto, i nomi
+  degli ingredienti); l'identità è la voce, mai il nome dell'evento. La scelta viene **copiata** nella
+  voce (ingredienti con id nuovi, porzioni, descrizione, nota): da lì è indipendente, e cambiarla non
+  tocca l'altro evento. Se la voce ha già una variante lo si dice prima.
+- **Dati** (`voci_menu.variante`, JSON): `ricettaOrigine` (stabilita dal server: origine della ricetta
+  collegata, o la ricetta stessa), `descrizione`, `nota`, `porzioniBase`, `ingredienti` (1–100, stessa
+  validazione degli ingredienti delle ricette, id distinti). Copia completa: una modifica successiva
+  della ricetta non cambia le varianti. Scrive chi può modificare l'evento (`PUT /voci/:id/variante`,
+  con versione; `null` torna alla ricetta; 422 senza ricetta o su evento archiviato); legge chi vede
+  l'evento. `GET /voci/:id/varianti` (lettura): solo eventi visibili all'utente; per gli eventi
+  **archiviati** la variante viene dall'archivio dell'evento, non dalla voce viva.
+- **Ricetta cambiata o tolta**: collegare un'altra ricetta (o scollegarla) fa decadere la variante; una
+  ricetta eliminata anche (la voce resta senza ricetta). Trasferimenti di proprietà (§41.5) e copie
+  per un altro organizzatore la conservano.
+- **Spesa**: con una variante il calcolo usa i suoi ingredienti e le sue porzioni di riferimento
+  (`ricettaDellaVoce`, `src/domain/spesa/calcolo.ts`); riconciliazione di sempre (ciò che era segnato
+  e non serve più va fra i «Non più necessari»). «A che punto siamo?» segue la spesa.
+- **Cucina**: ingredienti della variante alle porzioni della voce («personalizzati per questo
+  evento»), un avviso discreto «Ingredienti personalizzati: verifica che il procedimento sia adatto a
+  questa versione» e, se c'è, la nota sopra il procedimento (che resta quello della ricetta). Nessun
+  confronto automatico fra procedimento e ingredienti (scelta di Loris). Spunte per voce.
+- **Menù**: badge «variante · descrizione» accanto a «ricetta». **Mai** nel menù stampato né nei
+  segnaposto.
+- **Archivio, duplicazione, esportazione**: la variante fa parte della voce nello snapshot (formato
+  invariato, campo facoltativo); la Cucina degli archiviati la legge da lì. La duplicazione la copia
+  con la voce (decade se la ricetta non è disponibile). «Annulla» dopo l'eliminazione di una voce la
+  rimette. Esportazione, backup e ripristino la comprendono (colonna di `voci_menu`), su Debian e su
+  Cloudflare. Confronto fra edizioni, stelle e classifica invariati: la variante resta la stessa
+  ricetta.
+- Test: `src/domain/spesa/spesa.test.ts`, `server/api/varianti.test.ts` (due motori), matrice di
+  `autorizzazione.test.ts`, `test/cloudflare` (migrazione, backup e ripristino), e2e `varianti.spec.ts`.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -3186,6 +3241,7 @@ elenco per campo.
 | 24/11/2026 | 8.8 — **Ricettario contestuale nel menù** (§43): pannello delle ricette della portata filtrato dal campo «Aggiungi a…»; colonna a destra con trascinamento su portate e voci libere, doppio clic e tastiera; pannello dal basso con «+» sopra la tastiera; nessuna migrazione |
 | 24/11/2026 | 8.9 — **Principi guida per l'evoluzione** (§1.1): semplicità prima della completezza, usabilità dell'esistente, niente deriva gestionale, criterio di valutazione delle proposte; le idee delle analisi non sono attività approvate |
 | 24/11/2026 | 8.9.1 — Coerenza: F2 punto 5 e §15 (riordino solo con Su/Giù/Sposta in; il trascinamento di §43 inserisce, non riordina), §29.7 (tendina sostituita da §43) |
+| 24/11/2026 | 9.0 — **Varianti delle ricette nelle voci del menù** (§44): ingredienti adattati per un evento (elenco completo, porzioni di riferimento, descrizione, nota), «Usa una versione precedente» (ultime 20 visibili, archiviati dall'archivio), spesa e Cucina coerenti, mai nel menù stampato; migrazione 0022 |
 | 19/11/2026 | 7.9 — **Memoria di famiglia** (§40): storia della ricetta pubblicabile, ricordi ed esperienze dei familiari con foto, privati anche nelle ricette pubbliche, non copiati; modello pronto per un archivio di famiglia |
 | 19/11/2026 | 7.8 — **Chi porta cosa flessibile** (§39): piatti a scelta «da definire» con quanti contributi, precisabili senza perdere l'incarico; menù e Chi porta stesso record |
 | 19/11/2026 | 7.7 — **Regia della cucina** (§38): vista del piano per il giorno dell'evento, colonne per fase, filtri, attrezzature dal testo delle ricette, testo grande, schermo acceso, «Prepara il piano dai piatti» |
