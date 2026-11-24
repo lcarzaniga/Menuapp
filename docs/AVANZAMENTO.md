@@ -1021,3 +1021,22 @@ evento, su richiesta di Loris.
   dall'audit visivo. Nessuna migrazione di schema.
 - Verifica in sola lettura: salute ok, API senza sessione 401, pagina e foglio di stile 200 (con i
   nuovi token), dominio principale ancora su «Sito in costruzione».
+
+## Ricettario contestuale nel menù (24/11/2026, ramo `ricettario-contestuale`)
+
+- Richiesta di Loris, prioritaria sulle evoluzioni dell'analisi del 24/11. Scelte di Loris: solo le
+  ricette della portata (più quelle senza portata cercando), doppio clic per aggiungere, trascinamento
+  anche su una voce libera per collegarla. SPEC §43.
+- Riuso: `cercaRicette` (§23), `portataDelPiatto` (§5), `usePiatti`, `POST /eventi/:id/voci`,
+  `PUT /voci/:id`; la tendina dei suggerimenti (`SuggerimentiPiatti`) è sostituita dal pannello,
+  restano le note comuni usate anche da «Collega». Nessuna migrazione, nessuna API, nessuna libreria
+  (drag & drop nativo).
+- Nuovi: `ricetteDellaPortata` (dominio), `src/features/menu/RicettarioContestuale.tsx`,
+  `src/lib/dispositivo.ts` (media query, tastiera virtuale).
+- Test: 920 test di unità; e2e `ricettario-contestuale.spec.ts` (desktop: apertura, tipologia, nome,
+  ingrediente, digitazione, Invio, trascinamento su portata e su voce libera, doppio clic senza
+  doppioni, tastiera, chiusura; telefono: «+», campo sopra il pannello, doppio tocco, Invio, chiusura
+  continuando a scrivere, collegamento dall'editor); confronti visivi invariati (78 istantanee).
+  Controllo visivo a parte su desktop 1440/1024, tablet a tocco orizzontale e verticale, telefono 360,
+  chiaro e scuro. La tastiera virtuale vera non è riproducibile nei test: verificato il calcolo
+  (`dispositivo.test.tsx`) e la posizione del campo sopra il pannello.

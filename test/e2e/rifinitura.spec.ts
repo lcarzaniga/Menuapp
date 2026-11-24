@@ -69,25 +69,25 @@ test('notifiche, presenze in sola lettura, tastiera, ricettario e archivio', asy
   await page.getByRole('combobox', { name: 'Famiglia attiva' }).filter({ visible: true }).selectOption({ label: 'Famiglia' })
   await expect(page.getByRole('heading', { name: 'Famiglia', exact: true })).toBeVisible()
 
-  // ── Menù: i suggerimenti del ricettario si scelgono anche da tastiera
+  // ── Menù: le ricette del ricettario contestuale si scelgono anche da tastiera (SPEC §43)
   await apiScrivi(request, 'post', '/piatti', { id: 'rf-crostata', nome: 'Crostata di albicocche', porzioniBase: 8, ingredienti: [], famiglie: [famiglia.id] })
   await page.goto('/#/eventi/rf-ev/menu')
   await page.reload()
   const campo = page.getByLabel('Aggiungi a Dolci')
   await campo.fill('crostata di albi')
-  await expect(page.getByRole('listbox', { name: 'Piatti del ricettario' })).toBeVisible()
+  await expect(page.getByRole('listbox', { name: /^Ricette per/ })).toBeVisible()
   await campo.press('ArrowDown')
-  const attiva = page.getByRole('listbox', { name: 'Piatti del ricettario' }).getByRole('option', { selected: true })
+  const attiva = page.getByRole('listbox', { name: /^Ricette per/ }).getByRole('option', { selected: true })
   await expect(attiva).toContainText('Crostata di albicocche')
   await expect(campo).toHaveAttribute('aria-activedescendant', (await attiva.getAttribute('id'))!)
   await campo.press('Enter')
   await expect(page.getByRole('button', { name: 'Crostata di albicocche: apri dettagli' })).toBeVisible()
   const menu = await apiLeggi<{ portate: { voci: { nome: string; piattoId: string | null }[] }[] }>(request, '/eventi/rf-ev/menu')
   expect(menu.portate.flatMap((p) => p.voci).find((v) => v.nome === 'Crostata di albicocche')?.piattoId).toBe('rf-crostata')
-  // Esc chiude i suggerimenti e lascia scrivere liberamente.
+  // Esc chiude il ricettario e lascia scrivere liberamente.
   await campo.fill('crostata di albi')
   await campo.press('Escape')
-  await expect(page.getByRole('listbox', { name: 'Piatti del ricettario' })).toHaveCount(0)
+  await expect(page.getByRole('listbox', { name: /^Ricette per/ })).toHaveCount(0)
 
   // ── Ricettario: tornando da una ricetta si ritrovano ricerca e posizione
   for (let i = 1; i <= 25; i++) await apiScrivi(request, 'post', '/piatti', { id: `rf-zuppa-${i}`, nome: `Zuppa numero ${String(i).padStart(2, '0')}`, porzioniBase: 4, ingredienti: [] })

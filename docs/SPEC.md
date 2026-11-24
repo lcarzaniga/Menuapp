@@ -95,9 +95,9 @@ GitHub Pages.
    impostazioni e si possono cambiare.
 2. Si apre il menù dell'evento: una sezione per portata, ciascuna con un campo
    «Aggiungi piatto…».
-3. Scrivere un nome e premere Invio crea una voce di menù **senza** piatto collegato. Se
-   il nome coincide con un piatto del ricettario, compare un suggerimento: sceglierlo
-   collega la voce al piatto; ignorarlo lascia la voce libera.
+3. Scrivere un nome e premere Invio crea una voce di menù **senza** piatto collegato. Mettendo
+   a fuoco il campo si apre il ricettario contestuale della portata (§43), filtrato dal testo
+   scritto: scegliere una ricetta crea una voce collegata; ignorarlo lascia la voce libera.
 4. Incollare più righe nel campo crea una voce per riga.
 5. Le voci si riordinano con trascinamento (pressione prolungata) o con i comandi
    *Su / Giù / Sposta in…*.
@@ -3064,6 +3064,53 @@ migrazione: stanno nella riga dello stile di stampa dell'evento (`stili_stampa.o
   inclusi con la riga (`stili_stampa`), su Debian e su Cloudflare.
 - Stampa: scala 100% (non «Adatta alla pagina»), A4 verticale; i consigli sono nella pagina.
 
+## 43. Ricettario contestuale nel menù (8.8)
+
+Richiesta di Loris (24/11/2026), con le sue scelte sui punti aperti. Nessuna migrazione e nessuna API
+nuova: crea le voci con `POST /eventi/:id/voci` (con `piattoId`) e collega quelle esistenti con
+`PUT /voci/:id`, come prima. Sostituisce la tendina dei suggerimenti sotto «Aggiungi a…»: un solo
+elenco per campo.
+
+- **Apertura**: toccare o mettere a fuoco «Aggiungi a…» di una portata, oppure scriverci. Il fuoco
+  automatico di un menù vuoto non lo apre. Cambiando campo il pannello passa a quella portata. Non
+  c'è negli eventi archiviati.
+- **Contenuto** (`ricetteDellaPortata`, `src/domain/ricettario.ts`): le ricette la cui portata
+  suggerita ricade nella portata dell'evento (stesso confronto tollerante del ricettario, §5:
+  «Primo» → Primi), in ordine alfabetico. Con un testo nel campo si cerca per nome e ingredienti
+  (§23) fra quelle della portata e quelle **senza portata**; le ricette di **altre portate non
+  compaiono mai** (scelta di Loris). Le ricette sono quelle di prima (personali, della Famiglia
+  dell'evento, pubbliche se l'utente le include; le proprie prima). Nessuna casella di ricerca nel
+  pannello: filtra solo il testo del campo. Righe compatte: miniatura o icona, nome, al più una
+  nota («con zucca», «pubblica · verrà copiata», «senza portata»). Oltre 200 ricette l'elenco invita
+  a scrivere.
+- **Invio** crea sempre una voce libera con il testo (anche più righe incollate); una ricetta scelta
+  crea solo la voce collegata, con il nome della ricetta, e il testo si pulisce. La stessa ricetta si
+  può aggiungere più volte, come prima. Un solo invio alla volta: doppio clic, Invio ripetuto o due
+  tocchi non creano doppioni.
+- **Spazio largo** (da 1024 px): colonna a destra del menù, 300–360 px (`clamp(300px, 26vw, 360px)`),
+  ferma durante lo scorrimento; il menù si restringe e non viene coperto. Con il mouse
+  (`pointer: fine`) una ricetta si **trascina** (drag & drop nativo, nessuna libreria): su una
+  portata crea una voce collegata (la portata si evidenzia: «Rilascia per aggiungere…»), su una
+  **voce senza ricetta** la collega mantenendone il nome (scelta di Loris; non sulle voci «da
+  definire»). Durante il trascinamento tutte le portate mostrano un contorno tratteggiato. Il
+  riordino delle voci resta con Su/Giù/Sposta in: nessuna interferenza. Alternative al
+  trascinamento: **doppio clic** (un clic seleziona soltanto, scelta di Loris) e da tastiera **frecce
+  e Invio** dal campo (combobox con `aria-activedescendant`); Esc toglie la selezione, poi chiude.
+  Nessun pulsante «Aggiungi» sulle righe.
+- **Spazio stretto** (telefono, tablet verticale): pannello dal basso, non modale, senza togliere il
+  fuoco al campo; ogni riga ha «+». Si posiziona sopra la tastiera virtuale (`visualViewport`), alto
+  poco meno di metà dello spazio visibile (180–360 px), e la pagina scorre perché il campo resti
+  sopra il pannello. Toccare fuori dal campo lo chiude.
+- **Tocco su schermo largo**: la larghezza sceglie la colonna, il puntatore sceglie l'interazione.
+  Un tablet orizzontale a tocco ha la colonna con «+» su ogni riga e nessun trascinamento.
+- **Chiusura**: «×» del pannello (il fuoco e la tastiera restano nel campo) o Esc; il testo non si
+  perde mai. L'icona del ricettario accanto al campo attivo lo riapre o lo nasconde.
+- **Collegare una voce già esistente** resta possibile anche dall'editor della voce («Collega»), su
+  ogni dispositivo.
+- Test: `src/domain/ricettario.test.ts`, `src/lib/dispositivo.test.tsx` (tastiera virtuale), e2e
+  `ricettario-contestuale.spec.ts` (desktop e telefono), `ricerca.spec.ts` e `rifinitura.spec.ts`
+  adeguati; confronti visivi del menù invariati.
+
 ### Registro delle modifiche
 
 | Data | Modifica |
@@ -3098,6 +3145,7 @@ migrazione: stanno nella riga dello stile di stampa dell'evento (`stili_stampa.o
 | 23/11/2026 | 8.5 — **Ottanio più blu** (§31.6): fondi e superfici spostati da 167–182° a 188–193° di tinta, pulsanti e accenti invariati |
 | 23/11/2026 | 8.6 — **Nuvola del nome dell'app** (§31.6): alone avorio morbido a più ellissi dietro la scritta nella barra laterale |
 | 23/11/2026 | 8.7 — **Rifiniture dall'audit visivo** (§31.6): titoli su due righe, bordi dei campi ≥ 3:1, superfici della ricetta, foto, filo oro del prossimo evento al buio, «Me ne occupo io» a contorno, bersagli più grandi; test visivi estesi |
+| 24/11/2026 | 8.8 — **Ricettario contestuale nel menù** (§43): pannello delle ricette della portata filtrato dal campo «Aggiungi a…»; colonna a destra con trascinamento su portate e voci libere, doppio clic e tastiera; pannello dal basso con «+» sopra la tastiera; nessuna migrazione |
 | 19/11/2026 | 7.9 — **Memoria di famiglia** (§40): storia della ricetta pubblicabile, ricordi ed esperienze dei familiari con foto, privati anche nelle ricette pubbliche, non copiati; modello pronto per un archivio di famiglia |
 | 19/11/2026 | 7.8 — **Chi porta cosa flessibile** (§39): piatti a scelta «da definire» con quanti contributi, precisabili senza perdere l'incarico; menù e Chi porta stesso record |
 | 19/11/2026 | 7.7 — **Regia della cucina** (§38): vista del piano per il giorno dell'evento, colonne per fase, filtri, attrezzature dal testo delle ricette, testo grande, schermo acceso, «Prepara il piano dai piatti» |

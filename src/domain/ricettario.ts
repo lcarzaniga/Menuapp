@@ -1,4 +1,5 @@
 // Ricettario sfogliabile: portate per il filtro e iniziali per la rubrica (SPEC §5).
+import { cercaRicette, type RicettaCercabile, type Risultato, terminiRicerca } from './ricerca.ts'
 import { norm } from './testo.ts'
 
 export const SENZA_PORTATA = 'Senza portata'
@@ -68,4 +69,31 @@ export function rubrica<T extends { nome: string }>(piatti: readonly T[]): Grupp
     gruppi.set(l, [...(gruppi.get(l) ?? []), p])
   }
   return [...ALFABETO, ALTRO_INIZIALE].filter((l) => gruppi.has(l)).map((lettera) => ({ lettera, piatti: gruppi.get(lettera)! }))
+}
+
+/**
+ * Ricette per il pannello del menù (ricettario contestuale): quelle della tipologia della portata
+ * dell'evento (stesso confronto tollerante di `portataDelPiatto`). Con un testo si cerca per nome e
+ * ingredienti (§23) fra quelle della portata e quelle senza portata; le altre portate restano fuori.
+ * Senza testo: solo la portata, in ordine alfabetico.
+ */
+export function ricetteDellaPortata<T extends RicettaCercabile & { portataSuggerita: string | null }>(
+  ricette: readonly T[],
+  portata: string,
+  testo: string,
+  predefinite: readonly string[],
+): Risultato<T>[] {
+  const chiave = norm(portataDelPiatto(portata, predefinite))
+  const tipologia = (r: T) => norm(portataDelPiatto(r.portataSuggerita, predefinite))
+  if (terminiRicerca(testo).length === 0) {
+    return ricette
+      .filter((r) => tipologia(r) === chiave)
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base', numeric: true }))
+      .map((ricetta) => ({ ricetta, livello: 'nome', ingredientiTrovati: [], corrispondenze: 0, nelNome: 0 }))
+  }
+  const senza = norm(SENZA_PORTATA)
+  return cercaRicette(
+    ricette.filter((r) => [chiave, senza].includes(tipologia(r))),
+    testo,
+  )
 }

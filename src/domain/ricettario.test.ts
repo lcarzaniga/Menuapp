@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { inizialeRubrica, portataDelPiatto, portateDelRicettario, rubrica, SENZA_PORTATA } from './ricettario.ts'
+import { inizialeRubrica, portataDelPiatto, portateDelRicettario, ricetteDellaPortata, rubrica, SENZA_PORTATA } from './ricettario.ts'
 
 const PREDEFINITE = ['Antipasti', 'Primi', 'Secondi', 'Contorni', 'Dolci', 'Frutta e caffè', 'Bevande']
 
@@ -47,5 +47,38 @@ describe('rubrica alfabetica', () => {
       ['R', ['risotto', 'Rosti']],
       ['#', ['10 tartine']],
     ])
+  })
+})
+
+describe('ricette della portata (pannello del menù)', () => {
+  const r = (nome: string, portataSuggerita: string | null, ingredienti: string[] = []) => ({ nome, portataSuggerita, ingredienti })
+  const ricette = [
+    r('Tiramisù', 'Dolci', ['savoiardi', 'mascarpone']),
+    r('Lasagne al ragù', 'Primi', ['lasagne', 'carne macinata']),
+    r('Crostata', 'Dolce al forno', ['farina', 'marmellata']),
+    r('Zucchine ripiene', 'Contorni', ['zucchine', 'carne macinata']),
+    r('Risotto alle zucchine', 'primo', ['riso', 'zucchine']),
+    r('Salsa verde', null, ['prezzemolo']),
+    r('Zuppa inglese', null, ['savoiardi', 'alchermes']),
+  ]
+  const nomi = (portata: string, testo: string) => ricetteDellaPortata(ricette, portata, testo, PREDEFINITE).map((x) => x.ricetta.nome)
+
+  it('senza testo: tutte quelle della tipologia, in ordine alfabetico, senza quelle senza portata', () => {
+    expect(nomi('Dolci', '')).toEqual(['Crostata', 'Tiramisù'])
+    expect(nomi('Primi', '  ')).toEqual(['Lasagne al ragù', 'Risotto alle zucchine'])
+    expect(nomi('Bevande', '')).toEqual([])
+  })
+  it('con un testo: nome e ingredienti, solo nella portata e fra quelle senza portata', () => {
+    expect(nomi('Primi', 'zucchine')).toEqual(['Risotto alle zucchine'])
+    expect(nomi('Primi', 'macinata')).toEqual(['Lasagne al ragù'])
+    expect(nomi('Dolci', 'savoiardi')).toEqual(['Tiramisù', 'Zuppa inglese'])
+    expect(nomi('Contorni', 'zucch')).toEqual(['Zucchine ripiene'])
+  })
+  it('una portata dell\'evento scritta diversamente trova la stessa tipologia', () => {
+    expect(nomi('dolce', '')).toEqual(['Crostata', 'Tiramisù'])
+  })
+  it('il testo dice cosa è stato trovato negli ingredienti', () => {
+    const [x] = ricetteDellaPortata(ricette, 'Primi', 'riso zucchine', PREDEFINITE)
+    expect(x!.ricetta.nome).toBe('Risotto alle zucchine')
   })
 })

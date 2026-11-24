@@ -42,10 +42,11 @@ test('cerca per nome e ingredienti nel ricettario e nel menù', async ({ page, r
   const ev = (await apiScrivi(request, 'post', '/eventi', { id: 'ev-ricerca', nome: 'Cena di prova ricerca', data: '2027-04-10', oraServizio: null, tipo: 'cena', occasione: '', adulti: 4, bambini: 0, note: '' })).corpo
   await page.goto('/#/eventi/ev-ricerca/menu')
   await page.getByPlaceholder('Aggiungi a secondi…').fill('zucchine menta')
-  const proposte = page.getByRole('listbox', { name: 'Piatti del ricettario' })
+  const proposte = page.getByRole('listbox', { name: /^Ricette per/ })
   await expect(proposte.getByRole('option', { name: /Frittata di zucchine/ })).toContainText('con menta')
   await foto(page, '02-menu')
-  await proposte.getByRole('option', { name: /Frittata di zucchine/ }).click()
+  // Sul telefono si aggiunge con «+» dal pannello dal basso (SPEC §43).
+  await proposte.getByRole('button', { name: 'Aggiungi «Frittata di zucchine» a Secondi' }).click()
   await expect(page.getByRole('button', { name: 'Frittata di zucchine: apri dettagli' })).toBeVisible()
   const menu = await apiLeggi<{ portate: { voci: { nome: string; piattoId: string | null }[] }[] }>(request, `/eventi/${ev.id}/menu`)
   expect(menu.portate.flatMap((p) => p.voci).find((v) => v.nome === 'Frittata di zucchine')?.piattoId).toBe('r-frittata')
