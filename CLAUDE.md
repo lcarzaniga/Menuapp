@@ -53,5 +53,7 @@ verità) e `docs/AVANZAMENTO.md` (stato del lavoro) prima di cambiare qualcosa.
   main, controlli, push, migrazioni, rilascio); mai merge o push fuori da questo script.
   PRODUZIONE (`scripts/cloudflare/rilascia.sh`) **sempre e solo** dopo l'OK esplicito di Loris dato
   dopo il collaudo su TEST; con un OK ambiguo si chiede conferma.
+- Rami di sola documentazione (`docs/*.md`): nessun rilascio; Claude li porta su `main` in autonomia
+  appena prima di un rilascio in PRODUZIONE con `scripts/documentazione.sh <ramo>…` (docs/RILASCI.md).
 - Non toccare altri progetti o servizi del server (dailyMeals, sharedKidsCalendar, Apache…).
 - Aggiorna `docs/AVANZAMENTO.md` a ogni attività significativa.

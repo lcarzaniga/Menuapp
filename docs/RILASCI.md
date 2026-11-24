@@ -27,8 +27,10 @@ un'ulteriore autorizzazione**, appena le modifiche sono complete e i test automa
    - Va bene → OK esplicito a Claude per la produzione (es. «porta in produzione»). Una risposta
      ambigua non vale: Claude chiede conferma.
    - Non va bene → correzione su un nuovo ramo e di nuovo dal punto 1. Produzione non cambia.
-4. **PRODUZIONE** (Claude o Loris, solo dopo l'OK): `scripts/cloudflare/rilascia.sh`
-   rifiuta il rilascio se il commit di `main` non è quello attivo su TEST; poi controlli, prove sul
+4. **PRODUZIONE** (Claude o Loris, solo dopo l'OK): appena prima, Claude porta su `main` i rami di
+   sola documentazione in attesa con `scripts/documentazione.sh <ramo>…`; poi `scripts/cloudflare/rilascia.sh`
+   rifiuta il rilascio se il commit di `main` non è quello attivo su TEST o non ne differisce solo per
+   `docs/*.md`; poi controlli, prove sul
    Worker in locale, build, `wrangler deploy`, verifica di `app.ricettedifamiglia.online`. Le
    migrazioni di schema le applica il Durable Object al suo avvio, dopo un backup `pre-migrazione`
    in R2 (se il backup non riesce non migra e il Worker non parte).
@@ -37,9 +39,15 @@ un'ulteriore autorizzazione**, appena le modifiche sono complete e i test automa
    annotazione in AVANZAMENTO. Le prove con un accesso (ricette, foto, famiglie, notifiche) le fa
    Loris nell'app.
 
-La documentazione segue il codice: ogni ramo porta le sue note e arriva su `main` con il rilascio su
-TEST. Le note scritte dopo un rilascio (es. l'esito della produzione) vanno su un ramo breve
-rilasciato a sua volta su TEST, senza restare isolate su rami temporanei.
+La documentazione segue il codice: ogni ramo di sviluppo porta le sue note e arriva su `main` con il
+rilascio su TEST. **La documentazione da sola non richiede rilasci** (decisione di Loris del
+24/11/2026): le modifiche che toccano solo `docs/*.md` (note dopo un rilascio, esito della produzione,
+linee guida) restano su un ramo dedicato e Claude le porta su `main` in autonomia **appena prima del
+successivo rilascio in PRODUZIONE**, con `scripts/documentazione.sh` (solo avanzamento rapido, rifiuta
+rami con altri file, pubblica `main` su GitHub, non rilascia nulla). Lo script di PRODUZIONE accetta
+`main` avanti rispetto a TEST solo per questi file: il codice in produzione resta sempre quello
+provato su TEST. Se nel frattempo serve un rilascio su TEST di uno sviluppo, i rami di documentazione
+possono arrivare su `main` anche insieme a quello.
 
 Nessun rilascio su Cloudflare parte da solo: il Worker `menuapp` non ha build automatiche collegate a
 GitHub (verificato il 19/11/2026), e il push di `main` non pubblica nulla.

@@ -15,7 +15,9 @@ riportare il commit che lo pubblica).
 
 - Dominio principale `ricettedifamiglia.online`: solo «Sito in costruzione» (Worker
   `ricettedifamiglia-sito`, SPEC §34). Tailscale Funnel spento.
-- Procedura di rilascio: docs/RILASCI.md (TEST, prova di Loris, PRODUZIONE solo con il suo OK).
+- Procedura di rilascio: docs/RILASCI.md (TEST, prova di Loris, PRODUZIONE solo con il suo OK). I rami
+  di sola documentazione non si rilasciano: vanno su `main` appena prima della PRODUZIONE
+  (`scripts/documentazione.sh`).
 - Utenti in produzione: Loris, Lucia, Palli, Raffa (tutti collegati su `app.…`).
 - **Branch**: `main`, pubblicato su GitHub e uguale al rilascio di TEST; lavoro sempre su un ramo dedicato.
 - **Sviluppo**: tmux `menuapp` (finestre `server` → 9871 con `dati-sviluppo/`, `dev` → Vite 5173,
@@ -1085,3 +1087,10 @@ evento, su richiesta di Loris.
 - Richiesta di Loris: linee guida permanenti in SPEC §1.1 (registro 8.9); in questo documento lo stato
   è diviso in funzionalità approvate, idee da valutare e funzionalità rimandate. Solo documentazione:
   nessuna modifica a funzioni o interfaccia, nessun rilascio.
+- Stesso giorno, decisione di Loris: la documentazione da sola non richiede rilasci. Nuovo
+  `scripts/documentazione.sh` (porta su `main` rami che cambiano solo `docs/*.md`, avanzamento rapido,
+  push, nessun rilascio), usato da Claude appena prima di ogni rilascio in PRODUZIONE; lo script di
+  PRODUZIONE accetta `main` avanti rispetto a TEST solo per `docs/*.md` (provato sui commit reali:
+  stesso commit e sola documentazione accettati; codice non provato, commit non discendente e rilascio
+  non riconoscibile rifiutati). RILASCI.md e CLAUDE.md aggiornati. Questo ramo cambia script, quindi va
+  su TEST una volta con `scripts/rilascia.sh` (app invariata).
