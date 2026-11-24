@@ -41,13 +41,15 @@ riportare il commit che lo pubblica).
   A4/A5, archiviazione con snapshot autonomo, consultazione e vista cucina da snapshot,
   copia nel ricettario, riapertura.
 
-## Test (ultima esecuzione, 19/11/2026)
+## Test (ultime esecuzioni documentate)
 
-| Comando | Esito |
-|---|---|
-| `npm run check` (lint, tipi, 798 test: dominio, server su Fastify e sul motore leggero, architettura, build) | verde |
-| `npm run test:e2e` (52 scenari telefono + desktop) | verde |
-| `npm run test:cloudflare` (9 prove sul Worker in locale, R2 compreso) | verde |
+| Comando | Ultima esecuzione documentata | Esito |
+|---|---|---|
+| `npm run check` (lint, tipi, test di dominio, server su Fastify e sul motore leggero, interfaccia, architettura, build) | 24/11/2026, ricettario contestuale | verde, 920 test; verde anche nei controlli degli script di rilascio dello stesso giorno (conteggio non registrato) |
+| `npm run test:e2e` (telefono e desktop) | 24/11/2026, ricettario contestuale | 61 superati, 29 saltati (scenari riservati al solo telefono o al solo desktop), nessun fallimento |
+| `npm run test:aspetto` (confronti visivi) | 24/11/2026, ricettario contestuale | 10 test verdi, 78 schermate di riferimento invariate |
+| `npm run test:cloudflare` (prove sul Worker in locale, R2 compreso) | 24/11/2026, dentro `scripts/cloudflare/rilascia.sh` (rilascio `20261124-1121-1899b8a`) | verde (lo script si ferma altrimenti); ultimo conteggio documentato: 9 prove, 19/11/2026 |
+| `npm run test:e2e:cloudflare` (e2e sul Worker) | 18/11/2026, installazione Cloudflare | eseguito allora; non ripetuto dopo |
 
 ## Decisioni tecniche
 
@@ -1068,7 +1070,8 @@ evento, su richiesta di Loris.
 - Test: 920 test di unità; e2e `ricettario-contestuale.spec.ts` (desktop: apertura, tipologia, nome,
   ingrediente, digitazione, Invio, trascinamento su portata e su voce libera, doppio clic senza
   doppioni, tastiera, chiusura; telefono: «+», campo sopra il pannello, doppio tocco, Invio, chiusura
-  continuando a scrivere, collegamento dall'editor); confronti visivi invariati (78 istantanee).
+  continuando a scrivere, collegamento dall'editor); e2e completi: 61 superati, 29 saltati, nessun
+  fallimento; confronti visivi invariati (78 istantanee).
   Controllo visivo a parte su desktop 1440/1024, tablet a tocco orizzontale e verticale, telefono 360,
   chiaro e scuro. La tastiera virtuale vera non è riproducibile nei test: verificato il calcolo
   (`dispositivo.test.tsx`) e la posizione del campo sopra il pannello.
@@ -1094,3 +1097,13 @@ evento, su richiesta di Loris.
   stesso commit e sola documentazione accettati; codice non provato, commit non discendente e rilascio
   non riconoscibile rifiutati). RILASCI.md e CLAUDE.md aggiornati. Questo ramo cambia script, quindi va
   su TEST una volta con `scripts/rilascia.sh` (app invariata).
+
+## Coerenza dei documenti (24/11/2026, ramo `coerenza-documenti`, sola documentazione)
+
+- SPEC F2 punto 5, §15 e §29.7: il riordino delle voci è solo con Su/Giù/Sposta in; il trascinamento
+  del ricettario contestuale (§43) inserisce e collega ricette, non riordina; la tendina dei
+  suggerimenti è sostituita da §43. Registro 8.9.1.
+- Riepilogo dei test in testa a questo documento: sostituito quello del 19/11 con le ultime esecuzioni
+  documentate, con la data di ciascuna suite.
+- Su `main` appena prima del prossimo rilascio in PRODUZIONE (`scripts/documentazione.sh`), senza
+  rilascio.

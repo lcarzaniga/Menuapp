@@ -133,8 +133,10 @@ GitHub Pages.
    a fuoco il campo si apre il ricettario contestuale della portata (§43), filtrato dal testo
    scritto: scegliere una ricetta crea una voce collegata; ignorarlo lascia la voce libera.
 4. Incollare più righe nel campo crea una voce per riga.
-5. Le voci si riordinano con trascinamento (pressione prolungata) o con i comandi
-   *Su / Giù / Sposta in…*.
+5. Le voci si riordinano con i comandi *Su / Giù / Sposta in…* (menu delle azioni della voce).
+   Il riordino per trascinamento non è stato realizzato (taglio previsto in §15). Il trascinamento
+   del ricettario contestuale (§43) serve solo a inserire ricette nel menù o a collegarle a voci
+   libere, non a riordinare le voci esistenti.
 
 ### F3 — Dal nome al piatto
 1. Su una voce senza piatto: azione «Crea nel ricettario».
@@ -1657,7 +1659,8 @@ richiede di rieseguire `installa-servizio.sh`.
 M0 si allunga di due giorni rispetto alla v1.2 (backend, database e servizi); i giorni
 sono recuperati comprimendo M1 e M2 di un giorno ciascuno. Tagli previsti in caso di
 ritardo, in quest'ordine: trascinamento (restano Su/Giù) → formato A5 → Wake Lock →
-suggerimenti R10 → scorciatoie del manifest → promemoria dell'esportazione.
+suggerimenti R10 → scorciatoie del manifest → promemoria dell'esportazione. Il primo taglio è stato
+applicato: il riordino delle voci è solo con Su/Giù/Sposta in (F2).
 
 ## 16. Criteri di accettazione
 
@@ -2382,7 +2385,8 @@ dell'originale, uscita dalla Famiglia).
   nuova parte dall'alto. Nel ricettario anche la ricerca resta nell'indirizzo (`?q=`), come la
   portata.
 - Suggerimenti del ricettario nel menù: campo «combobox», frecce per scegliere, Invio per
-  collegare, Esc per chiudere (prima non erano raggiungibili da tastiera).
+  collegare, Esc per chiudere (prima non erano raggiungibili da tastiera). Dalla 8.8 la tendina è
+  sostituita dal ricettario contestuale (§43), con gli stessi comandi da tastiera.
 
 ### 29.8 Collaudo
 
@@ -3181,6 +3185,7 @@ elenco per campo.
 | 23/11/2026 | 8.7 — **Rifiniture dall'audit visivo** (§31.6): titoli su due righe, bordi dei campi ≥ 3:1, superfici della ricetta, foto, filo oro del prossimo evento al buio, «Me ne occupo io» a contorno, bersagli più grandi; test visivi estesi |
 | 24/11/2026 | 8.8 — **Ricettario contestuale nel menù** (§43): pannello delle ricette della portata filtrato dal campo «Aggiungi a…»; colonna a destra con trascinamento su portate e voci libere, doppio clic e tastiera; pannello dal basso con «+» sopra la tastiera; nessuna migrazione |
 | 24/11/2026 | 8.9 — **Principi guida per l'evoluzione** (§1.1): semplicità prima della completezza, usabilità dell'esistente, niente deriva gestionale, criterio di valutazione delle proposte; le idee delle analisi non sono attività approvate |
+| 24/11/2026 | 8.9.1 — Coerenza: F2 punto 5 e §15 (riordino solo con Su/Giù/Sposta in; il trascinamento di §43 inserisce, non riordina), §29.7 (tendina sostituita da §43) |
 | 19/11/2026 | 7.9 — **Memoria di famiglia** (§40): storia della ricetta pubblicabile, ricordi ed esperienze dei familiari con foto, privati anche nelle ricette pubbliche, non copiati; modello pronto per un archivio di famiglia |
 | 19/11/2026 | 7.8 — **Chi porta cosa flessibile** (§39): piatti a scelta «da definire» con quanti contributi, precisabili senza perdere l'incarico; menù e Chi porta stesso record |
 | 19/11/2026 | 7.7 — **Regia della cucina** (§38): vista del piano per il giorno dell'evento, colonne per fase, filtri, attrezzature dal testo delle ricette, testo grande, schermo acceso, «Prepara il piano dai piatti» |
